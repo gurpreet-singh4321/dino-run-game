@@ -92,53 +92,48 @@
     color: var(--accent-cyan);
   }
 
-  @media (max-width: 768px) {
+  @media (max-width: 900px) {
     .navbar {
-      padding: 6px 0;
+      padding: 10px 0;
     }
     .nav-container {
-      flex-direction: row;
-      justify-content: space-between;
+      flex-direction: column;
+      justify-content: center;
       align-items: center;
-      padding: 0 10px;
-      gap: 6px;
+      padding: 0 16px;
+      gap: 10px;
     }
     .logo-box {
-      gap: 4px;
-      flex-shrink: 0;
+      gap: 6px;
+      justify-content: center;
     }
     .logo-icon {
-      font-size: 18px;
+      font-size: 22px;
     }
     .logo-title {
-      font-size: 13px;
-      letter-spacing: 0.5px;
+      font-size: 17px;
+      letter-spacing: 0.8px;
     }
     .epochs-badge {
-      font-size: 8px;
-      padding: 2px 5px;
-      letter-spacing: 0.5px;
+      font-size: 9px;
+      padding: 3px 8px;
+      letter-spacing: 0.8px;
     }
     .nav-links {
       display: flex;
-      gap: 4px;
-      overflow-x: auto;
-      white-space: nowrap;
-      max-width: 55%;
-      padding: 2px 0;
-      -webkit-overflow-scrolling: touch;
-      scrollbar-width: none;
-    }
-    .nav-links::-webkit-scrollbar {
-      display: none;
+      justify-content: center;
+      align-items: center;
+      gap: 6px;
+      width: 100%;
+      flex-wrap: wrap;
     }
     .nav-link {
-      font-size: 10px;
+      font-size: 12px;
       font-weight: 700;
-      padding: 4px 7px;
+      padding: 5px 12px;
       background: rgba(255, 255, 255, 0.08);
-      border-radius: 6px;
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
       white-space: nowrap;
     }
   }
