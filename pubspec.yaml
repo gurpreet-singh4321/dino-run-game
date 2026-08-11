@@ -1,0 +1,46 @@
+name: dino_run_epochs
+description: "A new Flutter project."
+publish_to: 'none'
+version: 1.0.0+2
+
+environment:
+  sdk: ^3.12.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flame: ^1.18.0
+  flame_audio: ^2.10.0
+  flame_tiled: ^1.20.0
+  shared_preferences: ^2.2.3
+  flame_rive: ^1.11.2
+  rive: ^0.14.11
+  vibration: ^2.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.13.1
+
+flutter_launcher_icons:
+  android: "ic_launcher"
+  ios: true
+  remove_alpha_ios: true
+  web:
+    generate: true
+    image_path: "assets/images/app_icon.png"
+  image_path: "assets/images/app_icon.png"
+  adaptive_icon_background: "#101820"
+  adaptive_icon_foreground: "assets/images/app_icon_foreground.png"
+  min_sdk_android: 21
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/dino.riv
+    - assets/sun.riv
+    - assets/images/dino_sprite.png
+    - assets/images/app_icon.png
+    - assets/audio/
