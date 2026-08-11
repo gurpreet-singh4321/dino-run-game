@@ -10,6 +10,8 @@
 
     <!-- Embedded Flutter Game Player -->
     <div class="game-wrapper">
+      <button id="btn-exit-safari-fs" class="btn-exit-safari" title="Exit Fullscreen">✕ EXIT FULLSCREEN</button>
+
       <div class="game-toolbar">
         <div class="toolbar-left">
           <span class="status-dot"></span>
@@ -62,11 +64,14 @@
   document.addEventListener('DOMContentLoaded', () => {
     const btnFullscreen = document.getElementById('btn-fullscreen');
     const btnLaunchMobile = document.getElementById('btn-launch-mobile');
+    const btnExitSafari = document.getElementById('btn-exit-safari-fs');
     const gameFrame = document.getElementById('game-frame') as HTMLIFrameElement;
+    const gameWrapper = document.querySelector('.game-wrapper') as HTMLElement;
     const mobileOverlay = document.getElementById('mobile-play-overlay');
     const statHighScore = document.getElementById('stat-high-score');
     const statTotalCoins = document.getElementById('stat-total-coins');
 
+    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     const isPortraitOrMobile = window.innerWidth <= 900 || window.innerHeight > window.innerWidth || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
     // Desktop landscape loads iframe automatically; Mobile / Portrait waits for explicit tap
@@ -94,43 +99,84 @@
         gameFrame.src = targetSrc;
       }
 
-      try {
-        // 1. Enter Fullscreen Mode on iframe or game container
-        const container = gameFrame.parentElement || gameFrame;
-        if (container.requestFullscreen) {
-          await container.requestFullscreen();
-        } else if ((container as any).webkitRequestFullscreen) {
-          await (container as any).webkitRequestFullscreen();
-        } else if (gameFrame.requestFullscreen) {
-          await gameFrame.requestFullscreen();
-        }
+      // Show iframe on mobile when launched
+      if (gameFrame) {
+        gameFrame.style.display = 'block';
+      }
 
-        // 2. Lock Screen Orientation to Landscape
-        if (screen.orientation && (screen.orientation as any).lock) {
-          await (screen.orientation as any).lock('landscape').catch(() => {});
+      if (isIOS || !document.fullscreenEnabled) {
+        // Safari iOS Fallback: Fullscreen Viewport Container
+        if (gameWrapper) {
+          gameWrapper.classList.add('safari-fullscreen-active');
         }
-
         if (mobileOverlay) {
           mobileOverlay.style.display = 'none';
         }
-      } catch (_) {}
+        document.body.style.overflow = 'hidden';
+      } else {
+        // Standard Fullscreen API for Android / Chrome / Firefox
+        try {
+          const container = gameFrame.parentElement || gameFrame;
+          if (container.requestFullscreen) {
+            await container.requestFullscreen();
+          } else if ((container as any).webkitRequestFullscreen) {
+            await (container as any).webkitRequestFullscreen();
+          }
+
+          if (screen.orientation && (screen.orientation as any).lock) {
+            await (screen.orientation as any).lock('landscape').catch(() => {});
+          }
+
+          if (mobileOverlay) {
+            mobileOverlay.style.display = 'none';
+          }
+        } catch (err) {
+          // Safari Fallback on blocked request
+          if (gameWrapper) {
+            gameWrapper.classList.add('safari-fullscreen-active');
+          }
+          if (mobileOverlay) {
+            mobileOverlay.style.display = 'none';
+          }
+          document.body.style.overflow = 'hidden';
+        }
+      }
+    }
+
+    function exitSafariFullscreen() {
+      if (gameWrapper) {
+        gameWrapper.classList.remove('safari-fullscreen-active');
+      }
+      document.body.style.overflow = '';
+
+      if (gameFrame && gameFrame.contentWindow) {
+        try {
+          gameFrame.contentWindow.postMessage({ type: 'PAUSE_GAME' }, '*');
+        } catch (_) {}
+      }
+
+      if (mobileOverlay) {
+        mobileOverlay.style.display = 'flex';
+        const btnText = mobileOverlay.querySelector('.btn-mobile-play span');
+        if (btnText) btnText.textContent = '▶ RESUME GAME IN FULLSCREEN';
+        const overlayTitle = mobileOverlay.querySelector('h2');
+        if (overlayTitle) overlayTitle.textContent = 'GAME PAUSED';
+      }
     }
 
     function handleFullscreenChange() {
       const isFullscreenNow = !!(
         document.fullscreenElement ||
-        (document as any).webkitFullscreenElement
+        (document as any).webkitRequestFullscreen
       );
 
-      if (!isFullscreenNow) {
-        // Exited Fullscreen: Send PAUSE message to Flutter game
+      if (!isFullscreenNow && !gameWrapper?.classList.contains('safari-fullscreen-active')) {
         if (gameFrame && gameFrame.contentWindow) {
           try {
             gameFrame.contentWindow.postMessage({ type: 'PAUSE_GAME' }, '*');
           } catch (_) {}
         }
 
-        // Show Resume Game Fullscreen overlay on mobile
         const isPortraitOrMobile =
           window.innerWidth <= 900 ||
           window.innerHeight > window.innerWidth ||
@@ -138,15 +184,10 @@
 
         if (isPortraitOrMobile && mobileOverlay) {
           mobileOverlay.style.display = 'flex';
-
           const btnText = mobileOverlay.querySelector('.btn-mobile-play span');
-          if (btnText) {
-            btnText.textContent = '▶ RESUME GAME IN FULLSCREEN';
-          }
+          if (btnText) btnText.textContent = '▶ RESUME GAME IN FULLSCREEN';
           const overlayTitle = mobileOverlay.querySelector('h2');
-          if (overlayTitle) {
-            overlayTitle.textContent = 'GAME PAUSED';
-          }
+          if (overlayTitle) overlayTitle.textContent = 'GAME PAUSED';
         }
       }
     }
@@ -154,13 +195,9 @@
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
 
-    if (btnFullscreen) {
-      btnFullscreen.addEventListener('click', launchLandscapeFullscreen);
-    }
-
-    if (btnLaunchMobile) {
-      btnLaunchMobile.addEventListener('click', launchLandscapeFullscreen);
-    }
+    if (btnFullscreen) btnFullscreen.addEventListener('click', launchLandscapeFullscreen);
+    if (btnLaunchMobile) btnLaunchMobile.addEventListener('click', launchLandscapeFullscreen);
+    if (btnExitSafari) btnExitSafari.addEventListener('click', exitSafariFullscreen);
 
     window.addEventListener('message', (event) => {
       if (!event.data) return;
@@ -367,6 +404,51 @@
     color: var(--accent-gold);
   }
 
+  /* Safari iOS Viewport Fullscreen Mode */
+  .btn-exit-safari {
+    display: none;
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    z-index: 1000005;
+    background: rgba(0, 0, 0, 0.85);
+    color: var(--accent-cyan);
+    border: 1px solid var(--accent-cyan);
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: 800;
+    font-size: 12px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(0, 229, 255, 0.4);
+  }
+
+  .game-wrapper.safari-fullscreen-active {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    z-index: 1000000 !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    background: #000 !important;
+  }
+
+  .game-wrapper.safari-fullscreen-active .game-toolbar {
+    display: none !important;
+  }
+
+  .game-wrapper.safari-fullscreen-active .game-frame-box {
+    height: 100vh !important;
+    aspect-ratio: auto !important;
+  }
+
+  .game-wrapper.safari-fullscreen-active .btn-exit-safari {
+    display: block !important;
+  }
+
   /* Responsive Rules for Mobile Devices & Portrait Mode */
   @media (max-width: 900px), (orientation: portrait) {
     .mobile-overlay {
@@ -383,6 +465,10 @@
 
     .game-frame-box iframe {
       display: none !important;
+    }
+
+    .game-wrapper.safari-fullscreen-active iframe {
+      display: block !important;
     }
   }
 </style>
