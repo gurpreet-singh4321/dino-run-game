@@ -93,23 +93,27 @@
   }
 
   @media (max-width: 768px) {
+    .navbar {
+      padding: 10px 0;
+    }
     .nav-container {
-      flex-direction: column;
-      gap: 12px;
+      justify-content: center;
       padding: 0 16px;
+    }
+    .logo-box {
+      gap: 8px;
     }
     .logo-title {
       font-size: 18px;
+      white-space: nowrap;
     }
     .epochs-badge {
       font-size: 10px;
-      padding: 4px 9px;
+      padding: 3px 8px;
+      white-space: nowrap;
     }
     .nav-links {
-      gap: 16px;
-    }
-    .nav-link {
-      font-size: 13px;
+      display: none; /* Hide header links on mobile screens to prevent text collisions */
     }
   }
 </style>

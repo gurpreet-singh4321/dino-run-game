@@ -28,15 +28,15 @@
         <div id="mobile-play-overlay" class="mobile-overlay">
           <div class="overlay-card">
             <span class="overlay-icon">📱 🎮</span>
-            <h2>LANDSCAPE MODE RECOMMENDED</h2>
-            <p>For the best control and retro arcade action on phones, tap to launch in fullscreen landscape!</p>
+            <h2>LANDSCAPE MODE REQUIRED</h2>
+            <p>Portrait mode is restricted for mobile play. Tap below to launch the game in fullscreen landscape mode!</p>
             <button id="btn-launch-mobile" class="btn-mobile-play">
               <span>▶ TAP TO PLAY FULLSCREEN</span>
             </button>
           </div>
         </div>
 
-        <iframe id="game-frame" src="/game/index.html" title="Dino Run Epochs Game" allow="autoplay; fullscreen; orientation"></iframe>
+        <iframe id="game-frame" data-src="/game/index.html" title="Dino Run Epochs Game" allow="autoplay; fullscreen; orientation"></iframe>
       </div>
     </div>
 
@@ -63,8 +63,17 @@
     const btnFullscreen = document.getElementById('btn-fullscreen');
     const btnLaunchMobile = document.getElementById('btn-launch-mobile');
     const gameFrame = document.getElementById('game-frame') as HTMLIFrameElement;
+    const mobileOverlay = document.getElementById('mobile-play-overlay');
     const statHighScore = document.getElementById('stat-high-score');
     const statTotalCoins = document.getElementById('stat-total-coins');
+
+    const isMobile = window.innerWidth <= 768 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+    // Desktop loads iframe automatically; Mobile waits for explicit tap
+    if (!isMobile && gameFrame) {
+      const targetSrc = gameFrame.getAttribute('data-src');
+      if (targetSrc) gameFrame.src = targetSrc;
+    }
 
     function updateStatsDisplay() {
       const highScore = localStorage.getItem('dino_high_score') || '0';
@@ -79,17 +88,30 @@
     async function launchLandscapeFullscreen() {
       if (!gameFrame) return;
 
+      // Ensure iframe is loaded before going fullscreen
+      const targetSrc = gameFrame.getAttribute('data-src');
+      if (targetSrc && !gameFrame.src) {
+        gameFrame.src = targetSrc;
+      }
+
       try {
-        // 1. Enter Fullscreen Mode
-        if (gameFrame.requestFullscreen) {
+        // 1. Enter Fullscreen Mode on iframe or game container
+        const container = gameFrame.parentElement || gameFrame;
+        if (container.requestFullscreen) {
+          await container.requestFullscreen();
+        } else if ((container as any).webkitRequestFullscreen) {
+          await (container as any).webkitRequestFullscreen();
+        } else if (gameFrame.requestFullscreen) {
           await gameFrame.requestFullscreen();
-        } else if ((gameFrame as any).webkitRequestFullscreen) {
-          await (gameFrame as any).webkitRequestFullscreen();
         }
 
-        // 2. Lock Orientation to Landscape on Mobile Devices
+        // 2. Lock Screen Orientation to Landscape
         if (screen.orientation && (screen.orientation as any).lock) {
           await (screen.orientation as any).lock('landscape').catch(() => {});
+        }
+
+        if (mobileOverlay) {
+          mobileOverlay.style.display = 'none';
         }
       } catch (_) {}
     }
@@ -128,17 +150,18 @@
   }
 
   .main-title {
-    font-size: clamp(28px, 6vw, 48px);
+    font-size: clamp(26px, 5.5vw, 48px);
     font-weight: 900;
     letter-spacing: 2px;
-    margin-bottom: 12px;
+    margin-bottom: 8px;
   }
 
   .subtitle {
     color: var(--text-muted);
-    font-size: clamp(14px, 3.5vw, 18px);
-    max-width: 700px;
-    margin: 0 auto 30px;
+    font-size: clamp(13px, 3.2vw, 17px);
+    max-width: 650px;
+    margin: 0 auto 24px;
+    padding: 0 16px;
   }
 
   .game-wrapper {
@@ -221,21 +244,21 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(11, 15, 25, 0.95);
-    backdrop-filter: blur(12px);
+    background: rgba(11, 15, 25, 0.96);
+    backdrop-filter: blur(16px);
     z-index: 10;
     align-items: center;
     justify-content: center;
-    padding: 20px;
+    padding: 24px;
   }
 
   .overlay-card {
-    max-width: 400px;
+    max-width: 380px;
     text-align: center;
   }
 
   .overlay-icon {
-    font-size: 42px;
+    font-size: 48px;
     display: block;
     margin-bottom: 12px;
   }
@@ -245,12 +268,14 @@
     font-weight: 900;
     margin-bottom: 8px;
     color: var(--text-main);
+    letter-spacing: 1px;
   }
 
   .overlay-card p {
-    font-size: 14px;
+    font-size: 13px;
     color: var(--text-muted);
-    margin-bottom: 20px;
+    margin-bottom: 24px;
+    line-height: 1.5;
   }
 
   .btn-mobile-play {
@@ -258,16 +283,16 @@
     align-items: center;
     justify-content: center;
     width: 100%;
-    padding: 14px 24px;
+    padding: 16px 24px;
     background: linear-gradient(135deg, var(--accent-cyan), var(--accent-magenta));
     color: #0B0F19;
     font-weight: 900;
     font-size: 15px;
-    letter-spacing: 1px;
+    letter-spacing: 1.2px;
     border: none;
     border-radius: var(--radius-md);
     cursor: pointer;
-    box-shadow: 0 10px 25px rgba(0, 229, 255, 0.3);
+    box-shadow: 0 10px 30px rgba(0, 229, 255, 0.35);
     transition: transform 0.2s ease;
   }
 
@@ -315,6 +340,10 @@
     }
 
     .tool-btn span {
+      display: none;
+    }
+
+    .game-frame-box iframe {
       display: none;
     }
   }
