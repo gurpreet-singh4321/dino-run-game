@@ -399,39 +399,42 @@
     z-index: 100;
     align-items: center;
     justify-content: center;
-    padding: 24px;
+    padding: 12px;
+    overflow-y: auto;
   }
 
   .overlay-card {
-    max-width: 420px;
-    width: 100%;
+    max-width: 90%;
+    width: 360px;
     text-align: center;
-    background: rgba(18, 26, 42, 0.85);
+    background: rgba(18, 26, 42, 0.92);
     border: 1px solid var(--border-card);
-    border-radius: var(--radius-lg);
-    padding: 32px 24px;
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6);
+    border-radius: var(--radius-md);
+    padding: 16px 14px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+    margin: auto;
   }
 
   .overlay-icon {
-    font-size: 48px;
+    font-size: clamp(22px, 3.5vw, 36px);
     display: block;
-    margin-bottom: 12px;
+    margin-bottom: 6px;
   }
 
   .overlay-card h2 {
-    font-size: 20px;
+    font-size: clamp(13px, 3vw, 17px);
     font-weight: 900;
-    margin-bottom: 10px;
+    margin-bottom: 6px;
     color: var(--text-main);
-    letter-spacing: 1px;
+    letter-spacing: 0.8px;
+    line-height: 1.2;
   }
 
   .overlay-card p {
-    font-size: 14px;
+    font-size: clamp(10px, 2.4vw, 12px);
     color: var(--text-muted);
-    margin-bottom: 24px;
-    line-height: 1.5;
+    margin-bottom: 12px;
+    line-height: 1.4;
   }
 
   .btn-mobile-play {
@@ -439,22 +442,22 @@
     align-items: center;
     justify-content: center;
     width: 100%;
-    padding: 16px 24px;
+    padding: 10px 14px;
     background: linear-gradient(135deg, var(--accent-cyan), var(--accent-magenta));
     color: #0B0F19;
     font-weight: 900;
-    font-size: 15px;
-    letter-spacing: 1.2px;
+    font-size: clamp(11px, 2.6vw, 13px);
+    letter-spacing: 1px;
     border: none;
     border-radius: var(--radius-md);
     cursor: pointer;
-    box-shadow: 0 10px 30px rgba(0, 229, 255, 0.35);
+    box-shadow: 0 6px 20px rgba(0, 229, 255, 0.35);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
   }
 
   .btn-mobile-play:hover {
     transform: translateY(-2px);
-    box-shadow: 0 14px 35px rgba(0, 229, 255, 0.5);
+    box-shadow: 0 10px 25px rgba(0, 229, 255, 0.5);
   }
 
   .btn-mobile-play:active {
