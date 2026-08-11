@@ -8,14 +8,14 @@
       <p class="subtitle">Run across prehistoric lands, survive lava eruptions, and blast into zero-gravity space!</p>
     </div>
 
-    <!-- Embedded Flutter Game Player -->
-    <div class="game-wrapper">
+    <!-- Embedded Flutter Game Player Wrapper -->
+    <div class="game-wrapper" id="game-wrapper">
       <button id="btn-exit-safari-fs" class="btn-exit-safari" title="Exit Fullscreen">✕ EXIT FULLSCREEN</button>
 
       <div class="game-toolbar">
         <div class="toolbar-left">
           <span class="status-dot"></span>
-          <span class="toolbar-title">LIVE GAME SESSION (ASTRO JS)</span>
+          <span class="toolbar-title">LIVE GAME SESSION</span>
         </div>
         <div class="toolbar-right">
           <button id="btn-fullscreen" class="tool-btn" title="Toggle Fullscreen">
@@ -25,16 +25,24 @@
         </div>
       </div>
 
-      <div class="game-frame-box">
-        <!-- Mobile Phone Launch Overlay -->
-        <div id="mobile-play-overlay" class="mobile-overlay">
-          <div class="overlay-card">
-            <span class="overlay-icon">📱 🎮</span>
-            <h2>LANDSCAPE MODE REQUIRED</h2>
-            <p>Portrait mode is restricted for mobile play. Tap below to launch the game in fullscreen landscape mode!</p>
+      <div class="game-frame-box" id="game-frame-box">
+        <!-- Interactive Overlay Layer -->
+        <div id="game-overlay" class="game-overlay">
+          <!-- Card 1: Fullscreen Required / Game Paused Prompt -->
+          <div id="overlay-fullscreen-card" class="overlay-card">
+            <span id="overlay-icon" class="overlay-icon">📱 🎮</span>
+            <h2 id="overlay-title">FULLSCREEN LANDSCAPE REQUIRED</h2>
+            <p id="overlay-desc">Dino Run: Epochs is optimized for Fullscreen Landscape play. Tap below to launch full screen!</p>
             <button id="btn-launch-mobile" class="btn-mobile-play">
-              <span>▶ TAP TO PLAY FULLSCREEN</span>
+              <span id="btn-launch-text">▶ PLAY IN FULLSCREEN</span>
             </button>
+          </div>
+
+          <!-- Card 2: Rotate Device to Landscape Prompt (Used in Fullscreen Portrait) -->
+          <div id="overlay-rotate-card" class="overlay-card" style="display: none;">
+            <span class="overlay-icon">🔄 📱</span>
+            <h2>ROTATE YOUR DEVICE</h2>
+            <p>Portrait mode is not supported. Please turn your device horizontally to <strong>Landscape mode</strong> to continue playing!</p>
           </div>
         </div>
 
@@ -66,18 +74,38 @@
     const btnLaunchMobile = document.getElementById('btn-launch-mobile');
     const btnExitSafari = document.getElementById('btn-exit-safari-fs');
     const gameFrame = document.getElementById('game-frame') as HTMLIFrameElement;
-    const gameWrapper = document.querySelector('.game-wrapper') as HTMLElement;
-    const mobileOverlay = document.getElementById('mobile-play-overlay');
+    const gameWrapper = document.getElementById('game-wrapper') as HTMLElement;
+    const gameOverlay = document.getElementById('game-overlay') as HTMLElement;
+    const overlayFullscreenCard = document.getElementById('overlay-fullscreen-card') as HTMLElement;
+    const overlayRotateCard = document.getElementById('overlay-rotate-card') as HTMLElement;
+    const overlayIcon = document.getElementById('overlay-icon') as HTMLElement;
+    const overlayTitle = document.getElementById('overlay-title') as HTMLElement;
+    const overlayDesc = document.getElementById('overlay-desc') as HTMLElement;
+    const btnLaunchText = document.getElementById('btn-launch-text') as HTMLElement;
+
     const statHighScore = document.getElementById('stat-high-score');
     const statTotalCoins = document.getElementById('stat-total-coins');
 
     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    const isPortraitOrMobile = window.innerWidth <= 900 || window.innerHeight > window.innerWidth || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-    // Desktop landscape loads iframe automatically; Mobile / Portrait waits for explicit tap
-    if (!isPortraitOrMobile && gameFrame) {
-      const targetSrc = gameFrame.getAttribute('data-src');
-      if (targetSrc) gameFrame.src = targetSrc;
+    let hasExitedFullscreen = false;
+
+    function isMobileView(): boolean {
+      return window.innerWidth <= 900 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    }
+
+    function isFullscreenActive(): boolean {
+      return !!(
+        document.fullscreenElement ||
+        (document as any).webkitFullscreenElement ||
+        (document as any).webkitIsFullScreen ||
+        (document as any).mozFullScreenElement ||
+        gameWrapper?.classList.contains('safari-fullscreen-active')
+      );
+    }
+
+    function isPortraitMode(): boolean {
+      return window.innerHeight > window.innerWidth;
     }
 
     function updateStatsDisplay() {
@@ -90,57 +118,120 @@
 
     updateStatsDisplay();
 
+    function pauseGameEngine() {
+      if (gameFrame && gameFrame.contentWindow) {
+        try {
+          gameFrame.contentWindow.postMessage({ type: 'PAUSE_GAME' }, '*');
+        } catch (_) {}
+      }
+    }
+
+    function syncVisibilityAndState() {
+      const inFullscreen = isFullscreenActive();
+      const inPortrait = isPortraitMode();
+      const inMobile = isMobileView();
+
+      if (inFullscreen) {
+        if (inPortrait) {
+          // Fullscreen BUT in Portrait -> RESTRICT GAME, SHOW ROTATE PROMPT
+          pauseGameEngine();
+          if (gameFrame) gameFrame.style.display = 'none';
+          if (gameOverlay) gameOverlay.style.display = 'flex';
+          if (overlayFullscreenCard) overlayFullscreenCard.style.display = 'none';
+          if (overlayRotateCard) overlayRotateCard.style.display = 'flex';
+        } else {
+          // Fullscreen AND Landscape -> SHOW GAME, HIDE ALL OVERLAYS
+          if (gameFrame) {
+            const targetSrc = gameFrame.getAttribute('data-src');
+            if (targetSrc && !gameFrame.src) {
+              gameFrame.src = targetSrc;
+            }
+            gameFrame.style.display = 'block';
+          }
+          if (gameOverlay) gameOverlay.style.display = 'none';
+          if (overlayFullscreenCard) overlayFullscreenCard.style.display = 'none';
+          if (overlayRotateCard) overlayRotateCard.style.display = 'none';
+        }
+      } else {
+        // NOT Fullscreen (e.g. mobile page view, desktop page view after exit fullscreen, etc.)
+        if (inMobile || hasExitedFullscreen || inPortrait) {
+          // Game must NOT run and must NOT be visible when not in fullscreen (mobile or exited FS)
+          pauseGameEngine();
+          if (gameFrame) gameFrame.style.display = 'none';
+          if (gameOverlay) gameOverlay.style.display = 'flex';
+          if (overlayRotateCard) overlayRotateCard.style.display = 'none';
+          if (overlayFullscreenCard) {
+            overlayFullscreenCard.style.display = 'flex';
+            if (hasExitedFullscreen) {
+              if (overlayIcon) overlayIcon.textContent = '⏸️ 🎮';
+              if (overlayTitle) overlayTitle.textContent = 'GAME PAUSED';
+              if (overlayDesc) overlayDesc.textContent = 'Fullscreen mode was exited. The game is paused and hidden. Re-enter fullscreen mode to resume playing!';
+              if (btnLaunchText) btnLaunchText.textContent = '▶ RESUME GAME IN FULLSCREEN';
+            } else {
+              if (overlayIcon) overlayIcon.textContent = '📱 🎮';
+              if (overlayTitle) overlayTitle.textContent = 'FULLSCREEN LANDSCAPE REQUIRED';
+              if (overlayDesc) overlayDesc.textContent = 'Mobile / non-fullscreen embedded mode is restricted. Tap below to launch the game in fullscreen landscape mode!';
+              if (btnLaunchText) btnLaunchText.textContent = '▶ PLAY IN FULLSCREEN';
+            }
+          }
+        } else {
+          // Desktop landscape initial view
+          if (gameFrame) {
+            const targetSrc = gameFrame.getAttribute('data-src');
+            if (targetSrc && !gameFrame.src) {
+              gameFrame.src = targetSrc;
+            }
+            gameFrame.style.display = 'block';
+          }
+          if (gameOverlay) gameOverlay.style.display = 'none';
+        }
+      }
+    }
+
     async function launchLandscapeFullscreen() {
       if (!gameFrame) return;
 
-      // Ensure iframe is loaded before going fullscreen
+      // Ensure iframe src is loaded
       const targetSrc = gameFrame.getAttribute('data-src');
       if (targetSrc && !gameFrame.src) {
         gameFrame.src = targetSrc;
       }
 
-      // Show iframe on mobile when launched
-      if (gameFrame) {
-        gameFrame.style.display = 'block';
-      }
+      const container = gameWrapper || gameFrame.parentElement || gameFrame;
+      const supportsNativeFullscreen = !!(
+        container.requestFullscreen ||
+        (container as any).webkitRequestFullscreen ||
+        (container as any).mozRequestFullScreen
+      );
 
-      if (isIOS || !document.fullscreenEnabled) {
-        // Safari iOS Fallback: Fullscreen Viewport Container
+      if (isIOS || !supportsNativeFullscreen) {
+        // Safari iOS Fallback
         if (gameWrapper) {
           gameWrapper.classList.add('safari-fullscreen-active');
         }
-        if (mobileOverlay) {
-          mobileOverlay.style.display = 'none';
-        }
         document.body.style.overflow = 'hidden';
       } else {
-        // Standard Fullscreen API for Android / Chrome / Firefox
         try {
-          const container = gameFrame.parentElement || gameFrame;
           if (container.requestFullscreen) {
             await container.requestFullscreen();
           } else if ((container as any).webkitRequestFullscreen) {
             await (container as any).webkitRequestFullscreen();
+          } else if ((container as any).mozRequestFullScreen) {
+            await (container as any).mozRequestFullScreen();
           }
 
           if (screen.orientation && (screen.orientation as any).lock) {
             await (screen.orientation as any).lock('landscape').catch(() => {});
           }
-
-          if (mobileOverlay) {
-            mobileOverlay.style.display = 'none';
-          }
         } catch (err) {
-          // Safari Fallback on blocked request
           if (gameWrapper) {
             gameWrapper.classList.add('safari-fullscreen-active');
-          }
-          if (mobileOverlay) {
-            mobileOverlay.style.display = 'none';
           }
           document.body.style.overflow = 'hidden';
         }
       }
+
+      syncVisibilityAndState();
     }
 
     function exitSafariFullscreen() {
@@ -148,56 +239,37 @@
         gameWrapper.classList.remove('safari-fullscreen-active');
       }
       document.body.style.overflow = '';
-
-      if (gameFrame && gameFrame.contentWindow) {
-        try {
-          gameFrame.contentWindow.postMessage({ type: 'PAUSE_GAME' }, '*');
-        } catch (_) {}
-      }
-
-      if (mobileOverlay) {
-        mobileOverlay.style.display = 'flex';
-        const btnText = mobileOverlay.querySelector('.btn-mobile-play span');
-        if (btnText) btnText.textContent = '▶ RESUME GAME IN FULLSCREEN';
-        const overlayTitle = mobileOverlay.querySelector('h2');
-        if (overlayTitle) overlayTitle.textContent = 'GAME PAUSED';
-      }
+      hasExitedFullscreen = true;
+      pauseGameEngine();
+      syncVisibilityAndState();
     }
 
     function handleFullscreenChange() {
-      const isFullscreenNow = !!(
-        document.fullscreenElement ||
-        (document as any).webkitRequestFullscreen
-      );
+      const inFullscreen = isFullscreenActive();
 
-      if (!isFullscreenNow && !gameWrapper?.classList.contains('safari-fullscreen-active')) {
-        if (gameFrame && gameFrame.contentWindow) {
-          try {
-            gameFrame.contentWindow.postMessage({ type: 'PAUSE_GAME' }, '*');
-          } catch (_) {}
-        }
-
-        const isPortraitOrMobile =
-          window.innerWidth <= 900 ||
-          window.innerHeight > window.innerWidth ||
-          /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-
-        if (isPortraitOrMobile && mobileOverlay) {
-          mobileOverlay.style.display = 'flex';
-          const btnText = mobileOverlay.querySelector('.btn-mobile-play span');
-          if (btnText) btnText.textContent = '▶ RESUME GAME IN FULLSCREEN';
-          const overlayTitle = mobileOverlay.querySelector('h2');
-          if (overlayTitle) overlayTitle.textContent = 'GAME PAUSED';
-        }
+      if (!inFullscreen) {
+        hasExitedFullscreen = true;
+        pauseGameEngine();
       }
+
+      syncVisibilityAndState();
     }
 
+    // Bind event listeners with vendor prefix support for Safari
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+    document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+
+    window.addEventListener('resize', syncVisibilityAndState);
+    window.addEventListener('orientationchange', syncVisibilityAndState);
 
     if (btnFullscreen) btnFullscreen.addEventListener('click', launchLandscapeFullscreen);
     if (btnLaunchMobile) btnLaunchMobile.addEventListener('click', launchLandscapeFullscreen);
     if (btnExitSafari) btnExitSafari.addEventListener('click', exitSafariFullscreen);
+
+    // Initial state check
+    syncVisibilityAndState();
 
     window.addEventListener('message', (event) => {
       if (!event.data) return;
@@ -240,6 +312,7 @@
   }
 
   .game-wrapper {
+    position: relative;
     background: var(--bg-card);
     border: 1px solid var(--border-card);
     border-radius: var(--radius-lg);
@@ -253,7 +326,7 @@
     justify-content: space-between;
     align-items: center;
     padding: 12px 20px;
-    background: rgba(0, 0, 0, 0.4);
+    background: rgba(0, 0, 0, 0.6);
     border-bottom: 1px solid var(--border-card);
   }
 
@@ -302,34 +375,42 @@
     position: relative;
     width: 100%;
     aspect-ratio: 16 / 9;
-    background: #000;
+    background: #0B0F19;
+    overflow: hidden;
   }
 
   .game-frame-box iframe {
     width: 100%;
     height: 100%;
     border: none;
+    display: none; /* Controlled dynamically via JS */
   }
 
-  /* Mobile Play Overlay */
-  .mobile-overlay {
-    display: none;
+  /* Fullscreen & Responsive Overlay */
+  .game-overlay {
+    display: flex;
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(11, 15, 25, 0.96);
+    background: rgba(11, 15, 25, 0.98);
     backdrop-filter: blur(16px);
-    z-index: 10;
+    z-index: 100;
     align-items: center;
     justify-content: center;
     padding: 24px;
   }
 
   .overlay-card {
-    max-width: 380px;
+    max-width: 420px;
+    width: 100%;
     text-align: center;
+    background: rgba(18, 26, 42, 0.85);
+    border: 1px solid var(--border-card);
+    border-radius: var(--radius-lg);
+    padding: 32px 24px;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6);
   }
 
   .overlay-icon {
@@ -341,13 +422,13 @@
   .overlay-card h2 {
     font-size: 20px;
     font-weight: 900;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
     color: var(--text-main);
     letter-spacing: 1px;
   }
 
   .overlay-card p {
-    font-size: 13px;
+    font-size: 14px;
     color: var(--text-muted);
     margin-bottom: 24px;
     line-height: 1.5;
@@ -368,7 +449,12 @@
     border-radius: var(--radius-md);
     cursor: pointer;
     box-shadow: 0 10px 30px rgba(0, 229, 255, 0.35);
-    transition: transform 0.2s ease;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .btn-mobile-play:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 35px rgba(0, 229, 255, 0.5);
   }
 
   .btn-mobile-play:active {
@@ -404,31 +490,34 @@
     color: var(--accent-gold);
   }
 
-  /* Safari iOS Viewport Fullscreen Mode */
+  /* Safari iOS Viewport Fullscreen Fallback */
   .btn-exit-safari {
     display: none;
     position: fixed;
-    top: 12px;
-    right: 12px;
+    top: 16px;
+    right: 16px;
     z-index: 1000005;
-    background: rgba(0, 0, 0, 0.85);
+    background: rgba(0, 0, 0, 0.88);
     color: var(--accent-cyan);
     border: 1px solid var(--accent-cyan);
-    padding: 8px 16px;
+    padding: 8px 18px;
     border-radius: 20px;
     font-weight: 800;
     font-size: 12px;
     letter-spacing: 1px;
     cursor: pointer;
-    box-shadow: 0 4px 15px rgba(0, 229, 255, 0.4);
+    box-shadow: 0 4px 20px rgba(0, 229, 255, 0.4);
   }
 
   .game-wrapper.safari-fullscreen-active {
     position: fixed !important;
     top: 0 !important;
     left: 0 !important;
-    width: 100vw !important;
-    height: 100vh !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    height: 100dvh !important;
     z-index: 1000000 !important;
     border-radius: 0 !important;
     margin: 0 !important;
@@ -441,7 +530,9 @@
   }
 
   .game-wrapper.safari-fullscreen-active .game-frame-box {
-    height: 100vh !important;
+    width: 100% !important;
+    height: 100% !important;
+    height: 100dvh !important;
     aspect-ratio: auto !important;
   }
 
@@ -449,26 +540,115 @@
     display: block !important;
   }
 
-  /* Responsive Rules for Mobile Devices & Portrait Mode */
-  @media (max-width: 900px), (orientation: portrait) {
-    .mobile-overlay {
-      display: flex !important;
+  /* Standard Native Fullscreen & WebKit Fullscreen Rules (Separated for Safari compatibility) */
+  .game-wrapper:fullscreen {
+    width: 100vw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    max-width: 100vw !important;
+    border-radius: 0 !important;
+    border: none !important;
+    margin: 0 !important;
+    background: #000 !important;
+  }
+
+  .game-wrapper:-webkit-full-screen {
+    width: 100vw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    max-width: 100vw !important;
+    border-radius: 0 !important;
+    border: none !important;
+    margin: 0 !important;
+    background: #000 !important;
+  }
+
+  :fullscreen .game-frame-box {
+    width: 100vw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    aspect-ratio: auto !important;
+  }
+
+  :-webkit-full-screen .game-frame-box {
+    width: 100vw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    aspect-ratio: auto !important;
+  }
+
+  :fullscreen .game-toolbar {
+    display: none !important;
+  }
+
+  :-webkit-full-screen .game-toolbar {
+    display: none !important;
+  }
+
+  /* Responsive Adjustments */
+  @media (max-width: 900px) {
+    .game-section {
+      padding: 16px 0 35px;
+    }
+
+    .subtitle {
+      margin-bottom: 16px;
+    }
+
+    .game-toolbar {
+      padding: 10px 14px;
     }
 
     .toolbar-title {
       font-size: 11px;
     }
 
-    .tool-btn span {
-      display: none;
+    .tool-btn {
+      padding: 5px 10px;
+      font-size: 12px;
     }
 
-    .game-frame-box iframe {
-      display: none !important;
+    .overlay-card {
+      padding: 24px 16px;
     }
 
-    .game-wrapper.safari-fullscreen-active iframe {
-      display: block !important;
+    .overlay-card h2 {
+      font-size: 18px;
+    }
+
+    .overlay-card p {
+      font-size: 13px;
+      margin-bottom: 18px;
+    }
+
+    .btn-mobile-play {
+      padding: 14px 18px;
+      font-size: 14px;
+    }
+
+    .stats-bar {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .stat-card {
+      padding: 10px 6px;
+    }
+
+    .stat-label {
+      font-size: 9px;
+    }
+
+    .stat-value {
+      font-size: 15px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .stats-bar {
+      grid-template-columns: 1fr;
     }
   }
 </style>
+
+
