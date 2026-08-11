@@ -148,30 +148,33 @@ class DinoGame extends FlameGame with HasCollisionDetection, TapCallbacks, PanDe
     }
   }
 
+  final math.Random _rng = math.Random();
+
   @override
   void update(double dt) {
-    super.update(dt);
+    // Clamp delta time to maximum 33ms (~30 FPS min step) to prevent delta spikes & stuttering
+    final clampedDt = math.min(dt, 0.0333);
+    super.update(clampedDt);
     frameCount++;
 
     if (shakeTimer > 0) {
-      shakeTimer -= dt;
+      shakeTimer -= clampedDt;
       if (shakeTimer <= 0) {
         shakeTimer = 0;
         camera.viewfinder.position = Vector2.zero();
       } else {
-        final rng = math.Random();
-        final dx = (rng.nextDouble() - 0.5) * shakeIntensity * 2;
-        final dy = (rng.nextDouble() - 0.5) * shakeIntensity * 2;
+        final dx = (_rng.nextDouble() - 0.5) * shakeIntensity * 2;
+        final dy = (_rng.nextDouble() - 0.5) * shakeIntensity * 2;
         camera.viewfinder.position = Vector2(dx, dy);
       }
     }
 
     switch (state) {
       case GameState.playing:
-        _updatePlaying(dt);
+        _updatePlaying(clampedDt);
         break;
       case GameState.spaceMode:
-        _updateSpaceMode(dt);
+        _updateSpaceMode(clampedDt);
         break;
       case GameState.gameOver:
         break;
