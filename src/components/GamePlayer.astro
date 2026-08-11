@@ -24,7 +24,19 @@
       </div>
 
       <div class="game-frame-box">
-        <iframe id="game-frame" src="/game/index.html" title="Dino Run Epochs Game" allow="autoplay; fullscreen"></iframe>
+        <!-- Mobile Phone Launch Overlay -->
+        <div id="mobile-play-overlay" class="mobile-overlay">
+          <div class="overlay-card">
+            <span class="overlay-icon">📱 🎮</span>
+            <h2>LANDSCAPE MODE RECOMMENDED</h2>
+            <p>For the best control and retro arcade action on phones, tap to launch in fullscreen landscape!</p>
+            <button id="btn-launch-mobile" class="btn-mobile-play">
+              <span>▶ TAP TO PLAY FULLSCREEN</span>
+            </button>
+          </div>
+        </div>
+
+        <iframe id="game-frame" src="/game/index.html" title="Dino Run Epochs Game" allow="autoplay; fullscreen; orientation"></iframe>
       </div>
     </div>
 
@@ -49,6 +61,7 @@
 <script>
   document.addEventListener('DOMContentLoaded', () => {
     const btnFullscreen = document.getElementById('btn-fullscreen');
+    const btnLaunchMobile = document.getElementById('btn-launch-mobile');
     const gameFrame = document.getElementById('game-frame') as HTMLIFrameElement;
     const statHighScore = document.getElementById('stat-high-score');
     const statTotalCoins = document.getElementById('stat-total-coins');
@@ -63,18 +76,30 @@
 
     updateStatsDisplay();
 
-    if (btnFullscreen && gameFrame) {
-      btnFullscreen.addEventListener('click', () => {
-        if (!document.fullscreenElement) {
-          if (gameFrame.requestFullscreen) {
-            gameFrame.requestFullscreen();
-          }
-        } else {
-          if (document.exitFullscreen) {
-            document.exitFullscreen();
-          }
+    async function launchLandscapeFullscreen() {
+      if (!gameFrame) return;
+
+      try {
+        // 1. Enter Fullscreen Mode
+        if (gameFrame.requestFullscreen) {
+          await gameFrame.requestFullscreen();
+        } else if ((gameFrame as any).webkitRequestFullscreen) {
+          await (gameFrame as any).webkitRequestFullscreen();
         }
-      });
+
+        // 2. Lock Orientation to Landscape on Mobile Devices
+        if (screen.orientation && (screen.orientation as any).lock) {
+          await (screen.orientation as any).lock('landscape').catch(() => {});
+        }
+      } catch (_) {}
+    }
+
+    if (btnFullscreen) {
+      btnFullscreen.addEventListener('click', launchLandscapeFullscreen);
+    }
+
+    if (btnLaunchMobile) {
+      btnLaunchMobile.addEventListener('click', launchLandscapeFullscreen);
     }
 
     window.addEventListener('message', (event) => {
@@ -98,12 +123,12 @@
 
 <style>
   .game-section {
-    padding: 40px 0 60px;
+    padding: 30px 0 50px;
     text-align: center;
   }
 
   .main-title {
-    font-size: 48px;
+    font-size: clamp(28px, 6vw, 48px);
     font-weight: 900;
     letter-spacing: 2px;
     margin-bottom: 12px;
@@ -111,9 +136,9 @@
 
   .subtitle {
     color: var(--text-muted);
-    font-size: 18px;
+    font-size: clamp(14px, 3.5vw, 18px);
     max-width: 700px;
-    margin: 0 auto 36px;
+    margin: 0 auto 30px;
   }
 
   .game-wrapper {
@@ -176,6 +201,7 @@
   }
 
   .game-frame-box {
+    position: relative;
     width: 100%;
     aspect-ratio: 16 / 9;
     background: #000;
@@ -187,32 +213,109 @@
     border: none;
   }
 
+  /* Mobile Play Overlay */
+  .mobile-overlay {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(11, 15, 25, 0.95);
+    backdrop-filter: blur(12px);
+    z-index: 10;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  .overlay-card {
+    max-width: 400px;
+    text-align: center;
+  }
+
+  .overlay-icon {
+    font-size: 42px;
+    display: block;
+    margin-bottom: 12px;
+  }
+
+  .overlay-card h2 {
+    font-size: 20px;
+    font-weight: 900;
+    margin-bottom: 8px;
+    color: var(--text-main);
+  }
+
+  .overlay-card p {
+    font-size: 14px;
+    color: var(--text-muted);
+    margin-bottom: 20px;
+  }
+
+  .btn-mobile-play {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 14px 24px;
+    background: linear-gradient(135deg, var(--accent-cyan), var(--accent-magenta));
+    color: #0B0F19;
+    font-weight: 900;
+    font-size: 15px;
+    letter-spacing: 1px;
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    box-shadow: 0 10px 25px rgba(0, 229, 255, 0.3);
+    transition: transform 0.2s ease;
+  }
+
+  .btn-mobile-play:active {
+    transform: scale(0.97);
+  }
+
   .stats-bar {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 20px;
+    gap: 16px;
   }
 
   .stat-card {
     background: var(--bg-card);
     border: 1px solid var(--border-card);
     border-radius: var(--radius-md);
-    padding: 20px;
+    padding: 18px;
     text-align: center;
   }
 
   .stat-label {
     display: block;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 700;
     color: var(--text-muted);
     letter-spacing: 1px;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
   }
 
   .stat-value {
-    font-size: 24px;
+    font-size: 22px;
     font-weight: 900;
     color: var(--accent-gold);
+  }
+
+  /* Responsive Rules for Mobile Devices */
+  @media (max-width: 768px) {
+    .mobile-overlay {
+      display: flex;
+    }
+
+    .toolbar-title {
+      font-size: 11px;
+    }
+
+    .tool-btn span {
+      display: none;
+    }
   }
 </style>

@@ -195,4 +195,23 @@
     font-weight: 700;
     color: var(--text-main);
   }
+
+  @media (max-width: 768px) {
+    .section-title {
+      font-size: 26px;
+    }
+    .leaderboard-header, .leaderboard-row {
+      grid-template-columns: 45px 1fr 90px 75px;
+      padding: 12px 12px;
+    }
+    .player-name {
+      font-size: 13px;
+    }
+    .player-score {
+      font-size: 14px;
+    }
+    .badge-active, .badge-guest {
+      display: none;
+    }
+  }
 </style>
