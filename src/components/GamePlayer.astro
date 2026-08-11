@@ -116,6 +116,44 @@
       } catch (_) {}
     }
 
+    function handleFullscreenChange() {
+      const isFullscreenNow = !!(
+        document.fullscreenElement ||
+        (document as any).webkitFullscreenElement
+      );
+
+      if (!isFullscreenNow) {
+        // Exited Fullscreen: Send PAUSE message to Flutter game
+        if (gameFrame && gameFrame.contentWindow) {
+          try {
+            gameFrame.contentWindow.postMessage({ type: 'PAUSE_GAME' }, '*');
+          } catch (_) {}
+        }
+
+        // Show Resume Game Fullscreen overlay on mobile
+        const isPortraitOrMobile =
+          window.innerWidth <= 900 ||
+          window.innerHeight > window.innerWidth ||
+          /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+        if (isPortraitOrMobile && mobileOverlay) {
+          mobileOverlay.style.display = 'flex';
+
+          const btnText = mobileOverlay.querySelector('.btn-mobile-play span');
+          if (btnText) {
+            btnText.textContent = '▶ RESUME GAME IN FULLSCREEN';
+          }
+          const overlayTitle = mobileOverlay.querySelector('h2');
+          if (overlayTitle) {
+            overlayTitle.textContent = 'GAME PAUSED';
+          }
+        }
+      }
+    }
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+
     if (btnFullscreen) {
       btnFullscreen.addEventListener('click', launchLandscapeFullscreen);
     }

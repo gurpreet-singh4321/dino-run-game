@@ -97,23 +97,37 @@
       padding: 10px 0;
     }
     .nav-container {
-      justify-content: center;
-      padding: 0 16px;
+      flex-direction: column;
+      gap: 8px;
+      padding: 0 12px;
     }
     .logo-box {
-      gap: 8px;
+      gap: 6px;
+    }
+    .logo-icon {
+      font-size: 22px;
     }
     .logo-title {
-      font-size: 18px;
-      white-space: nowrap;
+      font-size: 17px;
+      letter-spacing: 1px;
     }
     .epochs-badge {
-      font-size: 10px;
-      padding: 3px 8px;
-      white-space: nowrap;
+      font-size: 9px;
+      padding: 3px 7px;
     }
     .nav-links {
-      display: none; /* Hide header links on mobile screens to prevent text collisions */
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .nav-link {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 10px;
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
     }
   }
 </style>
