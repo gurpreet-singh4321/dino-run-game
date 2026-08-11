@@ -67,10 +67,10 @@
     const statHighScore = document.getElementById('stat-high-score');
     const statTotalCoins = document.getElementById('stat-total-coins');
 
-    const isMobile = window.innerWidth <= 768 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    const isPortraitOrMobile = window.innerWidth <= 900 || window.innerHeight > window.innerWidth || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-    // Desktop loads iframe automatically; Mobile waits for explicit tap
-    if (!isMobile && gameFrame) {
+    // Desktop landscape loads iframe automatically; Mobile / Portrait waits for explicit tap
+    if (!isPortraitOrMobile && gameFrame) {
       const targetSrc = gameFrame.getAttribute('data-src');
       if (targetSrc) gameFrame.src = targetSrc;
     }
@@ -329,10 +329,10 @@
     color: var(--accent-gold);
   }
 
-  /* Responsive Rules for Mobile Devices */
-  @media (max-width: 768px) {
+  /* Responsive Rules for Mobile Devices & Portrait Mode */
+  @media (max-width: 900px), (orientation: portrait) {
     .mobile-overlay {
-      display: flex;
+      display: flex !important;
     }
 
     .toolbar-title {
@@ -344,7 +344,7 @@
     }
 
     .game-frame-box iframe {
-      display: none;
+      display: none !important;
     }
   }
 </style>
