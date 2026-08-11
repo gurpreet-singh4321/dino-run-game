@@ -1,0 +1,113 @@
+---
+interface Props {
+	title?: string;
+	description?: string;
+}
+
+const { 
+	title = "Dino Run: Epochs | Play Free Online Endless Runner Game",
+	description = "Play Dino Run: Epochs online for free! Run across 7 unique biomes including Jurassic, Ice Age, Volcano, Desert, Cyberpunk, and Cosmos Zero-G."
+} = Astro.props;
+---
+
+<!json-ld>
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<link rel="icon" type="image/png" href="/game/favicon.png" />
+		<meta name="generator" content={Astro.generator} />
+		<title>{title}</title>
+		<meta name="description" content={description} />
+		<meta name="keywords" content="Dino Run, Dino Run Epochs, Astro JS, Dino Runner Game, Dinosaur Game, Free Online Games, Endless Runner, Play Dino Game" />
+
+		<!-- OpenGraph / Facebook -->
+		<meta property="og:type" content="website" />
+		<meta property="og:url" content="https://dinorunepochs.com/" />
+		<meta property="og:title" content={title} />
+		<meta property="og:description" content={description} />
+		<meta property="og:image" content="/game/icons/Icon-512.png" />
+
+		<!-- Twitter -->
+		<meta property="twitter:card" content="summary_large_image" />
+		<meta property="twitter:title" content={title} />
+		<meta property="twitter:description" content={description} />
+		<meta property="twitter:image" content="/game/icons/Icon-512.png" />
+
+		<!-- Google Fonts -->
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+		<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=Plus+Jakarta+Sans:wght@500;700;800&display=swap" rel="stylesheet">
+
+		<!-- Schema.org VideoGame Structured Data -->
+		<script type="application/ld+json">
+		{
+			"@context": "https://schema.org",
+			"@type": "SoftwareApplication",
+			"name": "Dino Run: Epochs",
+			"operatingSystem": "Web, Android",
+			"applicationCategory": "GameApplication",
+			"genre": "Endless Runner",
+			"ratingValue": "4.9",
+			"ratingCount": "1420",
+			"offers": {
+				"@type": "Offer",
+				"price": "0",
+				"priceCurrency": "USD"
+			},
+			"description": "An epic 2D endless dinosaur runner built with Astro JS & Flame Engine."
+		}
+		</script>
+	</head>
+	<body>
+		<slot />
+	</body>
+</html>
+
+<style is:global>
+	:root {
+		--bg-dark: #0B0F19;
+		--bg-card: rgba(18, 26, 42, 0.75);
+		--border-card: rgba(255, 255, 255, 0.12);
+		--accent-cyan: #00E5FF;
+		--accent-magenta: #E040FB;
+		--accent-gold: #FFD54F;
+		--accent-green: #00E676;
+		--text-main: #F0F4F8;
+		--text-muted: #94A3B8;
+		--font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+		--radius-lg: 20px;
+		--radius-md: 12px;
+	}
+
+	* {
+		margin: 0;
+		padding: 0;
+		box-sizing: border-box;
+		scroll-behavior: smooth;
+	}
+
+	body {
+		background-color: var(--bg-dark);
+		color: var(--text-main);
+		font-family: var(--font-family);
+		line-height: 1.6;
+		overflow-x: hidden;
+		background-image: 
+			radial-gradient(circle at 15% 15%, rgba(0, 229, 255, 0.08) 0%, transparent 40%),
+			radial-gradient(circle at 85% 65%, rgba(224, 64, 251, 0.08) 0%, transparent 40%);
+	}
+
+	.section-container {
+		max-width: 1200px;
+		margin: 0 auto;
+		padding: 0 24px;
+	}
+
+	.gradient-text {
+		background: linear-gradient(135deg, var(--accent-cyan), var(--accent-magenta), var(--accent-gold));
+		-webkit-background-clip: text;
+		-webkit-text-fill-color: transparent;
+	}
+</style>

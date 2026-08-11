@@ -1,0 +1,94 @@
+---
+---
+
+<header class="navbar">
+  <div class="nav-container">
+    <div class="logo-box">
+      <span class="logo-icon">🦖</span>
+      <span class="logo-title">DINO RUN</span>
+      <span class="epochs-badge">EPOCHS</span>
+    </div>
+    <nav class="nav-links">
+      <a href="#play" class="nav-link active">Play Game</a>
+      <a href="#biomes" class="nav-link">Biomes</a>
+      <a href="#controls" class="nav-link">Controls</a>
+      <a href="#leaderboard" class="nav-link">Leaderboard</a>
+    </nav>
+  </div>
+</header>
+
+<style>
+  .navbar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(11, 15, 25, 0.88);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border-card);
+    padding: 14px 0;
+  }
+
+  .nav-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  .logo-box {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .logo-icon {
+    font-size: 26px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+  }
+
+  .logo-title {
+    font-size: 22px;
+    font-weight: 900;
+    letter-spacing: 1.5px;
+    color: #FFFFFF;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+  }
+
+  .epochs-badge {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    background: linear-gradient(135deg, var(--accent-cyan), var(--accent-magenta));
+    color: #0B0F19;
+    padding: 5px 11px;
+    border-radius: 20px;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 10px rgba(0, 229, 255, 0.25);
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 24px;
+  }
+
+  .nav-link {
+    color: var(--text-muted);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 15px;
+    transition: color 0.2s ease;
+  }
+
+  .nav-link:hover, .nav-link.active {
+    color: var(--accent-cyan);
+  }
+</style>

@@ -1,0 +1,109 @@
+---
+---
+
+<section id="biomes" class="features-section">
+  <div class="section-container">
+    <h2 class="section-title">EXPLORE 7 <span class="gradient-text">TIME EPOCHS</span></h2>
+    <p class="section-subtitle">Experience dynamic environment transitions as you survive longer in your run!</p>
+
+    <div class="biomes-grid">
+      <div class="biome-card jurassic">
+        <div class="biome-icon">🌴</div>
+        <h3>Jurassic Epoch</h3>
+        <p>Lush prehistoric jungles filled with leaping pterodactyls, rolling boulders, and ancient palm trees.</p>
+      </div>
+
+      <div class="biome-card volcano">
+        <div class="biome-icon">🌋</div>
+        <h3>Volcanic Wasteland</h3>
+        <p>Survive active lava pits with music equalizer spout eruptions and falling fiery meteorites.</p>
+      </div>
+
+      <div class="biome-card ice">
+        <div class="biome-icon">❄️</div>
+        <h3>Ice Age Glaciers</h3>
+        <p>Cross frozen glaciers under glowing Northern Lights (Aurora Borealis) and swirling snowstorms.</p>
+      </div>
+
+      <div class="biome-card desert">
+        <div class="biome-icon">🏜️</div>
+        <h3>Sandstone Desert</h3>
+        <p>Run past ancient 3D Egyptian Pyramids under golden sunbeams and rolling tumbleweeds.</p>
+      </div>
+
+      <div class="biome-card forest">
+        <div class="biome-icon">🌲</div>
+        <h3>Enchanted Forest</h3>
+        <p>Misty woods filled with glowing pollen spores, giant mushrooms, and mossy crags.</p>
+      </div>
+
+      <div class="biome-card cyberpunk">
+        <div class="biome-icon">🏙️</div>
+        <h3>Cyberpunk Metropolis</h3>
+        <p>Futuristic neon skyline with holographic billboards, digital glitch surges, and synthwave vibes.</p>
+      </div>
+
+      <div class="biome-card space">
+        <div class="biome-icon">🚀</div>
+        <h3>Cosmos Zero-G</h3>
+        <p>Pick up Gravity Powerups to blast into deep space! Dodge falling meteor showers and catch coin rain.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .features-section {
+    padding: 80px 0;
+    border-top: 1px solid var(--border-card);
+  }
+
+  .section-title {
+    font-size: 36px;
+    font-weight: 900;
+    text-align: center;
+    margin-bottom: 12px;
+  }
+
+  .section-subtitle {
+    text-align: center;
+    color: var(--text-muted);
+    margin-bottom: 50px;
+  }
+
+  .biomes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 24px;
+  }
+
+  .biome-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-card);
+    border-radius: var(--radius-md);
+    padding: 28px;
+    transition: transform 0.3s ease, border-color 0.3s ease;
+  }
+
+  .biome-card:hover {
+    transform: translateY(-6px);
+    border-color: var(--accent-cyan);
+  }
+
+  .biome-icon {
+    font-size: 36px;
+    margin-bottom: 16px;
+  }
+
+  .biome-card h3 {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: var(--text-main);
+  }
+
+  .biome-card p {
+    color: var(--text-muted);
+    font-size: 14px;
+  }
+</style>
