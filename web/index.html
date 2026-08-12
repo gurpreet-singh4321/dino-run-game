@@ -19,7 +19,9 @@
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="Dino Run Epochs - Infinite Dino Runner Game Across Epochs & Biomes">
-
+  <meta name="google-adsense-account" content="ca-pub-6461062896377292">
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6461062896377292"
+     crossorigin="anonymous"></script>
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -32,8 +34,49 @@
 
   <title>Dino Run Epochs</title>
   <link rel="manifest" href="manifest.json">
+  <style>
+    .ad-left {
+      position: absolute;
+      top: 50%;
+      left: 0;
+      transform: translateY(-50%);
+      width: 160px;
+      height: 600px;
+      z-index: 9999;
+    }
+    .ad-right {
+      position: absolute;
+      top: 50%;
+      right: 0;
+      transform: translateY(-50%);
+      width: 160px;
+      height: 600px;
+      z-index: 9999;
+    }
+    @media (max-width: 1100px) {
+      .ad-left, .ad-right {
+        display: none;
+      }
+    }
+  </style>
 </head>
 <body>
+  <div class="ad-left">
+    <ins class="adsbygoogle"
+         style="display:inline-block;width:160px;height:600px"
+         data-ad-client="ca-pub-6461062896377292"></ins>
+    <script>
+         (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
+  </div>
+  <div class="ad-right">
+    <ins class="adsbygoogle"
+         style="display:inline-block;width:160px;height:600px"
+         data-ad-client="ca-pub-6461062896377292"></ins>
+    <script>
+         (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
+  </div>
   <script>
     window.addEventListener('message', function(event) {
       if (event.data && event.data.type === 'PAUSE_GAME') {
