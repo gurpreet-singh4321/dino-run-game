@@ -8,7 +8,7 @@ import '../game/game_state.dart';
 import '../skins/skin.dart';
 import '../skins/skin_registry.dart';
 import '../managers/audio_manager.dart';
-import '../utils/colors.dart';
+
 import '../utils/vibration_util.dart';
 import 'obstacle.dart';
 import 'falling_stone.dart';

@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
-import 'package:flame/flame.dart';
+
 import 'package:flame/game.dart';
 import 'package:flame/events.dart';
 
