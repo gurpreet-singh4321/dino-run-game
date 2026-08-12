@@ -25,12 +25,23 @@ class RiveDinoSkin extends CharacterSkin {
   BooleanInput? _isRunning;
   
   bool _isLoaded = false;
+  
+  static rive.File? _cachedRiveFile;
+
+  static Future<void> preload() async {
+    try {
+      _cachedRiveFile = await rive.File.asset(
+        'assets/dino.riv',
+        riveFactory: rive.Factory.flutter,
+      );
+    } catch (_) {}
+  }
 
   void load() async {
     if (_isLoaded) return;
     _isLoaded = true;
     try {
-      final riveFile = await rive.File.asset(
+      final riveFile = _cachedRiveFile ?? await rive.File.asset(
         'assets/dino.riv',
         riveFactory: rive.Factory.flutter,
       );

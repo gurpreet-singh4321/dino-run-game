@@ -71,9 +71,6 @@ class DinoGame extends FlameGame with HasCollisionDetection, TapCallbacks, PanDe
     await AudioManager.init();
     AudioManager.playTitleBgm();
 
-    // Preload images
-    await Flame.images.load('dino_sprite.png');
-
     // Background sky
     add(SkyBackground());
 

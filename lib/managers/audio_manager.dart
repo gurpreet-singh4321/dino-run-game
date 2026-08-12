@@ -13,6 +13,15 @@ class AudioManager {
 
   static double get volume => _currentVolume;
 
+  static Future<void> preloadAll() async {
+    await FlameAudio.audioCache.loadAll([
+      'pixel_jump_title.mp3',
+      'one_more_try.mp3',
+      'pixel_jump_1.mp3',
+      'pixel_jump.mp3'
+    ]);
+  }
+
   static Future<void> init() async {
     if (_initialized) return;
     _initialized = true;

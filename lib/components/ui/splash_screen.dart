@@ -1,9 +1,11 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flame/game.dart';
+import 'package:flame/flame.dart';
 import '../../game/dino_game.dart';
 import '../../managers/coin_manager.dart';
 import '../../managers/audio_manager.dart';
+import '../../skins/rive_dino_skin.dart';
 import 'pause_menu.dart';
 import 'settings_dialog.dart';
 
@@ -52,9 +54,21 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     );
 
     _scaleController.forward();
-    _progressController.forward().then((_) {
+    
+    Future.wait([
+      _progressController.forward(),
+      _preloadAssets(),
+    ]).then((_) {
       _navigateToGame();
     });
+  }
+
+  Future<void> _preloadAssets() async {
+    try {
+      await Flame.images.load('dino_sprite.png');
+      await AudioManager.preloadAll();
+      await RiveDinoSkin.preload();
+    } catch (_) {}
   }
 
   void _navigateToGame() {
