@@ -23,6 +23,18 @@
   <meta name="google-adsense-account" content="ca-pub-6461062896377292">
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6461062896377292"
      crossorigin="anonymous"></script>
+  <!-- Vercel Speed Insights -->
+  <script>
+    window.si = window.si || function () { (window.siq = window.siq || []).push(arguments); };
+  </script>
+  <script defer src="/_vercel/speed-insights/script.js"></script>
+
+  <!-- Vercel Web Analytics -->
+  <script>
+    window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+  </script>
+  <script defer src="/_vercel/insights/script.js"></script>
+
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -36,8 +48,94 @@
   <title>Dino Run Epochs</title>
   <link rel="manifest" href="manifest.json">
 
+  <!-- Preconnect & Preload Emoji and Game Fonts to eliminate pop-in -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&family=Roboto:wght@400;700;900&display=swap" rel="stylesheet">
+
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background-color: #000;
+      overflow: hidden;
+    }
+
+    .ad-banner {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 160px;
+      height: 600px;
+      z-index: 9999;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .ad-banner.left {
+      left: 10px;
+    }
+
+    .ad-banner.right {
+      right: 10px;
+    }
+
+    flutter-view {
+      position: absolute !important;
+      left: 180px !important;
+      right: 180px !important;
+      width: calc(100% - 360px) !important;
+      height: 100% !important;
+    }
+
+    @media (max-width: 1100px) {
+      .ad-banner {
+        display: none !important;
+      }
+      flutter-view {
+        left: 0 !important;
+        right: 0 !important;
+        width: 100% !important;
+      }
+    }
+  </style>
 </head>
 <body>
+  <!-- Hidden DOM element forces browser to eagerly fetch and cache Noto Color Emoji font at page load -->
+  <div style="font-family: 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif; position: absolute; left: -9999px; top: -9999px; opacity: 0; pointer-events: none;" aria-hidden="true">
+    🪙💰🏆❤️🛡️⭐🚀🏜️🌧️🌲❄️🌌🔥🌋☁️🏔️🌊🐟🌈🐉🦖🦕🎮🎵🔊🔇⚙️🎲🌍🗺️✨🎪🌑🌙☀️⛈️🪐🌠💀👑🎭🎨🧪🔬💊🧬🌸🍄🦴🐊🦎🐢🦏🐘🦣🐆🦁🐺🐍🦅🦇🐝🦋🐛🐌🐙🦑🐳🐠🦈🐋
+  </div>
+
+  <!-- Left Ad Banner -->
+  <div class="ad-banner left">
+    <!-- dino web -->
+    <ins class="adsbygoogle"
+         style="display:block; width:160px; height:600px"
+         data-ad-client="ca-pub-6461062896377292"
+         data-ad-slot="8999529758"
+         data-ad-format="auto"
+         data-full-width-responsive="true"></ins>
+    <script>
+         (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
+  </div>
+
+  <!-- Right Ad Banner -->
+  <div class="ad-banner right">
+    <!-- dino web -->
+    <ins class="adsbygoogle"
+         style="display:block; width:160px; height:600px"
+         data-ad-client="ca-pub-6461062896377292"
+         data-ad-slot="8999529758"
+         data-ad-format="auto"
+         data-full-width-responsive="true"></ins>
+    <script>
+         (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
+  </div>
 
   <script>
     window.addEventListener('message', function(event) {
