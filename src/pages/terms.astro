@@ -1,0 +1,102 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+
+const lastUpdated = "August 22, 2026";
+---
+
+<Layout 
+  title="Terms of Service | Dino Run: Epochs" 
+  description="Read the official Terms of Service and rules for playing Dino Run: Epochs. Understand usage rights, intellectual property, and community guidelines."
+>
+  <Header activePage="terms" />
+
+  <main class="content-page">
+    <div class="section-container">
+      <div class="content-hero">
+        <span class="badge">Legal Agreement</span>
+        <h1>Terms of <span class="gradient-text">Service</span></h1>
+        <p>Please review the rules and guidelines governing your access to and play of Dino Run: Epochs.</p>
+        <p style="font-size: 14px; color: var(--text-dim); margin-top: 10px;">Effective Date: {lastUpdated}</p>
+      </div>
+
+      <div class="content-body">
+        <h2>1. Acceptance of Terms</h2>
+        <p>
+          By accessing, browsing, or playing <strong>Dino Run: Epochs</strong> via our website (<a href="https://dino-run-epochs.vercel.app" style="color: var(--accent-cyan);">dino-run-epochs.vercel.app</a>), you acknowledge that you have read, understood, and agree to be bound by these Terms of Service ("Terms") and our <a href="/privacy" style="color: var(--accent-cyan);">Privacy Policy</a>.
+        </p>
+        <p>
+          If you do not agree with any part of these Terms, you must not access or play the game.
+        </p>
+
+        <h2>2. License to Play & Intellectual Property</h2>
+        <p>
+          We grant you a personal, non-exclusive, non-transferable, revocable license to access and play Dino Run: Epochs for personal, non-commercial entertainment purposes through a compatible web browser.
+        </p>
+        <div class="content-card">
+          <h3>Proprietary Rights</h3>
+          <p>
+            All game mechanics, original sprite animations, custom sound effects, soundtrack compositions, procedural generation algorithms, source code, logos, visual designs, and written documentation are the exclusive intellectual property of the creators of Dino Run: Epochs.
+          </p>
+          <p>
+            You agree not to modify, reverse engineer, decompile, extract sprites or audio assets, redistribute, resell, or exploit any component of the game without express prior written consent.
+          </p>
+        </div>
+
+        <h2>3. Fair Play and User Conduct</h2>
+        <p>To preserve a fun and competitive experience for everyone, you agree to adhere to the following rules:</p>
+        <ul>
+          <li><strong>No Cheating or Exploiting:</strong> You will not use automated scripts, bots, memory injection tools, browser extensions, or malicious software to manipulate game physics, coin balances, or high scores.</li>
+          <li><strong>No Service Disruption:</strong> You will not attempt to overload our hosting infrastructure, flood network traffic, or interfere with other players' enjoyment of the game.</li>
+          <li><strong>No Unauthorized Mirroring:</strong> You may not iframe or embed our game on commercial third-party portals without proper authorization and attribution.</li>
+        </ul>
+
+        <h2>4. In-Game Currency and Virtual Items</h2>
+        <p>
+          Dino Run: Epochs features virtual gold coins and unlockable cosmetic skins (e.g., Cyber Raptor, Astro Dino, Lava Golem):
+        </p>
+        <ul>
+          <li>All virtual items and coins have zero real-world monetary value. They cannot be exchanged, redeemed, or refunded for real currency, goods, or services.</li>
+          <li>In-game currency is earned strictly through gameplay and stored locally in your browser session.</li>
+          <li>We reserve the right to rebalance coin costs, adjust skin attributes, or introduce new cosmetic unlockables at any time without liability.</li>
+        </ul>
+
+        <h2>5. Disclaimer of Warranties</h2>
+        <p>
+          Dino Run: Epochs is provided on an <strong>"AS IS"</strong> and <strong>"AS AVAILABLE"</strong> basis without warranties of any kind, whether express or implied.
+        </p>
+        <div class="info-callout">
+          <p>We do not guarantee that the game will operate uninterrupted, bug-free, or compatible with every browser hardware configuration, nor do we guarantee that local browser scores will be preserved if you clear your browser cache.</p>
+        </div>
+
+        <h2>6. Limitation of Liability</h2>
+        <p>
+          To the maximum extent permitted by applicable law, in no event shall the creators, developers, or affiliates of Dino Run: Epochs be liable for any indirect, incidental, special, consequential, or punitive damages arising from your access to or inability to access the game.
+        </p>
+
+        <h2>7. Third-Party Links & Advertisements</h2>
+        <p>
+          Our Website may display advertisements served by Google AdSense and link to third-party websites or services. We are not responsible for the content, privacy policies, or practices of any third-party websites. Your interactions with advertisers are solely between you and the respective third party.
+        </p>
+
+        <h2>8. Modifications to the Service and Terms</h2>
+        <p>
+          We reserve the right to modify, suspend, or discontinue any aspect of the game, including biomes, mechanics, or features, at any time without notice. We may also revise these Terms from time to time. Continued use of the game following any changes constitutes acceptance of the modified Terms.
+        </p>
+
+        <h2>9. Contact & Inquiries</h2>
+        <p>
+          For any legal or licensing inquiries regarding these Terms of Service, please contact us at:
+        </p>
+        <div class="content-card">
+          <p><strong>Dino Run: Epochs Legal Team</strong></p>
+          <p>Email: <a href="mailto:legal@dinorunepochs.com" style="color: var(--accent-cyan);">legal@dinorunepochs.com</a></p>
+          <p>Support Form: <a href="/contact" style="color: var(--accent-cyan);">Contact & Support Page</a></p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <Footer />
+</Layout>

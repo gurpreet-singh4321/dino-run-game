@@ -3,51 +3,65 @@
 
 <section id="biomes" class="features-section">
   <div class="section-container">
-    <h2 class="section-title">EXPLORE 7 <span class="gradient-text">TIME EPOCHS</span></h2>
-    <p class="section-subtitle">Experience dynamic environment transitions as you survive longer in your run!</p>
+    <div class="section-header">
+      <span class="badge">Dynamic World Progression</span>
+      <h2 class="section-title">EXPLORE 7 <span class="gradient-text">TIME EPOCHS</span></h2>
+      <p class="section-subtitle">Experience dynamic environment transitions, unique hazards, and changing gravity as you survive longer!</p>
+    </div>
 
     <div class="biomes-grid">
-      <div class="biome-card jurassic">
+      <a href="/epochs#jurassic" class="biome-card jurassic">
         <div class="biome-icon">🌴</div>
-        <h3>Jurassic Epoch</h3>
-        <p>Lush prehistoric jungles filled with leaping pterodactyls, rolling boulders, and ancient palm trees.</p>
-      </div>
+        <h3>Jurassic Dawn</h3>
+        <p>Lush prehistoric jungles filled with soaring pterodactyls, rolling boulders, and ancient palm trees.</p>
+        <span class="explore-link">Explore Era & Hazards →</span>
+      </a>
 
-      <div class="biome-card volcano">
+      <a href="/epochs#volcano" class="biome-card volcano">
         <div class="biome-icon">🌋</div>
         <h3>Volcanic Wasteland</h3>
         <p>Survive active lava pits with music equalizer spout eruptions and falling fiery meteorites.</p>
-      </div>
+        <span class="explore-link">Explore Era & Hazards →</span>
+      </a>
 
-      <div class="biome-card ice">
+      <a href="/epochs#ice" class="biome-card ice">
         <div class="biome-icon">❄️</div>
         <h3>Ice Age Glaciers</h3>
         <p>Cross frozen glaciers under glowing Northern Lights (Aurora Borealis) and swirling snowstorms.</p>
-      </div>
+        <span class="explore-link">Explore Era & Hazards →</span>
+      </a>
 
-      <div class="biome-card desert">
+      <a href="/epochs#desert" class="biome-card desert">
         <div class="biome-icon">🏜️</div>
         <h3>Sandstone Desert</h3>
-        <p>Run past ancient 3D Egyptian Pyramids under golden sunbeams and rolling tumbleweeds.</p>
-      </div>
+        <p>Run past ancient Egyptian Pyramids under golden sunbeams, heat hazes, and rolling tumbleweeds.</p>
+        <span class="explore-link">Explore Era & Hazards →</span>
+      </a>
 
-      <div class="biome-card forest">
+      <a href="/epochs#forest" class="biome-card forest">
         <div class="biome-icon">🌲</div>
-        <h3>Enchanted Forest</h3>
+        <h3>Enchanted Spore Forest</h3>
         <p>Misty woods filled with glowing pollen spores, giant mushrooms, and mossy crags.</p>
-      </div>
+        <span class="explore-link">Explore Era & Hazards →</span>
+      </a>
 
-      <div class="biome-card cyberpunk">
+      <a href="/epochs#cyberpunk" class="biome-card cyberpunk">
         <div class="biome-icon">🏙️</div>
         <h3>Cyberpunk Metropolis</h3>
         <p>Futuristic neon skyline with holographic billboards, digital glitch surges, and synthwave vibes.</p>
-      </div>
+        <span class="explore-link">Explore Era & Hazards →</span>
+      </a>
 
-      <div class="biome-card space">
+      <a href="/epochs#cosmos" class="biome-card space">
         <div class="biome-icon">🚀</div>
         <h3>Cosmos Zero-G</h3>
-        <p>Pick up Gravity Powerups to blast into deep space! Dodge falling meteor showers and catch coin rain.</p>
-      </div>
+        <p>Blast into deep space! Dodge falling meteor showers, float with zero gravity, and catch coin rain.</p>
+        <span class="explore-link">Explore Era & Hazards →</span>
+      </a>
+    </div>
+
+    <div class="biomes-footer-cta">
+      <a href="/epochs" class="btn-secondary">📖 Read Complete Biomes & Lore Encyclopedia</a>
     </div>
   </div>
 </section>
@@ -58,23 +72,45 @@
     border-top: 1px solid var(--border-card);
   }
 
-  .section-title {
-    font-size: 36px;
-    font-weight: 900;
+  .section-header {
     text-align: center;
+    margin-bottom: 48px;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    padding: 5px 12px;
+    border-radius: 20px;
+    background: rgba(0, 229, 255, 0.1);
+    color: var(--accent-cyan);
+    border: 1px solid rgba(0, 229, 255, 0.25);
     margin-bottom: 12px;
   }
 
+  .section-title {
+    font-size: clamp(28px, 4vw, 40px);
+    font-weight: 900;
+    margin-bottom: 12px;
+    letter-spacing: -0.5px;
+  }
+
   .section-subtitle {
-    text-align: center;
     color: var(--text-muted);
-    margin-bottom: 50px;
+    font-size: 16px;
+    max-width: 680px;
+    margin: 0 auto;
   }
 
   .biomes-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 24px;
+    margin-bottom: 40px;
   }
 
   .biome-card {
@@ -82,22 +118,27 @@
     border: 1px solid var(--border-card);
     border-radius: var(--radius-md);
     padding: 28px;
-    transition: transform 0.3s ease, border-color 0.3s ease;
+    text-decoration: none;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
   }
 
   .biome-card:hover {
     transform: translateY(-6px);
     border-color: var(--accent-cyan);
+    box-shadow: 0 16px 36px rgba(0, 229, 255, 0.12);
   }
 
   .biome-icon {
-    font-size: 36px;
+    font-size: 38px;
     margin-bottom: 16px;
+    line-height: 1;
   }
 
   .biome-card h3 {
     font-size: 20px;
-    font-weight: 700;
+    font-weight: 800;
     margin-bottom: 8px;
     color: var(--text-main);
   }
@@ -105,5 +146,46 @@
   .biome-card p {
     color: var(--text-muted);
     font-size: 14px;
+    line-height: 1.6;
+    margin-bottom: 18px;
+    flex-grow: 1;
+  }
+
+  .explore-link {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--accent-cyan);
+    display: inline-flex;
+    align-items: center;
+    transition: transform 0.2s ease;
+  }
+
+  .biome-card:hover .explore-link {
+    transform: translateX(4px);
+  }
+
+  .biomes-footer-cta {
+    text-align: center;
+  }
+
+  .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-card);
+    color: #FFFFFF;
+    font-weight: 700;
+    font-size: 15px;
+    padding: 12px 28px;
+    border-radius: 30px;
+    text-decoration: none;
+    transition: all 0.2s ease;
+  }
+
+  .btn-secondary:hover {
+    background: rgba(0, 229, 255, 0.15);
+    border-color: var(--accent-cyan);
+    color: var(--accent-cyan);
   }
 </style>

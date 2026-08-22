@@ -1,0 +1,189 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+---
+
+<Layout 
+  title="Dino Run: Epochs Strategy Guide | Master Controls, Physics & High Scores" 
+  description="Master Dino Run: Epochs with our comprehensive gameplay guide. Learn jump physics, powerup synergies, obstacle timing, and 50,000+ high-score strategies."
+>
+  <Header activePage="guide" />
+
+  <main class="content-page">
+    <div class="section-container">
+      <div class="content-hero">
+        <span class="badge">Master Strategy Guide</span>
+        <h1>Ultimate <span class="gradient-text">Gameplay & Physics</span> Guide</h1>
+        <p>From jump physics and powerup synergies to biome survival tactics and 50,000+ score strategies—everything you need to dominate the leaderboards.</p>
+      </div>
+
+      <div class="content-body">
+        <div class="info-callout">
+          <p><strong>Quick Pro Tip:</strong> Dino Run: Epochs features <em>variable jump height</em>. A quick tap gives you a short hop over low rolling boulders, while holding the jump button propels your dinosaur to maximum altitude to clear tall obstacles and double-stacked hazards!</p>
+        </div>
+
+        <h2 id="controls">1. Master Controls Matrix (Desktop & Mobile)</h2>
+        <p>
+          Responsive inputs are the backbone of any precision platformer. Dino Run: Epochs is fully optimized for both desktop keyboard inputs and mobile touch interfaces:
+        </p>
+
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Action</th>
+                <th>Desktop / Keyboard</th>
+                <th>Mobile / Touch Screen</th>
+                <th>Tactical Application</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Jump / Hop</strong></td>
+                <td><kbd>Spacebar</kbd> or <kbd>↑ Arrow</kbd> or <kbd>W</kbd></td>
+                <td>Tap anywhere on the screen</td>
+                <td>Clear rocks, cacti, ground hazards, and leap between elevated platforms.</td>
+              </tr>
+              <tr>
+                <td><strong>Duck / Fast Fall</strong></td>
+                <td><kbd>↓ Arrow</kbd> or <kbd>S</kbd></td>
+                <td>Swipe Down on the screen</td>
+                <td>Duck beneath flying Pterodactyls and lasers; fast-fall to return quickly to solid ground.</td>
+              </tr>
+              <tr>
+                <td><strong>Double Jump</strong></td>
+                <td><kbd>Spacebar</kbd> × 2 in air</td>
+                <td>Double Tap in air</td>
+                <td>Available when the Winged Boots powerup is active; allows airborne trajectory correction.</td>
+              </tr>
+              <tr>
+                <td><strong>Pause Game</strong></td>
+                <td><kbd>P</kbd> or <kbd>Esc</kbd></td>
+                <td>Tap the Pause icon in toolbar</td>
+                <td>Freezes game loop without forfeiting your active score multiplier or coin streak.</td>
+              </tr>
+              <tr>
+                <td><strong>Fullscreen Mode</strong></td>
+                <td><kbd>F</kbd> key</td>
+                <td>Fullscreen Button in Toolbar</td>
+                <td>Expands viewport for maximum peripheral vision of incoming obstacles.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2>2. Jump Physics & Movement Mechanics</h2>
+        <p>
+          Mastering the jump physics is the key differentiator between a casual runner and an elite player reaching the deep Cosmos era.
+        </p>
+
+        <div class="content-card">
+          <h3>The Physics of the Arc</h3>
+          <ul>
+            <li><strong>Variable Height Dynamics:</strong> The engine checks how many frames the jump input is sustained. Releasing early truncates vertical velocity, allowing rapid descent. Use this for low boulders to avoid flying into high-altitude hazards.</li>
+            <li><strong>Ground Snapping & Apex Floats:</strong> At the peak of your jump, gravity dampens momentarily by 15%, giving you a tiny reaction window to survey incoming ground hazards.</li>
+            <li><strong>Down-Swipe Fast Falling:</strong> Pressing Duck while airborne instantly applies a 3.5× downward gravitational multiplier. If you misjudged a jump and see an airborne obstacle ahead, fast fall immediately to regain ground control!</li>
+          </ul>
+        </div>
+
+        <h2 id="powerups">3. Powerups & Collectibles Catalog</h2>
+        <p>
+          Scattered throughout every time epoch are glowing artifact powerups. Collecting these powerups grants temporary abilities that can save your life or exponentially multiply your score:
+        </p>
+
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Powerup Icon</th>
+                <th>Name</th>
+                <th>Duration</th>
+                <th>Effect & Tactical Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>🛡️</td>
+                <td><strong>Aegis Energy Shield</strong></td>
+                <td>1 Hit / 15s</td>
+                <td>Absorbs one fatal obstacle collision without terminating your run. When broken, grants 1.5 seconds of invulnerability frames (i-frames).</td>
+              </tr>
+              <tr>
+                <td>🧲</td>
+                <td><strong>Magnetic Dynamo</strong></td>
+                <td>12 Seconds</td>
+                <td>Generates a magnetic aura that pulls all gold coins within a 400px radius directly toward your dinosaur without having to risk dangerous jump paths.</td>
+              </tr>
+              <tr>
+                <td>⚡</td>
+                <td><strong>Chronos Multiplier (2X / 5X)</strong></td>
+                <td>10 Seconds</td>
+                <td>Doubles or quintuples all score accumulation points. Synergizes massively when transitioning across epoch boundaries.</td>
+              </tr>
+              <tr>
+                <td>🚀</td>
+                <td><strong>Cosmos Gravity Inverter</strong></td>
+                <td>Special</td>
+                <td>Appears near cosmic rifts. Inverts gravitational drag and enables zero-gravity gliding over vast chasms and meteor zones.</td>
+              </tr>
+              <tr>
+                <td>🪙</td>
+                <td><strong>Epoch Gold Coins</strong></td>
+                <td>Permanent</td>
+                <td>Collectable currency used in the character shop to unlock exotic dinosaur skins with custom animations.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2>4. Hazard & Obstacle Evasion Tactics</h2>
+        <p>
+          Each era introduces unique obstacle types that require distinct evasive patterns:
+        </p>
+
+        <div class="content-card">
+          <h3>Common Hazards & Countermeasures</h3>
+          <ul>
+            <li><strong>High-Altitude Pterodactyls (Jurassic & Forest):</strong> Do not jump! Stay grounded or tap Duck to slide safely underneath their wings.</li>
+            <li><strong>Mid-Altitude Flying Obstacles:</strong> Requires ducking or a precise low-hop timed right between their flight paths.</li>
+            <li><strong>Lava Spouts & Geysers (Volcano Epoch):</strong> Watch the warning glow on the ground 0.5 seconds before eruption. Time a full-height jump to clear the plume.</li>
+            <li><strong>Rolling Boulders (Desert & Ice Age):</strong> Moving faster than standard terrain. Jump slightly earlier than you would for static cactus hazards.</li>
+            <li><strong>Cosmic Asteroids (Space Epoch):</strong> Asteroids fall in staggered diagonals. Use small tap jumps to navigate the gaps between falling trajectories.</li>
+          </ul>
+        </div>
+
+        <h2 id="high-score-tips">5. Elite 50,000+ High-Score Strategies</h2>
+        <p>
+          Want to reach the top rank of the Global Leaderboards? Follow these five golden rules utilized by master runners:
+        </p>
+        <ol>
+          <li><strong>Look Ahead, Not at Your Dino:</strong> Fix your eyes on the right 25% of the screen. Looking directly at your character reduces your reaction window by over 60%!</li>
+          <li><strong>Prioritize Survival Over Coins:</strong> Gold coins are enticing, but never risk an awkward jump arc into an unseen obstacle for a single coin. Wait for the Magnetic Dynamo to grab tricky coins safely.</li>
+          <li><strong>Conserve Shields for High-Speed Eras:</strong> As game speed accelerates past 15,000 points, obstacles spawn with tighter margins. Having an active Energy Shield gives you vital breathing room.</li>
+          <li><strong>Master the Fast-Fall Reflex:</strong> Train yourself to tap the Duck button instinctively whenever you are floating dangerously close to an airborne hazard.</li>
+          <li><strong>Play in Fullscreen Landscape:</strong> Maximizing screen width gives your eyes 30% more horizontal reaction distance on desktop and mobile displays alike.</li>
+        </ol>
+
+        <div class="info-callout">
+          <p>Ready to put these strategies into practice? <a href="/#play" style="color: var(--accent-cyan); font-weight: 700;">Jump back into the game now</a> and see how far you can run across the 7 Epochs!</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <Footer />
+</Layout>
+
+<style>
+  kbd {
+    background: #1E293B;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    padding: 3px 6px;
+    font-size: 13px;
+    font-family: var(--font-mono);
+    color: var(--accent-cyan);
+    box-shadow: 0 2px 0 rgba(0, 0, 0, 0.4);
+  }
+</style>
