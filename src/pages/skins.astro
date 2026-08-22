@@ -1,0 +1,241 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+
+const skins = [
+  {
+    id: "default_dino",
+    name: "Original Emerald Dino",
+    rarity: "Starter",
+    badgeColor: "#00E676",
+    icon: "🦖",
+    cost: "Free (Unlocked)",
+    lore: "The iconic green velociraptor who started it all. Agile, fearless, and ready to sprint across millions of years of evolutionary history.",
+    features: ["Classic sprint animations", "Responsive jump physics", "Prehistoric grass trail particles"]
+  },
+  {
+    id: "classic_rex",
+    name: "Classic Pixel Rex",
+    rarity: "Retro Classic",
+    badgeColor: "#94A3B8",
+    icon: "🦕",
+    cost: "150 🪙 Coins",
+    lore: "A loving homage to the legendary monochrome pixel runner that kept the world entertained during offline internet blackouts.",
+    features: ["Retro 8-bit aesthetic", "Monochrome pixel shader", "Nostalgic sound effects"]
+  },
+  {
+    id: "mecha_dino",
+    name: "Mecha Cyber Raptor",
+    rarity: "Epic",
+    badgeColor: "#00E5FF",
+    icon: "🤖",
+    cost: "350 🪙 Coins",
+    lore: "Forged in the neon-lit factories of the Cyberpunk 2099 metropolis. Equipped with titanium alloy plating, a pulsating HUD visor, and hydraulic thrusters.",
+    features: ["Neon cyan glow aura", "Hydraulic jump sounds", "Cyber-trail visual glitch effects"]
+  },
+  {
+    id: "ninja_dino",
+    name: "Shadow Shinobi Dino",
+    rarity: "Epic",
+    badgeColor: "#E040FB",
+    icon: "🥷",
+    cost: "500 🪙 Coins",
+    lore: "Trained in the mystical shadows of the Enchanted Spore Forest. Executes high-velocity leaps and silent fast-falls with smoke bomb flourishes.",
+    features: ["Shadow mist particle trail", "Silent step audio feedback", "Midnight ninja headband bandana"]
+  },
+  {
+    id: "golden_king",
+    name: "Golden King Monarch",
+    rarity: "Legendary",
+    badgeColor: "#FFD54F",
+    icon: "👑",
+    cost: "1,000 🪙 Coins",
+    lore: "The sovereign ruler of the Sandstone Desert Empire. Clad in pure 24K gold armor with an ornate diamond-encrusted royal crown.",
+    features: ["Sparkling golden dust aura", "Golden coin collection multiplier effect", "Regal victory fanfare on high scores"]
+  },
+  {
+    id: "cosmic_astro",
+    name: "Cosmic Astro Dino",
+    rarity: "Mythic",
+    badgeColor: "#818CF8",
+    icon: "🚀",
+    cost: "1,500 🪙 Coins",
+    lore: "A deep space explorer equipped with an airtight EVA pressurized astronaut suit and ion micro-boosters to traverse the Cosmos Zero-G frontier.",
+    features: ["Star-dust particle thrusters", "Zero-G float animation tuning", "Astronaut gold-tint visor reflections"]
+  }
+];
+---
+
+<Layout 
+  title="Dinosaur Skins & Character Gallery | Dino Run: Epochs" 
+  description="Explore all unlockable dinosaur skins in Dino Run: Epochs. From Mecha Cyber Raptors to Cosmic Astronauts and Golden Kings, find unlock requirements and lore."
+>
+  <Header activePage="skins" />
+
+  <main class="content-page">
+    <div class="section-container">
+      <div class="content-hero">
+        <span class="badge">Character Roster</span>
+        <h1>Dinosaur <span class="gradient-text">Skins & Roster</span></h1>
+        <p>Unlock custom prehistoric, cyberpunk, and cosmic runner skins using the gold coins you earn in your runs!</p>
+      </div>
+
+      <div class="content-body">
+        <div class="info-callout">
+          <p><strong>How to Unlock Skins:</strong> Collect gold coins during your runs across any of the 7 biomes. In the in-game shop, select your favorite skin to unlock it permanently in your browser session!</p>
+        </div>
+
+        <div class="skins-grid">
+          {skins.map((skin) => (
+            <div class="content-card skin-card">
+              <div class="skin-card-header">
+                <div class="skin-avatar">{skin.icon}</div>
+                <div class="skin-title-box">
+                  <span class="rarity-badge" style={`color: ${skin.badgeColor}; border-color: ${skin.badgeColor}40; background: ${skin.badgeColor}15;`}>
+                    {skin.rarity}
+                  </span>
+                  <h3>{skin.name}</h3>
+                  <span class="skin-cost">{skin.cost}</span>
+                </div>
+              </div>
+
+              <p class="skin-lore">{skin.lore}</p>
+
+              <div class="skin-features">
+                <h4>✨ Custom Attributes:</h4>
+                <ul>
+                  {skin.features.map((feat) => (
+                    <li>{feat}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <h2>Earning Coins Fast</h2>
+        <div class="content-card">
+          <p>Looking to unlock the legendary <strong>Golden King</strong> or <strong>Cosmic Astro Dino</strong> faster? Here are top coin-farming tips:</p>
+          <ul>
+            <li><strong>Grab the Magnetic Dynamo:</strong> This powerup sweeps up 100% of nearby coins automatically, allowing you to focus on dodging obstacles.</li>
+            <li><strong>Survive to the Sandstone Desert & Cyberpunk Eras:</strong> Later eras feature dense multi-row coin waves that yield 3× more coins per minute than the starting era.</li>
+            <li><strong>Look Out for Coin Rainbows:</strong> Transitioning between eras frequently spawns glowing coin arcs over the terrain!</li>
+          </ul>
+        </div>
+
+        <div class="info-callout">
+          <p>Ready to customize your runner? <a href="/#play" style="color: var(--accent-cyan); font-weight: 700;">Play now and start collecting coins!</a></p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <Footer />
+</Layout>
+
+<style>
+  .skins-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+    gap: 24px;
+    margin: 36px 0;
+  }
+
+  .skin-card {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    transition: transform 0.3s ease, border-color 0.3s ease;
+  }
+
+  .skin-card:hover {
+    transform: translateY(-6px);
+    border-color: var(--accent-cyan);
+    box-shadow: 0 16px 36px rgba(0, 229, 255, 0.12);
+  }
+
+  .skin-card-header {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--border-subtle);
+    padding-bottom: 16px;
+  }
+
+  .skin-avatar {
+    font-size: 44px;
+    width: 76px;
+    height: 76px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-card);
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .skin-title-box h3 {
+    font-size: 19px;
+    font-weight: 800;
+    color: #FFFFFF;
+    margin: 4px 0 6px;
+  }
+
+  .rarity-badge {
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 3px 10px;
+    border-radius: 12px;
+    border: 1px solid;
+    display: inline-block;
+  }
+
+  .skin-cost {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--accent-gold);
+  }
+
+  .skin-lore {
+    color: var(--text-muted);
+    font-size: 14.5px;
+    line-height: 1.6;
+    margin-bottom: 16px;
+    flex-grow: 1;
+  }
+
+  .skin-features {
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: var(--radius-sm);
+    padding: 14px;
+  }
+
+  .skin-features h4 {
+    font-size: 13px;
+    font-weight: 800;
+    color: #E2E8F0;
+    margin-bottom: 8px;
+  }
+
+  .skin-features ul {
+    margin: 0 0 0 16px;
+    padding: 0;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  .skin-features li {
+    margin-bottom: 4px;
+  }
+
+  @media (max-width: 480px) {
+    .skins-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

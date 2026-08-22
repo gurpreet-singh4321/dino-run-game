@@ -2,19 +2,73 @@
 ---
 
 <footer class="footer">
-  <div class="section-container footer-content">
-    <div class="footer-left">
-      <div class="logo-box">
-        <span class="logo-icon">🦖</span>
-        <span class="logo-title">DINO RUN</span>
-        <span class="epochs-badge">EPOCHS</span>
+  <div class="section-container">
+    <div class="footer-grid">
+      <!-- Col 1: Brand & Mission -->
+      <div class="footer-col brand-col">
+        <div class="logo-box">
+          <span class="logo-icon">🦖</span>
+          <span class="logo-title">DINO RUN</span>
+          <span class="epochs-badge">EPOCHS</span>
+        </div>
+        <p class="brand-desc">
+          The next evolution of 2D endless runners. Run through prehistoric eras, volcanic wastelands, cyberpunk skylines, and deep zero-g space with smooth 60 FPS physics.
+        </p>
+        <div class="tech-badge">
+          <span>⚡ Built with Flutter, Flame & Astro</span>
+        </div>
       </div>
-      <p>© 2026 Dino Run Epochs. Built with Astro JS & Flame Engine.</p>
+
+      <!-- Col 2: Play & Biomes -->
+      <div class="footer-col">
+        <h4>🎮 Biomes & Epochs</h4>
+        <ul class="footer-links">
+          <li><a href="/#play">Play Online Now</a></li>
+          <li><a href="/epochs#jurassic">🌴 Jurassic Epoch</a></li>
+          <li><a href="/epochs#volcano">🌋 Volcanic Wasteland</a></li>
+          <li><a href="/epochs#ice">❄️ Ice Age Glaciers</a></li>
+          <li><a href="/epochs#desert">🏜️ Sandstone Desert</a></li>
+          <li><a href="/epochs#cyberpunk">🏙️ Cyberpunk Metropolis</a></li>
+          <li><a href="/epochs#cosmos">🚀 Cosmos Zero-G</a></li>
+        </ul>
+      </div>
+
+      <!-- Col 3: Guides & Content -->
+      <div class="footer-col">
+        <h4>📖 Guides & Strategies</h4>
+        <ul class="footer-links">
+          <li><a href="/guide">Complete Strategy Guide</a></li>
+          <li><a href="/guide#controls">Controls & Movement</a></li>
+          <li><a href="/guide#powerups">Powerups Catalog</a></li>
+          <li><a href="/skins">Dinosaur Skins & Roster</a></li>
+          <li><a href="/faq">Frequently Asked Questions</a></li>
+          <li><a href="/guide#high-score-tips">50K+ High Score Tactics</a></li>
+        </ul>
+      </div>
+
+      <!-- Col 4: Legal & Contact -->
+      <div class="footer-col">
+        <h4>⚖️ Legal & Support</h4>
+        <ul class="footer-links">
+          <li><a href="/about">About the Project</a></li>
+          <li><a href="/privacy">Privacy Policy</a></li>
+          <li><a href="/terms">Terms of Service</a></li>
+          <li><a href="/contact">Contact Us & Support</a></li>
+          <li><a href="/contact#bug-report">Report a Bug</a></li>
+        </ul>
+      </div>
     </div>
-    <div class="footer-right">
-      <a href="#play">Play Game</a>
-      <a href="#biomes">Biomes</a>
-      <a href="#leaderboard">Leaderboard</a>
+
+    <!-- Bottom Copyright Bar -->
+    <div class="footer-bottom">
+      <p>© {new Date().getFullYear()} Dino Run: Epochs. All rights reserved. Play free in your browser on desktop and mobile.</p>
+      <div class="bottom-links">
+        <a href="/privacy">Privacy Policy</a>
+        <span>•</span>
+        <a href="/terms">Terms of Service</a>
+        <span>•</span>
+        <a href="/contact">Support</a>
+      </div>
     </div>
   </div>
 </footer>
@@ -22,66 +76,145 @@
 <style>
   .footer {
     border-top: 1px solid var(--border-card);
-    padding: 40px 0;
-    background: rgba(0, 0, 0, 0.5);
+    padding: 70px 0 30px;
+    background: #05080F;
+    margin-top: auto;
   }
 
-  .footer-content {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 20px;
+  .footer-grid {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr 1fr 1fr;
+    gap: 40px;
+    margin-bottom: 50px;
   }
 
-  .logo-box {
+  .brand-col .logo-box {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
+    margin-bottom: 16px;
   }
 
   .logo-icon {
-    font-size: 22px;
-    line-height: 1;
+    font-size: 24px;
   }
 
   .logo-title {
-    font-size: 18px;
+    font-size: 20px;
     font-weight: 900;
     letter-spacing: 1.2px;
     color: #FFFFFF;
-    line-height: 1;
   }
 
   .epochs-badge {
     font-size: 10px;
     font-weight: 800;
     background: linear-gradient(135deg, var(--accent-cyan), var(--accent-magenta));
-    color: #0B0F19;
+    color: #070A12;
     padding: 3px 8px;
-    border-radius: 16px;
-    line-height: 1;
+    border-radius: 14px;
   }
 
-  .footer-left p {
+  .brand-desc {
     color: var(--text-muted);
-    font-size: 13px;
-    margin-top: 8px;
+    font-size: 14px;
+    line-height: 1.65;
+    margin-bottom: 18px;
+    max-width: 340px;
   }
 
-  .footer-right {
+  .tech-badge {
+    display: inline-flex;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent-cyan);
+    background: rgba(0, 229, 255, 0.08);
+    border: 1px solid rgba(0, 229, 255, 0.2);
+    padding: 5px 12px;
+    border-radius: 20px;
+  }
+
+  .footer-col h4 {
+    font-size: 16px;
+    font-weight: 800;
+    color: #FFFFFF;
+    margin-bottom: 18px;
+    letter-spacing: 0.5px;
+  }
+
+  .footer-links {
+    list-style: none;
+    padding: 0;
+    margin: 0;
     display: flex;
-    gap: 20px;
+    flex-direction: column;
+    gap: 10px;
   }
 
-  .footer-right a {
+  .footer-links a {
     color: var(--text-muted);
     text-decoration: none;
     font-size: 14px;
+    transition: color 0.2s ease, transform 0.2s ease;
+    display: inline-block;
+  }
+
+  .footer-links a:hover {
+    color: var(--accent-cyan);
+    transform: translateX(3px);
+  }
+
+  .footer-bottom {
+    border-top: 1px solid var(--border-subtle);
+    padding-top: 25px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .footer-bottom p {
+    color: var(--text-dim);
+    font-size: 13px;
+  }
+
+  .bottom-links {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+  }
+
+  .bottom-links a {
+    color: var(--text-dim);
+    text-decoration: none;
     transition: color 0.2s ease;
   }
 
-  .footer-right a:hover {
+  .bottom-links a:hover {
     color: var(--accent-cyan);
+  }
+
+  .bottom-links span {
+    color: var(--text-dim);
+  }
+
+  @media (max-width: 980px) {
+    .footer-grid {
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+    }
+  }
+
+  @media (max-width: 580px) {
+    .footer-grid {
+      grid-template-columns: 1fr;
+      gap: 30px;
+    }
+    .footer-bottom {
+      flex-direction: column;
+      text-align: center;
+    }
   }
 </style>

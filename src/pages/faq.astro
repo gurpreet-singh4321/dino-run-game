@@ -1,0 +1,137 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+
+const faqs = [
+  {
+    q: "How do I play Dino Run: Epochs?",
+    a: "Press the Spacebar, Up Arrow, or tap your mobile screen to make your dinosaur jump over obstacles. Press the Down Arrow or swipe down to duck under flying pterodactyls or fast-fall back to the ground. Collect gold coins and survive as long as possible to journey through all 7 distinct Time Epochs!"
+  },
+  {
+    q: "How do I unlock new Time Epochs and Biomes?",
+    a: "Biomes unlock dynamically based on your cumulative survival score in a single run: Jurassic Dawn (0 pts), Volcanic Wasteland (3,500 pts), Ice Age Glaciers (7,500 pts), Sandstone Desert (12,500 pts), Enchanted Spore Forest (18,000 pts), Cyberpunk Metropolis (25,000 pts), and Cosmos Zero-G (35,000+ pts)."
+  },
+  {
+    q: "Why do I need to play in Fullscreen Landscape mode on mobile?",
+    a: "Dino Run: Epochs is an ultra-fast precision side-scroller. Playing in landscape orientation gives you a wide aspect ratio, allowing you to see incoming obstacles and hazards with enough reaction time. When opening the game on mobile, simply tap 'Play in Fullscreen' and rotate your device horizontally."
+  },
+  {
+    q: "How does the game save my high score and unlocked skins?",
+    a: "Your high scores, total gold coin balance, and unlocked dinosaur skins are securely saved directly inside your browser's local storage (LocalStorage). As long as you don't clear your browser cache or site data, your progress will be ready for your next session!"
+  },
+  {
+    q: "Is Dino Run: Epochs completely free to play?",
+    a: "Yes! Dino Run: Epochs is 100% free to play with no hidden paywalls, subscription fees, or pay-to-win microtransactions. All skins and features are unlockable purely through in-game skill and coin collection."
+  },
+  {
+    q: "How do I fix audio not playing on Safari or iOS?",
+    a: "Modern web browsers (especially Apple Safari on iOS and macOS) block audio autoplay until a user interacts with the page. Simply tap the game screen once to unlock the Web Audio context, and make sure your device is not in silent/vibrate hardware mode."
+  },
+  {
+    q: "What devices and browsers are supported?",
+    a: "Dino Run: Epochs is built using hardware-accelerated CanvasKit and WebGL. It is fully supported on modern versions of Google Chrome, Apple Safari, Mozilla Firefox, Microsoft Edge, Opera, and Brave across Windows, macOS, Linux, Android, and iOS devices."
+  },
+  {
+    q: "What do the glowing powerups do?",
+    a: "Powerups grant temporary super-abilities: the Blue Aegis Shield protects you from one collision; the Golden Dynamo Magnet pulls all nearby coins to you; the 2X/5X Chronos Multiplier multiplies your score gain; and the Gravity Inverter allows weightless gliding across cosmic chasms."
+  },
+  {
+    q: "How does the variable jump mechanic work?",
+    a: "Holding down the Spacebar or keeping your finger on the screen makes the dinosaur jump higher and float longer. Tapping quickly produces a short, fast hop ideal for clearing low rolling boulders without flying into airborne birds."
+  },
+  {
+    q: "When will online global cloud leaderboards launch?",
+    a: "Cloud multiplayer leaderboards and daily challenge seeds are currently in development for our next major release! In the meantime, your local personal bests are tracked on the home leaderboard."
+  },
+  {
+    q: "How can I report a bug or suggest a new dinosaur skin?",
+    a: "We welcome player feedback! You can email our development team at support@dinorunepochs.com or visit our Contact & Support Page to submit a bug report or biome suggestion."
+  }
+];
+---
+
+<Layout 
+  title="Frequently Asked Questions & Help | Dino Run: Epochs" 
+  description="Got questions about Dino Run: Epochs? Find answers regarding controls, biome unlocks, mobile fullscreen mode, audio settings, and performance tips."
+>
+  <Header activePage="faq" />
+
+  <main class="content-page">
+    <div class="section-container">
+      <div class="content-hero">
+        <span class="badge">Player Help Center</span>
+        <h1>Frequently Asked <span class="gradient-text">Questions</span></h1>
+        <p>Everything you need to know about game mechanics, mobile settings, audio troubleshooting, and upcoming features.</p>
+      </div>
+
+      <div class="content-body">
+        <div class="faq-list">
+          {faqs.map((faq, index) => (
+            <div class="content-card faq-card">
+              <h3>
+                <span class="faq-number">#{index + 1}</span> {faq.q}
+              </h3>
+              <p>{faq.a}</p>
+            </div>
+          ))}
+        </div>
+
+        <h2>Still Have Questions?</h2>
+        <div class="content-card">
+          <p>
+            Can't find the answer you're looking for? Reach out directly to our support crew via our <a href="/contact" style="color: var(--accent-cyan); font-weight: 700;">Contact Us Page</a> or email us at <a href="mailto:support@dinorunepochs.com" style="color: var(--accent-cyan); font-weight: 700;">support@dinorunepochs.com</a>.
+          </p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <Footer />
+</Layout>
+
+<style>
+  .faq-list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin: 32px 0;
+  }
+
+  .faq-card {
+    margin: 0;
+    transition: transform 0.2s ease, border-color 0.2s ease;
+  }
+
+  .faq-card:hover {
+    transform: translateY(-3px);
+    border-color: var(--accent-cyan);
+  }
+
+  .faq-card h3 {
+    font-size: 19px;
+    font-weight: 800;
+    color: #FFFFFF;
+    margin: 0 0 12px;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+
+  .faq-number {
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--accent-cyan);
+    background: rgba(0, 229, 255, 0.1);
+    padding: 2px 8px;
+    border-radius: 6px;
+    flex-shrink: 0;
+  }
+
+  .faq-card p {
+    color: var(--text-muted);
+    font-size: 15.5px;
+    line-height: 1.7;
+    margin: 0;
+  }
+</style>

@@ -7,12 +7,452 @@ import Leaderboard from '../components/Leaderboard.astro';
 import Footer from '../components/Footer.astro';
 ---
 
-<Layout title="Dino Run: Epochs | Play Free Online Endless Runner Game (Astro JS)">
-	<Header />
+<Layout 
+  title="Dino Run: Epochs | Play Free Online 2D Dinosaur Endless Runner"
+  description="Play Dino Run: Epochs online for free! Dash across 7 unique biomes—Jurassic, Volcanic, Ice Age, Desert, Cyberpunk & Cosmos Zero-G with smooth 60 FPS physics."
+>
+	<Header activePage="play" />
 	<main>
 		<GamePlayer />
+		
+		<!-- Section 1: How to Play & Controls Matrix -->
+		<section id="how-to-play" class="info-section">
+			<div class="section-container">
+				<div class="section-header">
+					<span class="badge">Master the Basics</span>
+					<h2 class="section-title">HOW TO <span class="gradient-text">PLAY</span></h2>
+					<p class="section-subtitle">Intuitive keyboard and touch controls engineered for low latency and high precision.</p>
+				</div>
+
+				<div class="controls-grid">
+					<div class="content-card control-card">
+						<div class="control-icon">⌨️</div>
+						<h3>Desktop Keyboard</h3>
+						<ul class="control-list">
+							<li><kbd>Spacebar</kbd> / <kbd>↑</kbd> / <kbd>W</kbd> — <strong>Jump / Hold for High Leap</strong></li>
+							<li><kbd>↓ Arrow</kbd> / <kbd>S</kbd> — <strong>Duck / Fast Fall to Ground</strong></li>
+							<li><kbd>P</kbd> or <kbd>Esc</kbd> — <strong>Pause Game</strong></li>
+							<li><kbd>F</kbd> — <strong>Toggle Fullscreen</strong></li>
+						</ul>
+					</div>
+
+					<div class="content-card control-card">
+						<div class="control-icon">📱</div>
+						<h3>Mobile & Touch Screen</h3>
+						<ul class="control-list">
+							<li><strong>Tap Screen</strong> — Jump over rocks, lava, and cacti</li>
+							<li><strong>Swipe Down</strong> — Duck under flying pterodactyls</li>
+							<li><strong>Double Tap</strong> — Double-jump with Winged Boots powerup</li>
+							<li><strong>Rotate Device</strong> — Landscape required for wide FOV</li>
+						</ul>
+					</div>
+
+					<div class="content-card control-card">
+						<div class="control-icon">💡</div>
+						<h3>Variable Jump Physics</h3>
+						<p class="control-desc">
+							Holding down the jump key keeps the dino ascending to maximum altitude. Releasing quickly produces a short hop, perfect for clearing low boulders without colliding with airborne birds.
+						</p>
+						<a href="/guide#controls" class="explore-link">Full Physics & Controls Guide →</a>
+					</div>
+				</div>
+			</div>
+		</section>
+
 		<Biomes />
+
+		<!-- Section 2: Powerups & Boosts -->
+		<section id="powerups-showcase" class="info-section alternate-bg">
+			<div class="section-container">
+				<div class="section-header">
+					<span class="badge">Powerups & Collectibles</span>
+					<h2 class="section-title">SUPERCHARGE YOUR <span class="gradient-text">RUN</span></h2>
+					<p class="section-subtitle">Grab glowing artifacts across the epochs to gain temporary invulnerability, coin magnets, and gravity inverters.</p>
+				</div>
+
+				<div class="powerups-grid">
+					<div class="content-card powerup-card">
+						<span class="powerup-badge-icon">🛡️</span>
+						<h3>Aegis Shield</h3>
+						<p>Absorbs one fatal collision without ending your run, providing 1.5 seconds of invincibility.</p>
+					</div>
+
+					<div class="content-card powerup-card">
+						<span class="powerup-badge-icon">🧲</span>
+						<h3>Coin Magnet</h3>
+						<p>Creates a magnetic field that automatically draws all nearby gold coins into your purse.</p>
+					</div>
+
+					<div class="content-card powerup-card">
+						<span class="powerup-badge-icon">⚡</span>
+						<h3>Chronos Multiplier</h3>
+						<p>Multiplies your score accumulation by 2X or 5X for explosive high-score climbing.</p>
+					</div>
+
+					<div class="content-card powerup-card">
+						<span class="powerup-badge-icon">🚀</span>
+						<h3>Gravity Inverter</h3>
+						<p>Enables zero-g float physics in cosmic rifts, allowing you to glide safely over vast hazard pits.</p>
+					</div>
+				</div>
+
+				<div class="text-center-cta">
+					<a href="/guide#powerups" class="btn-secondary">📖 View All Powerup Synergies & Timings</a>
+				</div>
+			</div>
+		</section>
+
+		<!-- Section 3: Pro Tips & High Score Strategies -->
+		<section id="pro-tips" class="info-section">
+			<div class="section-container">
+				<div class="section-header">
+					<span class="badge">Leaderboard Mastery</span>
+					<h2 class="section-title">PRO TIPS FOR <span class="gradient-text">HIGH SCORES</span></h2>
+					<p class="section-subtitle">Tactics used by master runners to survive past 50,000 points and conquer the deep cosmos.</p>
+				</div>
+
+				<div class="tips-grid">
+					<div class="content-card tip-card">
+						<span class="tip-num">01</span>
+						<h3>Fix Eyes on the Horizon</h3>
+						<p>Don't watch your dinosaur—focus your vision on the right edge of the screen to maximize reaction time for high-speed obstacles.</p>
+					</div>
+
+					<div class="content-card tip-card">
+						<span class="tip-num">02</span>
+						<h3>Master Fast-Falling</h3>
+						<p>Swipe or press Down while in mid-air to fast-fall back to the ground. This resets your jump and prevents floating into high hazards.</p>
+					</div>
+
+					<div class="content-card tip-card">
+						<span class="tip-num">03</span>
+						<h3>Save Shields for Fast Eras</h3>
+						<p>As the game speeds up in the Cyberpunk and Cosmos eras, shield orbs become your most valuable lifeline against dense obstacle clusters.</p>
+					</div>
+				</div>
+
+				<div class="text-center-cta">
+					<a href="/guide" class="btn-primary">📖 Read Complete 1,500+ Word Strategy Guide</a>
+				</div>
+			</div>
+		</section>
+
 		<Leaderboard />
+
+		<!-- Section 4: Homepage Quick FAQ -->
+		<section id="quick-faq" class="info-section alternate-bg">
+			<div class="section-container">
+				<div class="section-header">
+					<span class="badge">Quick Help</span>
+					<h2 class="section-title">FREQUENTLY ASKED <span class="gradient-text">QUESTIONS</span></h2>
+					<p class="section-subtitle">Common questions about game saves, fullscreen settings, and browser compatibility.</p>
+				</div>
+
+				<div class="faq-accordion-grid">
+					<div class="content-card faq-mini-card">
+						<h4>🦖 Is Dino Run: Epochs completely free?</h4>
+						<p>Yes! It is 100% free with no in-app purchases or paywalls. All skins and features are unlockable with in-game coins.</p>
+					</div>
+
+					<div class="content-card faq-mini-card">
+						<h4>📱 How do I play on mobile devices?</h4>
+						<p>Tap "Play in Fullscreen" and turn your phone to landscape mode for the best high-speed field of view.</p>
+					</div>
+
+					<div class="content-card faq-mini-card">
+						<h4>💾 How are my high score and coins saved?</h4>
+						<p>Your records and coins are automatically saved inside your browser's private LocalStorage.</p>
+					</div>
+
+					<div class="content-card faq-mini-card">
+						<h4>🔊 Why is there no sound on Safari?</h4>
+						<p>Tap the game canvas once to activate browser Web Audio permissions, and make sure silent mode is turned off.</p>
+					</div>
+				</div>
+
+				<div class="text-center-cta">
+					<a href="/faq" class="btn-secondary">❓ View All 12+ FAQs & Troubleshooting Guide</a>
+				</div>
+			</div>
+		</section>
 	</main>
 	<Footer />
 </Layout>
+
+<style>
+	.info-section {
+		padding: 70px 0;
+		border-top: 1px solid var(--border-card);
+	}
+
+	.alternate-bg {
+		background: rgba(14, 20, 36, 0.4);
+	}
+
+	.section-header {
+		text-align: center;
+		margin-bottom: 48px;
+	}
+
+	.badge {
+		display: inline-flex;
+		align-items: center;
+		font-size: 12px;
+		font-weight: 800;
+		letter-spacing: 1.2px;
+		text-transform: uppercase;
+		padding: 5px 12px;
+		border-radius: 20px;
+		background: rgba(0, 229, 255, 0.1);
+		color: var(--accent-cyan);
+		border: 1px solid rgba(0, 229, 255, 0.25);
+		margin-bottom: 12px;
+	}
+
+	.section-title {
+		font-size: clamp(28px, 4vw, 40px);
+		font-weight: 900;
+		margin-bottom: 12px;
+		letter-spacing: -0.5px;
+	}
+
+	.section-subtitle {
+		color: var(--text-muted);
+		font-size: 16px;
+		max-width: 680px;
+		margin: 0 auto;
+	}
+
+	/* Controls Matrix */
+	.controls-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+		gap: 24px;
+	}
+
+	.control-card {
+		margin: 0;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.control-icon {
+		font-size: 36px;
+		margin-bottom: 14px;
+		line-height: 1;
+	}
+
+	.control-card h3 {
+		font-size: 20px;
+		font-weight: 800;
+		color: #FFFFFF;
+		margin-bottom: 14px;
+	}
+
+	.control-list {
+		list-style: none;
+		padding: 0;
+		margin: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+		font-size: 14.5px;
+		color: #CBD5E1;
+	}
+
+	.control-list li {
+		margin-bottom: 0;
+	}
+
+	.control-desc {
+		color: var(--text-muted);
+		font-size: 14.5px;
+		line-height: 1.6;
+		margin-bottom: 16px;
+		flex-grow: 1;
+	}
+
+	kbd {
+		background: #1E293B;
+		border: 1px solid rgba(255, 255, 255, 0.2);
+		border-radius: 4px;
+		padding: 2px 6px;
+		font-size: 12px;
+		font-family: var(--font-mono);
+		color: var(--accent-cyan);
+	}
+
+	.explore-link {
+		font-size: 14px;
+		font-weight: 700;
+		color: var(--accent-cyan);
+		text-decoration: none;
+		margin-top: auto;
+		display: inline-flex;
+		align-items: center;
+		gap: 4px;
+		transition: transform 0.2s ease;
+	}
+
+	.explore-link:hover {
+		transform: translateX(4px);
+	}
+
+	/* Powerups Grid */
+	.powerups-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+		gap: 24px;
+		margin-bottom: 36px;
+	}
+
+	.powerup-card {
+		margin: 0;
+		text-align: center;
+		padding: 30px 24px;
+		transition: transform 0.3s ease, border-color 0.3s ease;
+	}
+
+	.powerup-card:hover {
+		transform: translateY(-5px);
+		border-color: var(--accent-cyan);
+	}
+
+	.powerup-badge-icon {
+		font-size: 42px;
+		display: block;
+		margin-bottom: 14px;
+		line-height: 1;
+	}
+
+	.powerup-card h3 {
+		font-size: 18px;
+		font-weight: 800;
+		color: #FFFFFF;
+		margin-bottom: 10px;
+	}
+
+	.powerup-card p {
+		color: var(--text-muted);
+		font-size: 14px;
+		line-height: 1.6;
+		margin-bottom: 0;
+	}
+
+	/* Tips Grid */
+	.tips-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+		gap: 24px;
+		margin-bottom: 36px;
+	}
+
+	.tip-card {
+		margin: 0;
+		position: relative;
+		padding: 32px 28px;
+	}
+
+	.tip-num {
+		font-size: 36px;
+		font-weight: 900;
+		color: rgba(0, 229, 255, 0.25);
+		font-family: var(--font-mono);
+		line-height: 1;
+		margin-bottom: 12px;
+		display: block;
+	}
+
+	.tip-card h3 {
+		font-size: 19px;
+		font-weight: 800;
+		color: #FFFFFF;
+		margin-bottom: 10px;
+	}
+
+	.tip-card p {
+		color: var(--text-muted);
+		font-size: 14.5px;
+		line-height: 1.6;
+		margin-bottom: 0;
+	}
+
+	/* FAQ Accordion Grid */
+	.faq-accordion-grid {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 20px;
+		margin-bottom: 36px;
+	}
+
+	.faq-mini-card {
+		margin: 0;
+		padding: 24px;
+	}
+
+	.faq-mini-card h4 {
+		font-size: 16px;
+		font-weight: 800;
+		color: #FFFFFF;
+		margin-bottom: 10px;
+	}
+
+	.faq-mini-card p {
+		color: var(--text-muted);
+		font-size: 14px;
+		line-height: 1.6;
+		margin-bottom: 0;
+	}
+
+	/* CTA Buttons */
+	.text-center-cta {
+		text-align: center;
+	}
+
+	.btn-primary {
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		background: linear-gradient(135deg, var(--accent-cyan), var(--accent-magenta));
+		color: #070A12;
+		font-weight: 800;
+		font-size: 15.5px;
+		padding: 14px 32px;
+		border-radius: 30px;
+		text-decoration: none;
+		box-shadow: 0 4px 20px rgba(0, 229, 255, 0.35);
+		transition: transform 0.2s ease, box-shadow 0.2s ease;
+	}
+
+	.btn-primary:hover {
+		transform: translateY(-2px);
+		box-shadow: 0 6px 26px rgba(0, 229, 255, 0.5);
+	}
+
+	.btn-secondary {
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		background: rgba(255, 255, 255, 0.05);
+		border: 1px solid var(--border-card);
+		color: #FFFFFF;
+		font-weight: 700;
+		font-size: 15px;
+		padding: 12px 28px;
+		border-radius: 30px;
+		text-decoration: none;
+		transition: all 0.2s ease;
+	}
+
+	.btn-secondary:hover {
+		background: rgba(0, 229, 255, 0.15);
+		border-color: var(--accent-cyan);
+		color: var(--accent-cyan);
+	}
+
+	@media (max-width: 768px) {
+		.faq-accordion-grid {
+			grid-template-columns: 1fr;
+		}
+	}
+</style>

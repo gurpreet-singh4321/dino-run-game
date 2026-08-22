@@ -1,0 +1,119 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+---
+
+<Layout 
+  title="About Dino Run: Epochs | The Next-Gen 2D Dinosaur Runner" 
+  description="Discover the engineering, origins, and vision behind Dino Run: Epochs. Built with Flutter, Flame Engine 2D, and Astro JS for 60 FPS browser gaming."
+>
+  <Header activePage="about" />
+
+  <main class="content-page">
+    <div class="section-container">
+      <div class="content-hero">
+        <span class="badge">Development & Vision</span>
+        <h1>About <span class="gradient-text">Dino Run: Epochs</span></h1>
+        <p>Reimagining the classic offline dinosaur runner into an expansive multi-era arcade journey across prehistory, cyberpunk futures, and deep space zero-gravity.</p>
+      </div>
+
+      <div class="content-body">
+        <h2>1. The Vision & Origin Story</h2>
+        <p>
+          Almost every internet user in the world has played the classic pixelated dinosaur running game when their connection drops. While beloved for its simplicity, we asked ourselves a question: <em>What if that little dino didn't just hop over desert cacti, but embarked on an epic time-traveling odyssey across eras of civilization, planetary disaster, and cosmic exploration?</em>
+        </p>
+        <p>
+          <strong>Dino Run: Epochs</strong> was conceived as a tribute to retro side-scrolling arcade classics combined with modern procedural generation, audio-reactive particle physics, and seamless multi-platform web engineering. As players survive longer in their run, the environment dynamically shifts through <strong>7 distinct Epochs</strong>: from lush Jurassic jungles and boiling lava pits, to glacial ice ages, cyberpunk neon megacities, and zero-g asteroid fields.
+        </p>
+
+        <div class="content-card">
+          <h3>🎮 Core Game Pillars</h3>
+          <ul>
+            <li><strong>Dynamic Era Progression:</strong> The world evolves beneath your feet as your score climbs, changing gravity, hazards, obstacle timings, and visual palettes in real-time.</li>
+            <li><strong>Responsive 60 FPS Physics:</strong> Precise jump arcs, double-jump abilities, gravity inversion fields, and responsive ground collision detection.</li>
+            <li><strong>Zero Friction Web Play:</strong> Instant loading in any modern desktop or mobile browser with no downloads, accounts, or installations required.</li>
+            <li><strong>Family-Friendly & Free:</strong> Pure gameplay-first entertainment accessible to players of all ages across the globe.</li>
+          </ul>
+        </div>
+
+        <h2>2. Technical Architecture & Engineering Stack</h2>
+        <p>
+          Building a fluid 60 frames-per-second platformer that runs synchronously across desktops, tablets, and mobile devices required a modern, highly optimized technology stack:
+        </p>
+
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Component</th>
+                <th>Technology</th>
+                <th>Purpose & Engineering Rationale</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Game Physics Engine</strong></td>
+                <td>Flutter & Flame Engine 2D</td>
+                <td>High-performance 2D component system, delta-time game loops, hitbox collision detection, and sprite sheet animation.</td>
+              </tr>
+              <tr>
+                <td><strong>Web Rendering Layer</strong></td>
+                <td>CanvasKit / WebGL / HTML5 Canvas</td>
+                <td>Hardware-accelerated graphics rendering supporting smooth alpha-blended particles, dynamic lighting, and background parallaxes.</td>
+              </tr>
+              <tr>
+                <td><strong>Web Portal & SEO</strong></td>
+                <td>Astro JS (Static Site Generation)</td>
+                <td>Zero-JavaScript baseline HTML shell providing instant page loads, perfect Core Web Vitals, rich SEO indexing, and structured schema data.</td>
+              </tr>
+              <tr>
+                <td><strong>Deployment & CDN</strong></td>
+                <td>Vercel Global Edge Network</td>
+                <td>Sub-50ms worldwide asset delivery, automatic caching, Speed Insights, and edge telemetry.</td>
+              </tr>
+              <tr>
+                <td><strong>Audio Synthesizer</strong></td>
+                <td>Howler.js / Web Audio API</td>
+                <td>Low-latency multi-channel audio playback for adaptive era soundtracks and reactive collision SFX.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2>3. Art Direction and Procedural World Design</h2>
+        <p>
+          Every visual asset in Dino Run: Epochs has been meticulously designed with a harmonious retro-modern color palette. Rather than repetitive static obstacle tracks, our custom procedural level generator creates rhythmic, rhythm-synced obstacle patterns that reward reflexes, timing, and environmental awareness.
+        </p>
+        <ul>
+          <li><strong>Layered Parallax Skies:</strong> Multi-plane parallax scrolling gives depth to towering prehistoric mountains, pyramid dunes, and cyberpunk skyscrapers.</li>
+          <li><strong>Audio-Reactive Particles:</strong> In the Volcanic and Cyberpunk eras, lava spouts and equalizer pulses react dynamically to the game's synthwave soundtrack.</li>
+          <li><strong>Cosmic Zero-Gravity:</strong> In the outer space era, standard ground physics convert to floating microgravity mechanics with falling meteor showers.</li>
+        </ul>
+
+        <h2>4. Future Roadmap & Upcoming Features</h2>
+        <p>
+          We are committed to continuously expanding the Dino Run: Epochs universe. Here is a sneak peek at what is currently in active development:
+        </p>
+        <div class="content-card">
+          <ul>
+            <li><strong>🌐 Global Cloud Leaderboards:</strong> Compete with players worldwide for daily, weekly, and all-time top runner badges.</li>
+            <li><strong>🦖 Expanded Dinosaur Roster:</strong> Unlockable skins with unique particle trails, custom sound effects, and themed animations.</li>
+            <li><strong>🏆 Daily Challenge Mode:</strong> Run on fixed procedural seeds to test identical obstacle sequences against friends.</li>
+            <li><strong>✨ Boss Encounters:</strong> Era-ending encounters with giant robotic Pterodactyls, Volcanic Titans, and Space Anomalies.</li>
+          </ul>
+        </div>
+
+        <h2>5. Meet the Creator & Get in Touch</h2>
+        <p>
+          Dino Run: Epochs is developed and maintained with passion by independent game developers and open-web enthusiasts. We love hearing from our players, whether it's a high-score screenshot, a biome suggestion, or a bug report.
+        </p>
+        <p>
+          Have questions or feedback? Feel free to reach out via our <a href="/contact" style="color: var(--accent-cyan);">Contact & Feedback Page</a> or explore our comprehensive <a href="/guide" style="color: var(--accent-cyan);">Gameplay Strategy Guide</a> to master your runs!
+        </p>
+      </div>
+    </div>
+  </main>
+
+  <Footer />
+</Layout>
