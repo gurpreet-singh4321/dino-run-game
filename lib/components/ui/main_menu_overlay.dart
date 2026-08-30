@@ -644,31 +644,31 @@ class _MainMenuOverlayState extends State<MainMenuOverlay> with TickerProviderSt
                 final realmColor = r['color'] as Color;
 
                 return Padding(
-                  padding: const EdgeInsets.only(bottom: 6.0),
+                  padding: const EdgeInsets.only(bottom: 3.5),
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(8),
                       onTap: () => _selectRealm(index),
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 180),
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                        constraints: const BoxConstraints(minHeight: 46),
+                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5.5),
+                        constraints: const BoxConstraints(minHeight: 40),
                         decoration: BoxDecoration(
                           color: isSelected
                               ? const Color(0xFF1E293B).withValues(alpha: 0.98)
                               : const Color(0xFF0F172A).withValues(alpha: 0.72),
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(8),
                           border: Border.all(
                             color: isSelected ? realmColor : const Color(0xFF334155).withValues(alpha: 0.6),
-                            width: isSelected ? 2.0 : 1.0,
+                            width: isSelected ? 1.8 : 0.9,
                           ),
                           boxShadow: isSelected
                               ? [
                                   BoxShadow(
-                                    color: realmColor.withValues(alpha: 0.45),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 2),
+                                    color: realmColor.withValues(alpha: 0.40),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 1.5),
                                   ),
                                 ]
                               : null,
@@ -676,14 +676,14 @@ class _MainMenuOverlayState extends State<MainMenuOverlay> with TickerProviderSt
                         child: Row(
                           children: [
                             Container(
-                              padding: const EdgeInsets.all(6),
+                              padding: const EdgeInsets.all(5),
                               decoration: BoxDecoration(
                                 color: realmColor.withValues(alpha: isSelected ? 0.35 : 0.15),
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(6),
                               ),
-                              child: Icon(r['icon'] as IconData, color: realmColor, size: 16),
+                              child: Icon(r['icon'] as IconData, color: realmColor, size: 15),
                             ),
-                            const SizedBox(width: 10),
+                            const SizedBox(width: 8),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -695,23 +695,23 @@ class _MainMenuOverlayState extends State<MainMenuOverlay> with TickerProviderSt
                                         r['name'] as String,
                                         style: TextStyle(
                                           color: isSelected ? Colors.white : const Color(0xFFCBD5E1),
-                                          fontSize: 10.5,
+                                          fontSize: 10,
                                           fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
                                         ),
                                       ),
                                       if (r['badge'] != null) ...[
-                                        const SizedBox(width: 6),
+                                        const SizedBox(width: 5),
                                         Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                                           decoration: BoxDecoration(
                                             color: const Color(0xFF78350F),
-                                            borderRadius: BorderRadius.circular(4),
+                                            borderRadius: BorderRadius.circular(3),
                                           ),
                                           child: Text(
                                             r['badge'] as String,
                                             style: const TextStyle(
                                               color: Color(0xFFFCD34D),
-                                              fontSize: 7.5,
+                                              fontSize: 7,
                                               fontWeight: FontWeight.w800,
                                             ),
                                           ),
@@ -719,14 +719,13 @@ class _MainMenuOverlayState extends State<MainMenuOverlay> with TickerProviderSt
                                       ],
                                     ],
                                   ),
-                                  const SizedBox(height: 1),
                                   Text(
                                     '${r['tag']} • ${r['bonus']}',
                                     style: TextStyle(
                                       color: isSelected ? realmColor : const Color(0xFF64748B),
-                                      fontSize: 8,
+                                      fontSize: 7.5,
                                       fontWeight: FontWeight.w600,
-                                      letterSpacing: 0.4,
+                                      letterSpacing: 0.3,
                                     ),
                                   ),
                                 ],
@@ -734,15 +733,15 @@ class _MainMenuOverlayState extends State<MainMenuOverlay> with TickerProviderSt
                             ),
                             if (isSelected)
                               Container(
-                                padding: const EdgeInsets.all(2),
+                                padding: const EdgeInsets.all(1.5),
                                 decoration: BoxDecoration(
                                   color: realmColor.withValues(alpha: 0.2),
                                   shape: BoxShape.circle,
                                 ),
-                                child: Icon(Icons.check_circle_rounded, color: realmColor, size: 16),
+                                child: Icon(Icons.check_circle_rounded, color: realmColor, size: 15),
                               )
                             else
-                              const Icon(Icons.chevron_right, color: Color(0xFF475569), size: 15),
+                              const Icon(Icons.chevron_right, color: Color(0xFF475569), size: 14),
                           ],
                         ),
                       ),
