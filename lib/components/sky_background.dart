@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flame/components.dart';
 import '../game/dino_game.dart';
 import '../game/game_state.dart';
@@ -15,6 +16,7 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
   final List<_AshParticle> _ashParticles = [];
   final List<_ForestSpore> _forestSpores = [];
   final List<_RollingBush> _rollingBushes = [];
+  final List<_DesertSparkle> _desertSparkles = [];
 
   final math.Random _rng = math.Random();
   double _time = 0;
@@ -28,11 +30,24 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
   double _lightningTimer = 0;
   double _lightningFlashAlpha = 0;
   final List<Offset> _lightningBoltPoints = [];
+  ui.Image? _desertBgImage;
 
   @override
   Future<void> onLoad() async {
     size = game.size;
     priority = -100; // Draw behind everything
+
+    try {
+      final data = await rootBundle.load('assets/images/desert_bg_v3.jpg');
+      final bytes = data.buffer.asUint8List();
+      final codec = await ui.instantiateImageCodec(bytes);
+      final frame = await codec.getNextFrame();
+      _desertBgImage = frame.image;
+    } catch (_) {
+      try {
+        _desertBgImage = await game.images.load('desert_bg_v3.jpg');
+      } catch (_) {}
+    }
 
     // Spawn initial clouds
     for (int i = 0; i < 6; i++) {
@@ -95,6 +110,19 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
         x: _rng.nextDouble() * size.x,
         speed: 80 + _rng.nextDouble() * 40,
         radius: 16 + _rng.nextDouble() * 8,
+      ));
+    }
+
+    // Spawn desert golden air sparkles
+    for (int i = 0; i < 40; i++) {
+      _desertSparkles.add(_DesertSparkle(
+        x: _rng.nextDouble() * size.x,
+        y: 30 + _rng.nextDouble() * (size.y * 0.7),
+        radius: 1.0 + _rng.nextDouble() * 2.2,
+        floatSpeedX: -12 - _rng.nextDouble() * 20,
+        floatSpeedY: -6 + _rng.nextDouble() * 12,
+        phase: _rng.nextDouble() * math.pi * 2,
+        alpha: 0.35 + _rng.nextDouble() * 0.55,
       ));
     }
   }
@@ -208,13 +236,21 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       }
     }
 
-    // Rolling bushes update
+    // Rolling bushes & desert sparkles update
     if (currentBiome == 'DESERT') {
       for (final rb in _rollingBushes) {
         rb.x -= rb.speed * dt;
         rb.rotation += (rb.speed / rb.radius) * dt;
         if (rb.x + rb.radius * 2 < -40) {
           rb.x = size.x + 60;
+        }
+      }
+      for (final sp in _desertSparkles) {
+        sp.x += sp.floatSpeedX * dt;
+        sp.y += sp.floatSpeedY * dt + math.sin(_time * 1.5 + sp.phase) * 6 * dt;
+        if (sp.x < -20) {
+          sp.x = size.x + 20;
+          sp.y = 30 + _rng.nextDouble() * (size.y * 0.7);
         }
       }
     }
@@ -240,24 +276,39 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     final skyTop = game.biomeManager.interpolatedSkyTop;
     final skyBottom = game.biomeManager.interpolatedSkyBottom;
     final sp = game.spaceTransitionProgress; // 0 = normal, 1 = full space
+    final currentBiome = game.biomeManager.effectiveBiome.name;
 
-    // Sky gradient (lerp towards deep space when sp > 0)
-    final topColor = sp > 0
-        ? Color.lerp(skyTop, const Color(0xFF050510), sp)!
-        : skyTop;
-    final bottomColor = sp > 0
-        ? Color.lerp(skyBottom, const Color(0xFF0A0A25), sp)!
-        : skyBottom;
-
-    final gradient = LinearGradient(
-      begin: Alignment.topCenter,
-      end: Alignment.bottomCenter,
-      colors: [topColor, bottomColor],
-    );
+    // Sky gradient (multi-stop deep twilight to golden horizon for Desert, or standard transition)
+    final Gradient gradient;
+    if (currentBiome == 'DESERT' && sp <= 0.01) {
+      gradient = const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          Color(0xFF18539B), // Vibrant royal sky blue top
+          Color(0xFF2E6FB8), // Clear cerulean
+          Color(0xFF6B8FB8), // Soft atmospheric haze
+          Color(0xFFDEAA4A), // Bright golden amber
+          Color(0xFFF7C858), // Warm glowing sunlit horizon
+        ],
+        stops: [0.0, 0.22, 0.45, 0.72, 1.0],
+      );
+    } else {
+      final topColor = sp > 0
+          ? Color.lerp(skyTop, const Color(0xFF050510), sp)!
+          : skyTop;
+      final bottomColor = sp > 0
+          ? Color.lerp(skyBottom, const Color(0xFF0A0A25), sp)!
+          : skyBottom;
+      gradient = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [topColor, bottomColor],
+      );
+    }
     final rect = Rect.fromLTWH(0, 0, size.x, size.y);
     canvas.drawRect(rect, Paint()..shader = gradient.createShader(rect));
 
-    final currentBiome = game.biomeManager.effectiveBiome.name;
     final biomeAlpha = (1.0 - sp).clamp(0.0, 1.0); // fade biome elements out
 
     // --- SPACE MODE VISUALS (drawn when transitioning or fully in space) ---
@@ -290,9 +341,9 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       // Detailed multi-layer parallax environments
       _drawParallaxBackground(canvas, currentBiome);
 
-      // Stars (visible in dark biomes & space)
+      // Stars (visible in dark biomes & space, not during bright desert day)
       final skyBrightness = skyTop.computeLuminance();
-      if (skyBrightness < 0.35) {
+      if (skyBrightness < 0.35 && currentBiome != 'DESERT') {
         for (final star in _stars) {
           final alpha = ((math.sin(star.brightness) + 1) / 2 * (1 - skyBrightness)).clamp(0.0, 1.0);
           canvas.drawCircle(
@@ -304,7 +355,7 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       }
 
       // Sun
-      if (currentBiome != 'COSMOS' && currentBiome != 'VOLCANO') {
+      if (currentBiome != 'COSMOS' && currentBiome != 'VOLCANO' && !(currentBiome == 'DESERT' && _desertBgImage != null)) {
         _drawSun(canvas, size.x, skyBrightness);
       }
 
@@ -722,9 +773,11 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
       colors: const [
-        Color(0xFFE5C158), // Bright sandstone gold
-        Color(0xFFD4B04C), // Mid sandstone
+        Color(0xFFFBE48A), // Bright glowing sunlit sandstone
+        Color(0xFFE5BF54), // Warm amber mid-tone
+        Color(0xFFD4A842), // Base sandstone
       ],
+      stops: const [0.0, 0.5, 1.0],
     ).createShader(Rect.fromLTRB(leftBaseX, apex.dy, ridgeX, yGround));
     canvas.drawPath(litFacePath, Paint()..shader = litShader);
 
@@ -738,56 +791,860 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
       colors: const [
-        Color(0xFF9E824A), // Desert shadow tan
-        Color(0xFF7A6437), // Dark sandstone shadow
+        Color(0xFFA67E36), // Deep warm sandstone shadow
+        Color(0xFF825F22), // Ambient occlusion shadow
       ],
     ).createShader(Rect.fromLTRB(ridgeX, apex.dy, rightBaseX, yGround));
     canvas.drawPath(shadowFacePath, Paint()..shader = shadowShader);
 
-    // Center Ridge Divide Line
+    // Subtle 3D Center Ridge Shadow Line
     canvas.drawLine(
       apex,
       Offset(ridgeX, yGround),
       Paint()
-        ..color = const Color(0xFF5D4A27).withValues(alpha: 0.6)
-        ..strokeWidth = 2.0,
+        ..color = const Color(0xFF5D4216).withValues(alpha: 0.55)
+        ..strokeWidth = 2.0
+        ..strokeCap = StrokeCap.round,
     );
 
-    // 3. Horizontal Stone Block Ridges across faces (8 block layers for grand scale)
-    final blockPaint = Paint()
-      ..color = const Color(0xFF7A6437).withValues(alpha: 0.35)
-      ..strokeWidth = 1.2;
-    for (int k = 1; k <= 8; k++) {
-      final t = k / 9.0;
+    // 3. Horizontal Stone Block Courses (Alternating highlight and groove for depth)
+    final numCourses = 9;
+    for (int k = 1; k <= numCourses; k++) {
+      final t = k / (numCourses + 1.0);
       final py = apex.dy + (yGround - apex.dy) * t;
       final lx = apex.dx + (leftBaseX - apex.dx) * t;
+      final cx = apex.dx + (ridgeX - apex.dx) * t;
       final rx = apex.dx + (rightBaseX - apex.dx) * t;
-      canvas.drawLine(Offset(lx, py), Offset(rx, py), blockPaint);
+
+      // Lit face block line (subtle warm groove)
+      canvas.drawLine(
+        Offset(lx, py),
+        Offset(cx, py),
+        Paint()
+          ..color = const Color(0xFFB58E34).withValues(alpha: 0.40)
+          ..strokeWidth = 1.3,
+      );
+      // Lit face upper block edge highlight
+      canvas.drawLine(
+        Offset(lx + 2, py - 1),
+        Offset(cx, py - 1),
+        Paint()
+          ..color = const Color(0xFFFFF3B0).withValues(alpha: 0.45)
+          ..strokeWidth = 1.0,
+      );
+
+      // Shadow face block line
+      canvas.drawLine(
+        Offset(cx, py),
+        Offset(rx, py),
+        Paint()
+          ..color = const Color(0xFF5C4116).withValues(alpha: 0.45)
+          ..strokeWidth = 1.3,
+      );
     }
 
     // 4. Golden Apex Capstone (Pyramidion)
     if (hasGoldenCapstone) {
-      final capH = (yGround - apex.dy) * 0.16;
-      final capApexY = apex.dy;
-      final capBaseY = apex.dy + capH;
       final capT = 0.16;
+      final capBaseY = apex.dy + (yGround - apex.dy) * capT;
       final capLx = apex.dx + (leftBaseX - apex.dx) * capT;
       final capRx = apex.dx + (rightBaseX - apex.dx) * capT;
       final capRidgeX = apex.dx + (ridgeX - apex.dx) * capT;
 
       final capLitPath = Path()
-        ..moveTo(apex.dx, capApexY)
+        ..moveTo(apex.dx, apex.dy)
         ..lineTo(capLx, capBaseY)
         ..lineTo(capRidgeX, capBaseY)
         ..close();
-      canvas.drawPath(capLitPath, Paint()..color = const Color(0xFFFFD700));
+      final capLitShader = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: const [
+          Color(0xFFFFF9C4), // Gleaming white gold tip
+          Color(0xFFFFD54F), // Pure yellow gold
+          Color(0xFFFFB300), // Rich amber gold
+        ],
+      ).createShader(Rect.fromLTRB(capLx, apex.dy, capRidgeX, capBaseY));
+      canvas.drawPath(capLitPath, Paint()..shader = capLitShader);
 
       final capShadowPath = Path()
-        ..moveTo(apex.dx, capApexY)
+        ..moveTo(apex.dx, apex.dy)
         ..lineTo(capRidgeX, capBaseY)
         ..lineTo(capRx, capBaseY)
         ..close();
-      canvas.drawPath(capShadowPath, Paint()..color = const Color(0xFFFFB300));
+      final capShadowShader = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: const [
+          Color(0xFFFFB300),
+          Color(0xFFFF8F00),
+        ],
+      ).createShader(Rect.fromLTRB(capRidgeX, apex.dy, capRx, capBaseY));
+      canvas.drawPath(capShadowPath, Paint()..shader = capShadowShader);
+
+      // Specular diamond star glint on apex
+      _drawStarGlint(canvas, apex, 14.0);
+    }
+  }
+
+  /// 4-point diamond specular star glint
+  void _drawStarGlint(Canvas canvas, Offset center, double size) {
+    final glintPaint = Paint()..color = Colors.white.withValues(alpha: 0.90);
+    final hPath = Path()
+      ..moveTo(center.dx - size, center.dy)
+      ..quadraticBezierTo(center.dx, center.dy, center.dx, center.dy - size * 0.25)
+      ..quadraticBezierTo(center.dx, center.dy, center.dx + size, center.dy)
+      ..quadraticBezierTo(center.dx, center.dy, center.dx, center.dy + size * 0.25)
+      ..close();
+    final vPath = Path()
+      ..moveTo(center.dx, center.dy - size)
+      ..quadraticBezierTo(center.dx, center.dy, center.dx + size * 0.25, center.dy)
+      ..quadraticBezierTo(center.dx, center.dy, center.dx, center.dy + size)
+      ..quadraticBezierTo(center.dx, center.dy, center.dx - size * 0.25, center.dy)
+      ..close();
+    canvas.drawPath(hPath, glintPaint);
+    canvas.drawPath(vPath, glintPaint);
+    canvas.drawCircle(center, size * 0.22, Paint()..color = Colors.white);
+  }
+
+  /// Master Desert Artwork rendering: AI background image or procedural vector fallback
+  void _drawDesertArtwork(Canvas canvas, double w, double yGround) {
+    if (_desertBgImage != null) {
+      final img = _desertBgImage!;
+      final imgW = img.width.toDouble();
+      final imgH = img.height.toDouble();
+      final scale = size.y / imgH;
+      final renderW = imgW * scale;
+
+      final srcRect = Rect.fromLTWH(0, 0, imgW, imgH);
+      final dstRect = Rect.fromLTWH(0, 0, renderW, size.y);
+      canvas.drawImageRect(img, srcRect, dstRect, Paint()..filterQuality = FilterQuality.high);
+      _drawDesertAtmosphere(canvas, renderW, yGround);
+      return;
+    }
+
+    // 1. Far Soft Sand Dune Horizon Silhouette (Atmospheric backdrop - seamlessly matching at 0 and w)
+    final farDunePath = Path()
+      ..moveTo(0, yGround - 50)
+      ..quadraticBezierTo(w * 0.18, yGround - 72, w * 0.38, yGround - 48)
+      ..quadraticBezierTo(w * 0.58, yGround - 80, w * 0.78, yGround - 52)
+      ..quadraticBezierTo(w * 0.90, yGround - 72, w, yGround - 50)
+      ..lineTo(w, size.y)
+      ..lineTo(0, size.y);
+    final farDuneShader = LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [
+        const Color(0xFFF0D58C).withValues(alpha: 0.75),
+        const Color(0xFFE0B65E).withValues(alpha: 0.60),
+      ],
+    ).createShader(Rect.fromLTWH(0, yGround - 85, w, 140));
+    canvas.drawPath(farDunePath, Paint()..shader = farDuneShader);
+
+    // 2. Far Landmarks:
+    // Distant Sphinx on left dune ridge
+    _drawDesertSphinx(canvas, Offset(w * 0.08, yGround - 58), 0.68);
+    // Secondary Sphinx on mid-right dune ridge
+    _drawDesertSphinx(canvas, Offset(w * 0.72, yGround - 66), 0.75);
+    // Ancient Sand Citadel / Castle on right dune
+    _drawDesertSandCitadel(canvas, Offset(w * 0.88, yGround - 66), 0.80);
+
+    // 3. Midground Sweeping Sand Dunes (Rich S-crests with golden light & shadow - seamlessly matching at 0 and w)
+    final midDunePath = Path()
+      ..moveTo(0, yGround - 40)
+      ..cubicTo(w * 0.16, yGround - 62, w * 0.32, yGround - 26, w * 0.48, yGround - 52)
+      ..cubicTo(w * 0.62, yGround - 74, w * 0.76, yGround - 28, w * 0.90, yGround - 58)
+      ..lineTo(w, yGround - 40)
+      ..lineTo(w, size.y)
+      ..lineTo(0, size.y);
+    final midDuneShader = LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [
+        const Color(0xFFFBE48A), // Bright sunlit crest
+        const Color(0xFFE8BC50), // Mid dune gold
+        const Color(0xFFC7922E), // Rich warm shadow
+      ],
+      stops: const [0.0, 0.42, 1.0],
+    ).createShader(Rect.fromLTWH(0, yGround - 75, w, 150));
+    canvas.drawPath(midDunePath, Paint()..shader = midDuneShader);
+
+    // Dune Ridge Golden Highlight & Shadow Crest Sweep
+    final ridgePath = Path()
+      ..moveTo(0, yGround - 40)
+      ..cubicTo(w * 0.16, yGround - 62, w * 0.32, yGround - 26, w * 0.48, yGround - 52)
+      ..cubicTo(w * 0.62, yGround - 74, w * 0.76, yGround - 28, w * 0.90, yGround - 58)
+      ..lineTo(w, yGround - 40);
+
+    // Golden sun glint on the ridge edge
+    canvas.drawPath(
+      ridgePath,
+      Paint()
+        ..color = const Color(0xFFFFF5B8).withValues(alpha: 0.75)
+        ..strokeWidth = 2.0
+        ..style = ui.PaintingStyle.stroke,
+    );
+    // Soft shadow below the ridge
+    canvas.drawPath(
+      ridgePath,
+      Paint()
+        ..color = const Color(0xFF9E6E1C).withValues(alpha: 0.40)
+        ..strokeWidth = 3.5
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.5)
+        ..style = ui.PaintingStyle.stroke,
+    );
+
+    // 4. Midground Scenic Elements:
+    // Desert Oasis nestled in left dune valley
+    _drawDesertOasis(canvas, Offset(w * 0.22, yGround - 42), 135);
+
+    // Camel Caravan walking along the central ridge
+    _drawDesertCamelCaravan(canvas, Offset(w * 0.60, yGround - 48), 0.82);
+
+    // Ancient Petroglyphs carved into the sand slopes
+    _drawDesertPetroglyphs(canvas, Offset(w * 0.11, yGround - 28), 0.75);
+    _drawDesertPetroglyphs(canvas, Offset(w * 0.78, yGround - 32), 0.65);
+
+    // 5. Grand 3D Pyramids with Golden Capstones
+    // Great Pyramid of Giza (Center Left)
+    _draw3DPyramid(
+      canvas,
+      apex: Offset(w * 0.38, yGround - 165),
+      leftBaseX: w * 0.18,
+      rightBaseX: w * 0.56,
+      yGround: yGround,
+      hasGoldenCapstone: true,
+    );
+
+    // Pyramid of Khafre (Center Right)
+    _draw3DPyramid(
+      canvas,
+      apex: Offset(w * 0.76, yGround - 140),
+      leftBaseX: w * 0.62,
+      rightBaseX: w * 0.89,
+      yGround: yGround,
+      hasGoldenCapstone: true,
+    );
+
+    // 6. Foreground Dune Ridge Hugging Base of Pyramids (seamlessly matching at 0 and w)
+    final fgDunePath = Path()
+      ..moveTo(0, yGround - 15)
+      ..quadraticBezierTo(w * 0.22, yGround - 26, w * 0.46, yGround - 8)
+      ..quadraticBezierTo(w * 0.72, yGround - 28, w, yGround - 15)
+      ..lineTo(w, size.y)
+      ..lineTo(0, size.y);
+    final fgDuneShader = LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: const [
+        Color(0xFFFBE48A),
+        Color(0xFFE5B946),
+        Color(0xFFCA9428),
+      ],
+      stops: const [0.0, 0.4, 1.0],
+    ).createShader(Rect.fromLTWH(0, yGround - 30, w, 60));
+    canvas.drawPath(fgDunePath, Paint()..shader = fgDuneShader);
+
+    // Foreground Crest Golden Edge
+    final fgCrest = Path()
+      ..moveTo(0, yGround - 15)
+      ..quadraticBezierTo(w * 0.22, yGround - 26, w * 0.46, yGround - 8)
+      ..quadraticBezierTo(w * 0.72, yGround - 28, w, yGround - 15);
+    canvas.drawPath(
+      fgCrest,
+      Paint()
+        ..color = const Color(0xFFFFF9C4).withValues(alpha: 0.85)
+        ..strokeWidth = 1.8
+        ..style = ui.PaintingStyle.stroke,
+    );
+
+    // 7. Ambient Atmosphere: Floating golden dust particles & heat sparkles
+    _drawDesertAtmosphere(canvas, w, yGround);
+  }
+
+  void _drawDesertSphinx(Canvas canvas, Offset pos, double scale) {
+    canvas.save();
+    canvas.translate(pos.dx, pos.dy);
+    canvas.scale(scale);
+
+    // Soft cast shadow on dune
+    final shadowPath = Path()
+      ..addOval(const Rect.fromLTWH(-55, 18, 120, 16));
+    canvas.drawPath(shadowPath, Paint()..color = const Color(0xFF8A5D18).withValues(alpha: 0.35));
+
+    // Sphinx Lion Body (Rich golden sandstone gradient)
+    final bodyPath = Path()
+      ..moveTo(-50, 20)
+      ..cubicTo(-48, -6, -28, -20, -8, -12)
+      ..cubicTo(6, -6, 16, -14, 22, -30)
+      ..lineTo(28, -30)
+      ..cubicTo(34, -14, 36, 2, 38, 18)
+      ..lineTo(62, 18)
+      ..quadraticBezierTo(66, 23, 60, 25)
+      ..lineTo(-55, 25)
+      ..quadraticBezierTo(-60, 22, -50, 20);
+
+    final sphinxGrad = const LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [Color(0xFFFBE48A), Color(0xFFE5B946), Color(0xFFB88628)],
+      stops: [0.0, 0.5, 1.0],
+    );
+    final bounds = const Rect.fromLTWH(-60, -50, 130, 80);
+    canvas.drawPath(bodyPath, Paint()..shader = sphinxGrad.createShader(bounds));
+
+    // Curved Tail resting against flank
+    final tailPath = Path()
+      ..moveTo(-48, 16)
+      ..cubicTo(-54, 4, -48, -4, -42, -2)
+      ..cubicTo(-40, 4, -44, 12, -45, 18);
+    canvas.drawPath(
+      tailPath,
+      Paint()
+        ..color = const Color(0xFF9E6E1C)
+        ..strokeWidth = 2.4
+        ..style = ui.PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round,
+    );
+
+    // Front Paws with defined claws
+    final pawPaint = Paint()..color = const Color(0xFFF5CE6E);
+    canvas.drawRRect(RRect.fromRectAndRadius(const Rect.fromLTWH(36, 16, 26, 9), const Radius.circular(3)), pawPaint);
+    canvas.drawRRect(RRect.fromRectAndRadius(const Rect.fromLTWH(26, 18, 22, 7), const Radius.circular(3)), Paint()..color = const Color(0xFFD8A53B));
+
+    // Royal Nemes Headdress (Egyptian pharaoh cloth with blue & gold bands)
+    final nemesPath = Path()
+      ..moveTo(12, -30)
+      ..lineTo(14, -52)
+      ..quadraticBezierTo(24, -60, 35, -52)
+      ..lineTo(37, -30)
+      ..lineTo(33, -22)
+      ..lineTo(15, -22)
+      ..close();
+    canvas.drawPath(nemesPath, Paint()..color = const Color(0xFFFFD54F));
+
+    // Pharaoh Face profile
+    final facePath = Path()
+      ..moveTo(22, -50)
+      ..quadraticBezierTo(28, -52, 34, -48)
+      ..lineTo(36, -42)
+      ..lineTo(39, -39) // Noble nose
+      ..lineTo(35, -36) // Lips
+      ..lineTo(36, -32) // Chin
+      ..lineTo(22, -32)
+      ..close();
+    canvas.drawPath(facePath, Paint()..color = const Color(0xFFFFF1A8));
+
+    // Pharaoh Beard (Osiris Beard)
+    final beardPath = Path()
+      ..moveTo(33, -32)
+      ..lineTo(36, -32)
+      ..lineTo(37, -23)
+      ..lineTo(32, -23)
+      ..close();
+    canvas.drawPath(beardPath, Paint()..color = const Color(0xFF4A3412));
+
+    // Royal Blue Nemes Stripes
+    final blueStripePaint = Paint()
+      ..color = const Color(0xFF1565C0)
+      ..strokeWidth = 1.4;
+    for (int k = 0; k < 5; k++) {
+      final sy = -48.0 + k * 3.8;
+      canvas.drawLine(Offset(14, sy), Offset(35, sy), blueStripePaint);
+    }
+
+    // Uraeus Cobra crest on brow
+    canvas.drawCircle(const Offset(25, -56), 2.0, Paint()..color = const Color(0xFFFFD700));
+
+    canvas.restore();
+  }
+
+  void _drawDesertCamelCaravan(Canvas canvas, Offset startPos, double scale) {
+    canvas.save();
+    canvas.translate(startPos.dx, startPos.dy);
+    canvas.scale(scale);
+
+    final saddlePaints = [
+      Paint()..color = const Color(0xFFD32F2F), // Crimson
+      Paint()..color = const Color(0xFF1976D2), // Royal Cobalt
+      Paint()..color = const Color(0xFF388E3C), // Emerald
+      Paint()..color = const Color(0xFFF57C00), // Sunset Orange
+    ];
+    final ropePaint = Paint()
+      ..color = const Color(0xFF5D4037).withValues(alpha: 0.7)
+      ..strokeWidth = 1.2;
+
+    // Leader Bedouin scout figure
+    const scoutX = 145.0;
+    final scoutPaint = Paint()..color = const Color(0xFF4E342E);
+    // Flowing desert keffiyeh headwear
+    canvas.drawCircle(const Offset(scoutX, -18), 4.0, Paint()..color = const Color(0xFFFFF8E1));
+    canvas.drawCircle(const Offset(scoutX, -18), 2.5, scoutPaint);
+    // Flowing Robe (Galabeya)
+    final robePath = Path()
+      ..moveTo(scoutX - 4, -14)
+      ..lineTo(scoutX + 4, -14)
+      ..lineTo(scoutX + 6, 8)
+      ..lineTo(scoutX - 6, 8)
+      ..close();
+    canvas.drawPath(robePath, Paint()..color = const Color(0xFFECEFF1));
+    // Walking legs
+    canvas.drawLine(const Offset(scoutX - 3, 8), const Offset(scoutX - 5, 16), scoutPaint..strokeWidth = 2.0);
+    canvas.drawLine(const Offset(scoutX + 3, 8), const Offset(scoutX + 5, 16), scoutPaint..strokeWidth = 2.0);
+    // Shepherd staff
+    canvas.drawLine(
+      const Offset(scoutX + 7, -24),
+      const Offset(scoutX + 7, 16),
+      Paint()..color = const Color(0xFF795548)..strokeWidth = 1.5,
+    );
+
+    // Lead rope to first camel
+    canvas.drawLine(const Offset(scoutX - 4, -6), const Offset(108, -12), ropePaint);
+
+    for (int c = 0; c < 4; c++) {
+      final cx = 100.0 - c * 40.0;
+      final cy = (c % 2 == 0) ? 0.0 : 2.5;
+
+      canvas.save();
+      canvas.translate(cx, cy);
+
+      // Connecting rein rope to previous camel
+      if (c < 3) {
+        final ropeCurve = Path()
+          ..moveTo(-14, -6)
+          ..quadraticBezierTo(-26, 4, -40 + 12, -10);
+        canvas.drawPath(ropeCurve, ropePaint..style = ui.PaintingStyle.stroke);
+      }
+
+      // Camel Soft Drop Shadow
+      canvas.drawOval(
+        const Rect.fromLTWH(-16, 12, 36, 6),
+        Paint()..color = const Color(0xFF7A5820).withValues(alpha: 0.35),
+      );
+
+      // Smooth Anatomical Camel Silhouette
+      final cPath = Path()
+        ..moveTo(-16, 2)
+        ..cubicTo(-18, -4, -16, -10, -10, -12) // Rear flank
+        ..cubicTo(-6, -12, -4, -20, 2, -20)   // Rounded Single Hump
+        ..cubicTo(7, -20, 9, -12, 13, -10)    // Shoulder
+        ..lineTo(16, -22)                     // Arched neck
+        ..cubicTo(18, -26, 24, -26, 24, -21)  // Head & muzzle
+        ..lineTo(22, -18)
+        ..lineTo(17, -14)                     // Throat
+        ..cubicTo(14, -6, 13, 0, 10, 2)       // Chest
+        ..cubicTo(0, 5, -8, 5, -16, 2)        // Belly
+        ..close();
+
+      final camelGradient = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: const [
+          Color(0xFFD4A552),
+          Color(0xFFB58230),
+        ],
+      ).createShader(const Rect.fromLTWH(-18, -26, 45, 35));
+      canvas.drawPath(cPath, Paint()..shader = camelGradient);
+
+      // Embroidered Nomadic Saddle Blanket with Gold Fringe
+      final saddleRect = const Rect.fromLTWH(-5, -20, 14, 10);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(saddleRect, const Radius.circular(2)),
+        saddlePaints[c % saddlePaints.length],
+      );
+      // Gold fringe trim on saddle
+      canvas.drawLine(
+        const Offset(-5, -10),
+        const Offset(9, -10),
+        Paint()..color = const Color(0xFFFFD700)..strokeWidth = 1.4,
+      );
+
+      // Articulated legs with knees & hooves
+      final legPaint = Paint()
+        ..color = const Color(0xFF8D6220)
+        ..strokeWidth = 2.0
+        ..strokeCap = StrokeCap.round;
+      // Hind legs (stride motion)
+      canvas.drawLine(const Offset(-12, 2), const Offset(-15, 14), legPaint);
+      canvas.drawLine(const Offset(-7, 2), const Offset(-5, 14), legPaint);
+      // Fore legs (stride motion)
+      canvas.drawLine(const Offset(6, 2), const Offset(4, 14), legPaint);
+      canvas.drawLine(const Offset(11, 2), const Offset(14, 14), legPaint);
+
+      // Head bridle detail
+      canvas.drawCircle(const Offset(22, -22), 1.0, Paint()..color = const Color(0xFF3E2723));
+
+      canvas.restore();
+    }
+
+    canvas.restore();
+  }
+
+  void _drawDesertOasis(Canvas canvas, Offset pos, double width) {
+    canvas.save();
+    canvas.translate(pos.dx, pos.dy);
+
+    // 1. Soft glowing shoreline moisture ring
+    final shoreRect = Rect.fromCenter(center: Offset.zero, width: width * 1.15, height: width * 0.42);
+    final shoreShader = RadialGradient(
+      center: Alignment.center,
+      colors: [
+        const Color(0xFF4DB6AC).withValues(alpha: 0.45),
+        const Color(0xFFE0B65E).withValues(alpha: 0.0),
+      ],
+    ).createShader(shoreRect);
+    canvas.drawOval(shoreRect, Paint()..shader = shoreShader);
+
+    // 2. Crystal clear turquoise spring pool
+    final poolRect = Rect.fromCenter(center: Offset.zero, width: width, height: width * 0.36);
+    final poolPath = Path()..addOval(poolRect);
+
+    final waterShader = RadialGradient(
+      center: const Alignment(-0.25, -0.3),
+      colors: const [
+        Color(0xFFE0F7FA), // Radiant sky reflection
+        Color(0xFF4DD0E1), // Turquoise clear water
+        Color(0xFF0097A7), // Deep emerald azure spring
+        Color(0xFF006064), // Deep basin
+      ],
+      stops: const [0.0, 0.35, 0.75, 1.0],
+    ).createShader(poolRect);
+    canvas.drawPath(poolPath, Paint()..shader = waterShader);
+
+    // 3. Shimmering water ripple arcs & white wave crests
+    final ripplePaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.70)
+      ..style = ui.PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = 1.6;
+    canvas.drawArc(Rect.fromCenter(center: const Offset(-10, -5), width: width * 0.52, height: width * 0.16), 0.2, 2.2, false, ripplePaint);
+    canvas.drawArc(Rect.fromCenter(center: const Offset(12, 4), width: width * 0.38, height: width * 0.12), 0.6, 1.8, false, ripplePaint);
+
+    // 4. Smooth shoreline river rocks with highlights & shadows
+    final stones = [
+      (Offset(-width * 0.48, 3), 11.0, 7.0, const Color(0xFF795548)),
+      (Offset(-width * 0.36, width * 0.15), 14.0, 8.0, const Color(0xFF8D6E63)),
+      (Offset(-width * 0.12, width * 0.18), 10.0, 6.0, const Color(0xFFA1887F)),
+      (Offset(width * 0.14, width * 0.17), 13.0, 7.5, const Color(0xFF795548)),
+      (Offset(width * 0.42, width * 0.08), 12.0, 7.0, const Color(0xFF8D6E63)),
+      (Offset(width * 0.46, -width * 0.06), 9.0, 6.0, const Color(0xFFA1887F)),
+      (Offset(-width * 0.22, -width * 0.16), 11.0, 6.5, const Color(0xFF6D4C41)),
+      (Offset(width * 0.22, -width * 0.17), 12.0, 7.0, const Color(0xFF795548)),
+    ];
+    for (final stone in stones) {
+      final stoneRect = Rect.fromCenter(center: stone.$1, width: stone.$2, height: stone.$3);
+      // Cast shadow
+      canvas.drawOval(
+        Rect.fromCenter(center: stone.$1 + const Offset(1, 2), width: stone.$2, height: stone.$3),
+        Paint()..color = const Color(0xFF4E342E).withValues(alpha: 0.4),
+      );
+      // Stone body
+      canvas.drawOval(stoneRect, Paint()..color = stone.$4);
+      // Stone sunlit top highlight
+      canvas.drawOval(
+        Rect.fromCenter(center: stone.$1 - const Offset(1, 1.5), width: stone.$2 * 0.7, height: stone.$3 * 0.5),
+        Paint()..color = Colors.white.withValues(alpha: 0.28),
+      );
+    }
+
+    // 5. Lush Date Palm Trees gracefully framing the oasis
+    _drawPalmTree(canvas, Offset(-width * 0.32, -4), scale: 0.90, tilt: -0.24);
+    _drawPalmTree(canvas, Offset(-width * 0.16, -12), scale: 1.15, tilt: -0.06);
+    _drawPalmTree(canvas, Offset(width * 0.30, -6), scale: 0.95, tilt: 0.20);
+
+    canvas.restore();
+  }
+
+  void _drawPalmTree(Canvas canvas, Offset rootPos, {required double scale, required double tilt}) {
+    canvas.save();
+    canvas.translate(rootPos.dx, rootPos.dy);
+    canvas.scale(scale);
+
+    // Natural curved segmented palm trunk
+    final trunkPath = Path()
+      ..moveTo(-5, 0)
+      ..cubicTo(-4 + tilt * 40, -25, -3 + tilt * 70, -50, tilt * 90 - 1, -78)
+      ..lineTo(tilt * 90 + 5, -78)
+      ..cubicTo(4 + tilt * 70, -50, 5 + tilt * 40, -25, 5, 0)
+      ..close();
+
+    final trunkGradient = LinearGradient(
+      begin: Alignment.centerLeft,
+      end: Alignment.centerRight,
+      colors: const [
+        Color(0xFF8D6E63), // Lit side bark
+        Color(0xFF5D4037), // Core bark
+        Color(0xFF3E2723), // Shadow bark
+      ],
+    ).createShader(const Rect.fromLTWH(-10, -80, 40, 80));
+    canvas.drawPath(trunkPath, Paint()..shader = trunkGradient);
+
+    // Palm trunk texture rings
+    final ringPaint = Paint()
+      ..color = const Color(0xFF2D1B18).withValues(alpha: 0.6)
+      ..strokeWidth = 1.8;
+    for (int k = 1; k <= 9; k++) {
+      final t = k / 10.0;
+      final rx = (1 - t) * 0 + t * (tilt * 90);
+      final ry = -t * 78;
+      canvas.drawLine(Offset(rx - 4.5, ry), Offset(rx + 4.5, ry), ringPaint);
+    }
+
+    final crownX = tilt * 90 + 2;
+    const crownY = -78.0;
+
+    // Golden / Brown Date Clusters
+    final datePaint = Paint()..color = const Color(0xFF6D4C41);
+    final dateHighlight = Paint()..color = const Color(0xFFFFB300);
+    canvas.drawCircle(Offset(crownX - 4, crownY + 3), 3.5, datePaint);
+    canvas.drawCircle(Offset(crownX - 4, crownY + 3), 1.8, dateHighlight);
+    canvas.drawCircle(Offset(crownX + 3, crownY + 4), 3.8, datePaint);
+    canvas.drawCircle(Offset(crownX + 3, crownY + 4), 2.0, dateHighlight);
+    canvas.drawCircle(Offset(crownX, crownY + 6), 3.2, datePaint);
+
+    // Multi-Layered Feathered Date Palm Fronds
+    final frondTiers = [
+      // Deep background fronds
+      (const Color(0xFF1B5E20), 0.95, -0.15),
+      // Mid rich forest fronds
+      (const Color(0xFF2E7D32), 1.05, 0.0),
+      // Bright sunlit emerald fronds
+      (const Color(0xFF43A047), 1.15, 0.12),
+      // Top lime highlight fronds
+      (const Color(0xFF66BB6A), 1.0, 0.22),
+    ];
+
+    final baseAngles = [-2.5, -1.9, -1.3, -0.7, 0.0, 0.7, 1.3, 1.9, 2.5];
+    for (int i = 0; i < baseAngles.length; i++) {
+      final baseAngle = baseAngles[i] + tilt * 0.45;
+      final tier = frondTiers[i % frondTiers.length];
+      final frondLen = (32.0 + (i % 3) * 7.0) * tier.$2;
+
+      final tipX = crownX + math.cos(baseAngle - math.pi / 2) * frondLen;
+      final tipY = crownY + math.sin(baseAngle - math.pi / 2) * frondLen + 10.0;
+
+      // Elegant cascading curved frond leaf body
+      final fPath = Path()
+        ..moveTo(crownX, crownY)
+        ..quadraticBezierTo(
+          (crownX + tipX) / 2 + math.sin(baseAngle) * 9,
+          (crownY + tipY) / 2 - 10,
+          tipX,
+          tipY,
+        )
+        ..quadraticBezierTo(
+          (crownX + tipX) / 2 - math.sin(baseAngle) * 5,
+          (crownY + tipY) / 2 + 6,
+          crownX,
+          crownY,
+        );
+
+      canvas.drawPath(fPath, Paint()..color = tier.$1);
+
+      // Bright sunlit central frond stem (rachis)
+      canvas.drawLine(
+        Offset(crownX, crownY),
+        Offset(tipX, tipY),
+        Paint()
+          ..color = const Color(0xFFDCEDC8).withValues(alpha: 0.8)
+          ..strokeWidth = 1.2
+          ..strokeCap = StrokeCap.round,
+      );
+
+      // Fine feathery leaflet strokes along the frond
+      final leafStrokePaint = Paint()
+        ..color = tier.$1
+        ..strokeWidth = 1.4
+        ..strokeCap = StrokeCap.round;
+      for (int lf = 1; lf <= 6; lf++) {
+        final lt = lf / 7.0;
+        final lx = crownX + (tipX - crownX) * lt;
+        final ly = crownY + (tipY - crownY) * lt;
+        final lAng = baseAngle + (lf % 2 == 0 ? 0.6 : -0.6);
+        canvas.drawLine(
+          Offset(lx, ly),
+          Offset(lx + math.cos(lAng) * 6, ly + math.sin(lAng) * 6 + 2),
+          leafStrokePaint,
+        );
+      }
+    }
+
+    canvas.restore();
+  }
+
+  void _drawDesertSandCitadel(Canvas canvas, Offset pos, double scale) {
+    canvas.save();
+    canvas.translate(pos.dx, pos.dy);
+    canvas.scale(scale);
+
+    // Fortress shadow on sand
+    canvas.drawOval(
+      const Rect.fromLTWH(-55, 20, 115, 14),
+      Paint()..color = const Color(0xFF7A5820).withValues(alpha: 0.35),
+    );
+
+    final litPaint = Paint()..color = const Color(0xFFFBE48A);
+    final midPaint = Paint()..color = const Color(0xFFE5B946);
+    final shadowPaint = Paint()..color = const Color(0xFF9E6E1C);
+
+    // Main Curtain Wall
+    canvas.drawRect(const Rect.fromLTWH(-36, -26, 72, 38), midPaint);
+    canvas.drawRect(const Rect.fromLTWH(-36, -26, 36, 38), litPaint);
+    canvas.drawRect(const Rect.fromLTWH(0, -26, 36, 38), shadowPaint);
+
+    // Battlements & Crenellations across curtain wall
+    for (int i = 0; i < 5; i++) {
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(Rect.fromLTWH(-36 + i * 15, -34, 9, 8), const Radius.circular(1.5)),
+        litPaint,
+      );
+    }
+
+    // Grand Central Keep
+    canvas.drawRect(const Rect.fromLTWH(-14, -54, 28, 28), midPaint);
+    canvas.drawRect(const Rect.fromLTWH(-14, -54, 14, 28), litPaint);
+    canvas.drawRect(const Rect.fromLTWH(0, -54, 14, 28), shadowPaint);
+
+    // Gleaming Golden Onion Dome on Central Keep
+    final domePath = Path()
+      ..moveTo(-16, -54)
+      ..cubicTo(-18, -66, -8, -75, 0, -78)
+      ..cubicTo(8, -75, 18, -66, 16, -54)
+      ..close();
+    final domeShader = LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: const [
+        Color(0xFFFFF9C4),
+        Color(0xFFFFD54F),
+        Color(0xFFFF8F00),
+      ],
+    ).createShader(const Rect.fromLTWH(-18, -78, 36, 26));
+    canvas.drawPath(domePath, Paint()..shader = domeShader);
+    // Dome crescent finial
+    canvas.drawCircle(const Offset(0, -81), 2.2, Paint()..color = const Color(0xFFFFD700));
+
+    // Left Watchtower with Conical Spire
+    canvas.drawRect(const Rect.fromLTWH(-50, -44, 18, 52), litPaint);
+    final leftSpire = Path()
+      ..moveTo(-52, -44)
+      ..lineTo(-41, -64)
+      ..lineTo(-30, -44)
+      ..close();
+    canvas.drawPath(leftSpire, Paint()..color = const Color(0xFFFFD54F));
+    // Fluttering red banner flag
+    final flagPath = Path()
+      ..moveTo(-41, -64)
+      ..lineTo(-41, -74)
+      ..lineTo(-32, -69)
+      ..lineTo(-41, -64);
+    canvas.drawPath(flagPath, Paint()..color = const Color(0xFFD32F2F));
+
+    // Right Watchtower with Conical Spire
+    canvas.drawRect(const Rect.fromLTWH(32, -44, 18, 52), shadowPaint);
+    final rightSpire = Path()
+      ..moveTo(30, -44)
+      ..lineTo(41, -64)
+      ..lineTo(52, -44)
+      ..close();
+    canvas.drawPath(rightSpire, Paint()..color = const Color(0xFFC7922E));
+
+    // Moorish Arched Entry Portal with Depth
+    final archPath = Path()
+      ..moveTo(-9, 12)
+      ..lineTo(-9, -6)
+      ..cubicTo(-9, -18, 9, -18, 9, -6)
+      ..lineTo(9, 12)
+      ..close();
+    canvas.drawPath(archPath, Paint()..color = const Color(0xFF3E2723));
+
+    // Decorative Arched Windows / Arrow Slits
+    final winPaint = Paint()..color = const Color(0xFF4A3412);
+    canvas.drawRRect(RRect.fromRectAndRadius(const Rect.fromLTWH(-45, -32, 7, 12), const Radius.circular(3.5)), winPaint);
+    canvas.drawRRect(RRect.fromRectAndRadius(const Rect.fromLTWH(38, -32, 7, 12), const Radius.circular(3.5)), winPaint);
+    canvas.drawRRect(RRect.fromRectAndRadius(const Rect.fromLTWH(-5, -44, 10, 14), const Radius.circular(5)), winPaint);
+
+    canvas.restore();
+  }
+
+  void _drawDesertPetroglyphs(Canvas canvas, Offset pos, double scale) {
+    canvas.save();
+    canvas.translate(pos.dx, pos.dy);
+    canvas.scale(scale);
+
+    final glyphPaint = Paint()
+      ..color = const Color(0xFFB57E28).withValues(alpha: 0.65)
+      ..strokeWidth = 2.2
+      ..style = ui.PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    final spiralPath = Path();
+    for (double a = 0; a < math.pi * 5; a += 0.2) {
+      final r = a * 2.6;
+      final px = math.cos(a) * r;
+      final py = math.sin(a) * r;
+      if (a == 0) {
+        spiralPath.moveTo(px, py);
+      } else {
+        spiralPath.lineTo(px, py);
+      }
+    }
+    canvas.drawPath(spiralPath, glyphPaint);
+
+    for (int i = 0; i < 8; i++) {
+      final ang = (i / 8) * math.pi * 2;
+      canvas.drawCircle(
+        Offset(math.cos(ang) * 44, math.sin(ang) * 44),
+        2.2,
+        Paint()..color = const Color(0xFFB57E28).withValues(alpha: 0.6),
+      );
+    }
+
+    final birdPath = Path()
+      ..moveTo(-35, 15)
+      ..quadraticBezierTo(-20, 5, 0, 20)
+      ..quadraticBezierTo(20, 5, 35, 15)
+      ..moveTo(0, 20)
+      ..lineTo(0, 38)
+      ..lineTo(-10, 48)
+      ..moveTo(0, 38)
+      ..lineTo(10, 48);
+    canvas.drawPath(birdPath, glyphPaint);
+
+    canvas.restore();
+  }
+
+  void _drawDesertAtmosphere(Canvas canvas, double w, double yGround) {
+    final sparkleGlowPaint = Paint()
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
+    for (final sp in _desertSparkles) {
+      final twinkle = ((math.sin(_time * 3.0 + sp.phase) + 1) / 2).clamp(0.0, 1.0);
+      final alpha = sp.alpha * (0.3 + twinkle * 0.7);
+      
+      sparkleGlowPaint.color = const Color(0xFFFFD54F).withValues(alpha: alpha * 0.4);
+      canvas.drawCircle(Offset(sp.x, sp.y), sp.radius * 2.2, sparkleGlowPaint);
+
+      final starPaint = Paint()..color = Colors.white.withValues(alpha: alpha);
+      canvas.drawCircle(Offset(sp.x, sp.y), sp.radius * 0.8, starPaint);
+      if (twinkle > 0.6) {
+        final crossLen = sp.radius * 2.5;
+        canvas.drawLine(Offset(sp.x - crossLen, sp.y), Offset(sp.x + crossLen, sp.y), starPaint..strokeWidth = 0.8);
+        canvas.drawLine(Offset(sp.x, sp.y - crossLen), Offset(sp.x, sp.y + crossLen), starPaint..strokeWidth = 0.8);
+      }
+    }
+
+    final windPaint = Paint()
+      ..color = const Color(0xFFFFF9C4).withValues(alpha: 0.18)
+      ..strokeWidth = 1.5
+      ..style = ui.PaintingStyle.stroke;
+
+    for (int wIdx = 0; wIdx < 3; wIdx++) {
+      final windX = ((_time * 160 + wIdx * 260) % (w + 300)) - 150;
+      final windY = yGround - 110 + math.sin(_time * 1.8 + wIdx) * 16;
+      final wPath = Path()
+        ..moveTo(windX, windY)
+        ..quadraticBezierTo(windX + 50, windY - 8, windX + 110, windY + 4);
+      canvas.drawPath(wPath, windPaint);
     }
   }
 
@@ -821,118 +1678,48 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
   /// Draw multi-layer detailed parallax background silhouettes for all 6 biomes
   void _drawParallaxBackground(Canvas canvas, String biome) {
     final yGround = size.y - 120 + _spaceSlideOffset;
-    final totalW = size.x; // tile width matches landscape drawing width
-    final pShift = _bgScrollOffset % totalW;
 
+    if (_desertBgImage != null && biome == 'DESERT') {
+      final img = _desertBgImage!;
+      final imgW = img.width.toDouble();
+      final imgH = img.height.toDouble();
+      final scale = size.y / imgH;
+      final tileW = imgW * scale;
+      final pShift = _bgScrollOffset % tileW;
+
+      final srcRect = Rect.fromLTWH(0, 0, imgW, imgH);
+      final paint = Paint()..filterQuality = FilterQuality.high;
+
+      // Draw seamlessly repeating tiles
+      double startX = -pShift;
+      while (startX < size.x + 50) {
+        canvas.drawImageRect(
+          img,
+          srcRect,
+          Rect.fromLTWH(startX, 0, tileW, size.y),
+          paint,
+        );
+        startX += tileW;
+      }
+
+      // Dynamic floating golden dust particles
+      _drawDesertAtmosphere(canvas, size.x, yGround);
+      return;
+    }
+
+    final tileW = size.x;
+    final pShift = _bgScrollOffset % tileW;
     canvas.save();
     canvas.translate(-pShift, 0);
     _drawBiomeLandscape(canvas, biome, yGround);
-    canvas.translate(totalW, 0);
+    canvas.translate(tileW, 0);
     _drawBiomeLandscape(canvas, biome, yGround);
     canvas.restore();
   }
 
   void _drawBiomeLandscape(Canvas canvas, String biome, double yGround) {
-
     if (biome == 'DESERT') {
-      // 1. Far Soft Background Sand Dunes (Behind Pyramids)
-      final farDunePath = Path()
-        ..moveTo(0, yGround)
-        ..quadraticBezierTo(size.x * 0.20, yGround - 35, size.x * 0.45, yGround - 15)
-        ..quadraticBezierTo(size.x * 0.70, yGround - 40, size.x, yGround - 18)
-        ..lineTo(size.x, size.y)
-        ..lineTo(0, size.y);
-      final farDuneShader = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          const Color(0xFFE5C158).withValues(alpha: 0.45),
-          const Color(0xFFD4A359).withValues(alpha: 0.35),
-        ],
-      ).createShader(Rect.fromLTWH(0, yGround - 40, size.x, 100));
-      canvas.drawPath(farDunePath, Paint()..shader = farDuneShader);
-
-      // 2. 3 TOWERING ANCIENT 3D PYRAMIDS (Distant & Grand Scale - High Unblocked Pyramids!)
-      // Great Pyramid of Giza (Far Left Center - 180px tall!)
-      _draw3DPyramid(
-        canvas,
-        apex: Offset(size.x * 0.26, yGround - 180),
-        leftBaseX: size.x * 0.06,
-        rightBaseX: size.x * 0.44,
-        yGround: yGround,
-        hasGoldenCapstone: true,
-      );
-
-      // Middle Pyramid of Khafre (Center Right - 145px tall!)
-      _draw3DPyramid(
-        canvas,
-        apex: Offset(size.x * 0.60, yGround - 145),
-        leftBaseX: size.x * 0.44,
-        rightBaseX: size.x * 0.76,
-        yGround: yGround,
-        hasGoldenCapstone: true,
-      );
-
-      // Third Pyramid of Menkaure (Far Right - 105px tall!)
-      _draw3DPyramid(
-        canvas,
-        apex: Offset(size.x * 0.84, yGround - 105),
-        leftBaseX: size.x * 0.74,
-        rightBaseX: size.x * 0.94,
-        yGround: yGround,
-        hasGoldenCapstone: false,
-      );
-
-      // 3. Low Horizon Foreground Sand Dunes (Gentle low waves hugging base)
-      final midDunePath = Path()
-        ..moveTo(0, yGround)
-        ..quadraticBezierTo(size.x * 0.25, yGround - 22, size.x * 0.50, yGround - 10)
-        ..quadraticBezierTo(size.x * 0.75, yGround - 25, size.x, yGround - 12)
-        ..lineTo(size.x, size.y)
-        ..lineTo(0, size.y);
-      final midDuneShader = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          const Color(0xFFD4B04C).withValues(alpha: 0.80),
-          const Color(0xFFB88E36).withValues(alpha: 0.70),
-        ],
-      ).createShader(Rect.fromLTWH(0, yGround - 25, size.x, 80));
-      canvas.drawPath(midDunePath, Paint()..shader = midDuneShader);
-
-      // Gentle Dune Crest Shadow Line
-      final duneCrestPaint = Paint()
-        ..color = const Color(0xFF9E7728).withValues(alpha: 0.5)
-        ..strokeWidth = 2.0
-        ..style = ui.PaintingStyle.stroke;
-      final crestPath = Path()
-        ..moveTo(0, yGround - 10)
-        ..quadraticBezierTo(size.x * 0.25, yGround - 22, size.x * 0.50, yGround - 10)
-        ..quadraticBezierTo(size.x * 0.75, yGround - 25, size.x, yGround - 12);
-      canvas.drawPath(crestPath, duneCrestPaint);
-
-      // 4. Dusty Wind Gust Streaks & Flying Sand Particles (Dry Hazy Atmosphere)
-      final windPaint = Paint()
-        ..color = const Color(0xFFFFF9C4).withValues(alpha: 0.22)
-        ..strokeWidth = 1.5
-        ..style = ui.PaintingStyle.stroke;
-
-      for (int w = 0; w < 4; w++) {
-        final windX = ((_time * 180 + w * 220) % (size.x + 300)) - 150;
-        final windY = yGround - 110 + math.sin(_time * 2.0 + w) * 18;
-        final wPath = Path()
-          ..moveTo(windX, windY)
-          ..quadraticBezierTo(windX + 60, windY - 8, windX + 130, windY + 4);
-        canvas.drawPath(wPath, windPaint);
-      }
-
-      // Fine drifting sand grain particles
-      final sandPaint = Paint()..color = const Color(0xFFFFECB3).withValues(alpha: 0.45);
-      for (int s = 0; s < 18; s++) {
-        final sx = ((_time * (90 + s * 10) + s * 65) % (size.x + 40)) - 20;
-        final sy = yGround - 140 + (s * 7) % 120;
-        canvas.drawCircle(Offset(sx, sy), 1.0 + (s % 3) * 0.5, sandPaint);
-      }
+      _drawDesertArtwork(canvas, size.x, yGround);
     } else if (biome == 'ICE') {
       // 1. Far jagged ice glaciers & frozen mountain peaks
       final glacierPath = Path()
@@ -1126,7 +1913,7 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
   }
 
   void _drawSun(Canvas canvas, double w, double skyBrightness) {
-    final sunCenter = Offset(w - 240, 70);
+    final sunCenter = Offset(w - 180, 65);
     final t = _time;
 
     // 1. Massive Outer Heat Glow & Atmospheric Halo
@@ -1291,4 +2078,17 @@ class _RollingBush {
   double x, speed, radius;
   double rotation = 0;
   _RollingBush({required this.x, required this.speed, required this.radius});
+}
+
+class _DesertSparkle {
+  double x, y, radius, floatSpeedX, floatSpeedY, phase, alpha;
+  _DesertSparkle({
+    required this.x,
+    required this.y,
+    required this.radius,
+    required this.floatSpeedX,
+    required this.floatSpeedY,
+    required this.phase,
+    required this.alpha,
+  });
 }

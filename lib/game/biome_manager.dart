@@ -16,8 +16,8 @@ class BiomeManager extends Component with HasGameReference<DinoGame> {
   static const List<Biome> biomes = [
     Biome(
       name: 'DESERT',
-      skyTop: Color(0xFF87CEEB),
-      skyBottom: Color(0xFFE0C090),
+      skyTop: Color(0xFF184988),
+      skyBottom: Color(0xFFEAA63F),
       groundTop: Color(0xFFD2B48C),
       groundBottom: Color(0xFFA0855C),
     ),
