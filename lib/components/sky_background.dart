@@ -17,6 +17,7 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
   final List<_ForestSpore> _forestSpores = [];
   final List<_RollingBush> _rollingBushes = [];
   final List<_DesertSparkle> _desertSparkles = [];
+  final List<_Pterodactyl> _pterodactyls = [];
 
   final math.Random _rng = math.Random();
   double _time = 0;
@@ -32,6 +33,10 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
   final List<Offset> _lightningBoltPoints = [];
   ui.Image? _desertBgImage;
   ui.Image? _rainBgImage;
+  ui.Image? _forestBgImage;
+  ui.Image? _iceBgImage;
+  ui.Image? _volcanoBgImage;
+  ui.Image? _cosmosBgImage;
 
   @override
   Future<void> onLoad() async {
@@ -60,6 +65,65 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       try {
         _rainBgImage = await game.images.load('rain_bg.jpg');
       } catch (_) {}
+    }
+
+    try {
+      final data = await rootBundle.load('assets/images/forest_bg.jpg');
+      final bytes = data.buffer.asUint8List();
+      final codec = await ui.instantiateImageCodec(bytes);
+      final frame = await codec.getNextFrame();
+      _forestBgImage = frame.image;
+    } catch (_) {
+      try {
+        _forestBgImage = await game.images.load('forest_bg.jpg');
+      } catch (_) {}
+    }
+
+    try {
+      final data = await rootBundle.load('assets/images/ice_bg.jpg');
+      final bytes = data.buffer.asUint8List();
+      final codec = await ui.instantiateImageCodec(bytes);
+      final frame = await codec.getNextFrame();
+      _iceBgImage = frame.image;
+    } catch (_) {
+      try {
+        _iceBgImage = await game.images.load('ice_bg.jpg');
+      } catch (_) {}
+    }
+
+    try {
+      final data = await rootBundle.load('assets/images/volcano_bg.jpg');
+      final bytes = data.buffer.asUint8List();
+      final codec = await ui.instantiateImageCodec(bytes);
+      final frame = await codec.getNextFrame();
+      _volcanoBgImage = frame.image;
+    } catch (_) {
+      try {
+        _volcanoBgImage = await game.images.load('volcano_bg.jpg');
+      } catch (_) {}
+    }
+
+    try {
+      final data = await rootBundle.load('assets/images/cosmos_bg.jpg');
+      final bytes = data.buffer.asUint8List();
+      final codec = await ui.instantiateImageCodec(bytes);
+      final frame = await codec.getNextFrame();
+      _cosmosBgImage = frame.image;
+    } catch (_) {
+      try {
+        _cosmosBgImage = await game.images.load('cosmos_bg.jpg');
+      } catch (_) {}
+    }
+
+    // Spawn pterodactyls for prehistoric skies
+    for (int i = 0; i < 3; i++) {
+      _pterodactyls.add(_Pterodactyl(
+        x: _rng.nextDouble() * size.x,
+        y: 35 + _rng.nextDouble() * 95,
+        speed: 30 + _rng.nextDouble() * 22,
+        wingPhase: _rng.nextDouble() * math.pi * 2,
+        scale: 0.70 + _rng.nextDouble() * 0.40,
+      ));
     }
 
     // Spawn initial clouds
@@ -238,13 +302,22 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       }
     }
 
-    // Forest spores update
+    // Forest spores & flying pterodactyls update
     if (currentBiome == 'FOREST') {
       for (final spore in _forestSpores) {
         spore.y += math.sin(_time * spore.floatSpeed + spore.phase) * 12 * dt;
         spore.x -= 20 * dt;
         if (spore.x < -10) {
           spore.x = size.x + 10;
+        }
+      }
+      for (final pt in _pterodactyls) {
+        pt.x -= pt.speed * dt;
+        pt.wingPhase += dt * 5.5;
+        pt.y += math.sin(pt.wingPhase * 0.4) * 0.35;
+        if (pt.x < -100) {
+          pt.x = size.x + 100 + _rng.nextDouble() * 150;
+          pt.y = 35 + _rng.nextDouble() * 100;
         }
       }
     }
@@ -335,28 +408,28 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
         canvas.saveLayer(rect, Paint()..color = Colors.white.withValues(alpha: biomeAlpha));
       }
 
-      // Cosmic space nebulae & ringed planet
-      if (currentBiome == 'COSMOS') {
+      // Cosmic space nebulae & ringed planet (procedural fallback only)
+      if (currentBiome == 'COSMOS' && _cosmosBgImage == null) {
         _drawSpaceNebulae(canvas);
         _drawRingedPlanet(canvas);
       }
 
-      // Northern Lights for ICE land
-      if (currentBiome == 'ICE') {
+      // Northern Lights for ICE land (procedural fallback only)
+      if (currentBiome == 'ICE' && _iceBgImage == null) {
         _drawAuroraBorealis(canvas);
       }
 
-      // God rays for Forest
-      if (currentBiome == 'FOREST') {
+      // God rays for Forest (procedural fallback only)
+      if (currentBiome == 'FOREST' && _forestBgImage == null) {
         _drawGodRays(canvas);
       }
 
       // Detailed multi-layer parallax environments
       _drawParallaxBackground(canvas, currentBiome);
 
-      // Stars (visible in dark biomes & space, not during bright desert day)
+      // Stars (visible in space/night procedural fallbacks)
       final skyBrightness = skyTop.computeLuminance();
-      if (skyBrightness < 0.35 && currentBiome != 'DESERT') {
+      if (skyBrightness < 0.35 && currentBiome != 'DESERT' && _cosmosBgImage == null && _iceBgImage == null) {
         for (final star in _stars) {
           final alpha = ((math.sin(star.brightness) + 1) / 2 * (1 - skyBrightness)).clamp(0.0, 1.0);
           canvas.drawCircle(
@@ -367,13 +440,13 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
         }
       }
 
-      // Sun
-      if (currentBiome != 'COSMOS' && currentBiome != 'VOLCANO' && currentBiome != 'RAIN' && !(currentBiome == 'DESERT' && _desertBgImage != null)) {
+      // Sun (Procedural fallback only)
+      if (currentBiome == 'DESERT' && _desertBgImage == null) {
         _drawSun(canvas, size.x, skyBrightness);
       }
 
-      // Clouds
-      if (currentBiome != 'RAIN' && currentBiome != 'COSMOS' && !(currentBiome == 'DESERT' && _desertBgImage != null)) {
+      // Clouds (Procedural fallback only)
+      if (_desertBgImage == null && _rainBgImage == null && _forestBgImage == null && _iceBgImage == null && _volcanoBgImage == null && _cosmosBgImage == null) {
         final cloudAlpha = skyBrightness > 0.2 ? 0.75 : 0.2;
         for (final cloud in _clouds) {
           _drawCloud(canvas, cloud, cloudAlpha);
@@ -1748,6 +1821,107 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       return;
     }
 
+    if (_forestBgImage != null && biome == 'FOREST') {
+      final img = _forestBgImage!;
+      final imgW = img.width.toDouble();
+      final imgH = img.height.toDouble();
+      final scale = size.y / imgH;
+      final tileW = imgW * scale;
+      final pShift = _bgScrollOffset % tileW;
+
+      final srcRect = Rect.fromLTWH(0, 0, imgW, imgH);
+      final paint = Paint()..filterQuality = FilterQuality.high;
+
+      // Draw seamlessly repeating tiles
+      double startX = -pShift;
+      while (startX < size.x + 50) {
+        canvas.drawImageRect(
+          img,
+          srcRect,
+          Rect.fromLTWH(startX, 0, tileW, size.y),
+          paint,
+        );
+        startX += tileW;
+      }
+      _drawForestAtmosphere(canvas, size.x, yGround);
+      return;
+    }
+
+    if (_iceBgImage != null && biome == 'ICE') {
+      final img = _iceBgImage!;
+      final imgW = img.width.toDouble();
+      final imgH = img.height.toDouble();
+      final scale = size.y / imgH;
+      final tileW = imgW * scale;
+      final pShift = _bgScrollOffset % tileW;
+
+      final srcRect = Rect.fromLTWH(0, 0, imgW, imgH);
+      final paint = Paint()..filterQuality = FilterQuality.high;
+
+      double startX = -pShift;
+      while (startX < size.x + 50) {
+        canvas.drawImageRect(
+          img,
+          srcRect,
+          Rect.fromLTWH(startX, 0, tileW, size.y),
+          paint,
+        );
+        startX += tileW;
+      }
+      _drawIceAtmosphere(canvas, size.x, yGround);
+      return;
+    }
+
+    if (_volcanoBgImage != null && biome == 'VOLCANO') {
+      final img = _volcanoBgImage!;
+      final imgW = img.width.toDouble();
+      final imgH = img.height.toDouble();
+      final scale = size.y / imgH;
+      final tileW = imgW * scale;
+      final pShift = _bgScrollOffset % tileW;
+
+      final srcRect = Rect.fromLTWH(0, 0, imgW, imgH);
+      final paint = Paint()..filterQuality = FilterQuality.high;
+
+      double startX = -pShift;
+      while (startX < size.x + 50) {
+        canvas.drawImageRect(
+          img,
+          srcRect,
+          Rect.fromLTWH(startX, 0, tileW, size.y),
+          paint,
+        );
+        startX += tileW;
+      }
+      _drawVolcanoAtmosphere(canvas, size.x, yGround);
+      return;
+    }
+
+    if (_cosmosBgImage != null && biome == 'COSMOS') {
+      final img = _cosmosBgImage!;
+      final imgW = img.width.toDouble();
+      final imgH = img.height.toDouble();
+      final scale = size.y / imgH;
+      final tileW = imgW * scale;
+      final pShift = _bgScrollOffset % tileW;
+
+      final srcRect = Rect.fromLTWH(0, 0, imgW, imgH);
+      final paint = Paint()..filterQuality = FilterQuality.high;
+
+      double startX = -pShift;
+      while (startX < size.x + 50) {
+        canvas.drawImageRect(
+          img,
+          srcRect,
+          Rect.fromLTWH(startX, 0, tileW, size.y),
+          paint,
+        );
+        startX += tileW;
+      }
+      _drawCosmosAtmosphere(canvas, size.x, yGround);
+      return;
+    }
+
     final tileW = size.x;
     final pShift = _bgScrollOffset % tileW;
     canvas.save();
@@ -2385,6 +2559,210 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       canvas.drawCircle(Offset(sx, sy), 1.5, sporePaint);
     }
   }
+
+  void _drawForestAtmosphere(Canvas canvas, double w, double yGround) {
+    // 1. Soaring Flying Pterodactyls across the prehistoric canopy openings
+    for (final pt in _pterodactyls) {
+      _drawPterodactyl(canvas, pt);
+    }
+
+    // 2. Floating golden pollen and emerald spores drifting through the prehistoric canopy
+    final sporePaint = Paint()
+      ..color = const Color(0xFFFFF59D).withValues(alpha: 0.55)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
+
+    final greenSporePaint = Paint()
+      ..color = const Color(0xFFA5D6A7).withValues(alpha: 0.45)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
+
+    for (int i = 0; i < 22; i++) {
+      final sx = ((i * 67 + _time * (12 + (i % 5) * 3)) % w);
+      final sy = yGround - 40 - math.sin(_time * 1.6 + i * 0.8) * 35 - (i * 12) % (size.y * 0.5);
+      final r = 1.2 + (i % 3) * 0.8;
+      final paint = (i % 2 == 0) ? sporePaint : greenSporePaint;
+      canvas.drawCircle(Offset(sx, sy), r, paint);
+    }
+
+    // 3. Easter Egg: Cute Peeking Baby Dino popping up from behind mossy hillock!
+    final cycle = (_time * 0.16) % 1.0;
+    if (cycle < 0.42) {
+      final peekProgress = (cycle < 0.10)
+          ? (cycle / 0.10) // Pop up
+          : (cycle > 0.32)
+              ? (1.0 - (cycle - 0.32) / 0.10) // Duck down
+              : 1.0; // Stay looking around
+      
+      final dinoX = (w * 0.58);
+      final dinoY = yGround - 8 - (peekProgress * 26);
+
+      canvas.save();
+      canvas.translate(dinoX, dinoY);
+
+      // Baby Dino Body
+      final dinoPaint = Paint()..color = const Color(0xFF66BB6A);
+      final bellyPaint = Paint()..color = const Color(0xFFC8E6C9);
+      final eyeWhite = Paint()..color = Colors.white;
+      final eyePupil = Paint()..color = const Color(0xFF1B5E20);
+      final blushPaint = Paint()..color = const Color(0xFFFF80AB).withValues(alpha: 0.65);
+
+      // Head
+      canvas.drawCircle(Offset.zero, 12, dinoPaint);
+      // Cute Snout
+      canvas.drawRRect(RRect.fromRectAndRadius(const Rect.fromLTWH(2, -4, 13, 9), const Radius.circular(4.5)), dinoPaint);
+      canvas.drawOval(const Rect.fromLTWH(4, 0, 9, 4), bellyPaint);
+
+      // Little Triceratops Crown Frill
+      final frillPath = Path()
+        ..moveTo(-4, -10)
+        ..lineTo(-2, -17)
+        ..lineTo(2, -10)
+        ..lineTo(6, -17)
+        ..lineTo(8, -9);
+      canvas.drawPath(frillPath, Paint()..color = const Color(0xFF81C784)..style = PaintingStyle.stroke..strokeWidth = 2.6..strokeCap = StrokeCap.round);
+
+      // Big glossy happy blinking eye
+      final blink = (math.sin(_time * 6) > 0.94);
+      if (blink) {
+        canvas.drawLine(const Offset(6, -4), const Offset(10, -4), eyePupil..strokeWidth = 2.0..strokeCap = StrokeCap.round);
+      } else {
+        canvas.drawCircle(const Offset(8, -4), 3.2, eyeWhite);
+        canvas.drawCircle(const Offset(8.6, -4), 1.9, eyePupil);
+        canvas.drawCircle(const Offset(9.2, -4.8), 0.9, eyeWhite); // Glint
+      }
+
+      // Cute Rosy Cheek Blush
+      canvas.drawCircle(const Offset(4, 2), 2.4, blushPaint);
+
+      // Happy Smile
+      final mouthPath = Path()
+        ..moveTo(8, 2)
+        ..quadraticBezierTo(10, 4.5, 12, 2);
+      canvas.drawPath(mouthPath, Paint()..color = const Color(0xFF2E7D32)..style = PaintingStyle.stroke..strokeWidth = 1.3..strokeCap = StrokeCap.round);
+
+      // Little waving dino hand
+      final waveAng = math.sin(_time * 14) * 0.45;
+      canvas.save();
+      canvas.translate(9, 7);
+      canvas.rotate(waveAng);
+      canvas.drawRRect(RRect.fromRectAndRadius(const Rect.fromLTWH(0, 0, 5, 7), const Radius.circular(2.5)), dinoPaint);
+      canvas.restore();
+
+      canvas.restore();
+    }
+  }
+
+  void _drawIceAtmosphere(Canvas canvas, double w, double yGround) {
+    // Swirling ice crystalline diamond dust and frosty mist
+    final frostPaint = Paint()
+      ..color = const Color(0xFFE0F7FA).withValues(alpha: 0.6)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
+
+    for (int i = 0; i < 25; i++) {
+      final sx = ((i * 59 + _time * 24) % w);
+      final sy = yGround - 30 - math.sin(_time * 2.0 + i) * 35 - (i * 14) % (size.y * 0.6);
+      canvas.drawCircle(Offset(sx, sy), 1.2 + (i % 3) * 0.6, frostPaint);
+    }
+  }
+
+  void _drawVolcanoAtmosphere(Canvas canvas, double w, double yGround) {
+    // Rising fiery magma embers and glowing sparks
+    final emberPaint = Paint()
+      ..color = const Color(0xFFFF9100).withValues(alpha: 0.75)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
+    final coreEmber = Paint()..color = const Color(0xFFFFF59D);
+
+    for (int i = 0; i < 28; i++) {
+      final ex = ((i * 63 - _time * 28) % w);
+      final ey = yGround - 20 - ((_time * 65 + i * 28) % (size.y * 0.75));
+      final er = 1.0 + (i % 3) * 0.8;
+      canvas.drawCircle(Offset(ex, ey), er, emberPaint);
+      canvas.drawCircle(Offset(ex, ey), er * 0.5, coreEmber);
+    }
+  }
+
+  void _drawCosmosAtmosphere(Canvas canvas, double w, double yGround) {
+    // Floating cosmic stardust and starlight energy motes
+    final stardustPaint = Paint()
+      ..color = const Color(0xFF00E5FF).withValues(alpha: 0.6)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
+    final violetDustPaint = Paint()
+      ..color = const Color(0xFFE040FB).withValues(alpha: 0.5)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
+
+    for (int i = 0; i < 24; i++) {
+      final cx = ((i * 71 + _time * 18) % w);
+      final cy = yGround - 50 - math.sin(_time * 1.8 + i) * 40 - (i * 16) % (size.y * 0.65);
+      final cr = 1.2 + (i % 3) * 0.7;
+      final paint = (i % 2 == 0) ? stardustPaint : violetDustPaint;
+      canvas.drawCircle(Offset(cx, cy), cr, paint);
+    }
+  }
+
+  void _drawPterodactyl(Canvas canvas, _Pterodactyl pt) {
+    canvas.save();
+    canvas.translate(pt.x, pt.y);
+    canvas.scale(pt.scale, pt.scale);
+
+    final wingFlap = math.sin(pt.wingPhase);
+    final wingY = wingFlap * 13.0;
+
+    final bodyPaint = Paint()..color = const Color(0xFF263238).withValues(alpha: 0.80);
+    final wingPaint = Paint()..color = const Color(0xFF37474F).withValues(alpha: 0.75);
+    final eyePaint = Paint()..color = const Color(0xFFFFD54F);
+
+    // 1. Long Aerodynamic Body & Tail
+    final bodyPath = Path()
+      ..moveTo(15, -2) // Beak tip
+      ..lineTo(7, -4)  // Head top
+      ..lineTo(1, -6)  // Crest back
+      ..lineTo(4, -1)  // Neck
+      ..lineTo(-18, 1) // Tail
+      ..lineTo(4, 2)   // Belly
+      ..close();
+    canvas.drawPath(bodyPath, bodyPaint);
+
+    // 2. Head Crest
+    final crestPath = Path()
+      ..moveTo(1, -6)
+      ..lineTo(-9, -12) // Pointy crest
+      ..lineTo(3, -3)
+      ..close();
+    canvas.drawPath(crestPath, bodyPaint);
+
+    // Amber Glint Eye
+    canvas.drawCircle(const Offset(7, -2), 1.0, eyePaint);
+
+    // 3. Flapping Leather Wings
+    // Left Wing
+    final leftWing = Path()
+      ..moveTo(2, -1)
+      ..lineTo(-4, -17 + wingY) // Wing tip
+      ..lineTo(-13, -3 + wingY * 0.5) // Trailing membrane
+      ..lineTo(-4, 1)
+      ..close();
+    canvas.drawPath(leftWing, wingPaint);
+
+    // Right Wing (Perspective offset)
+    final rightWing = Path()
+      ..moveTo(3, -1)
+      ..lineTo(7, -15 + wingY)
+      ..lineTo(-2, -2 + wingY * 0.5)
+      ..close();
+    canvas.drawPath(rightWing, bodyPaint..color = const Color(0xFF455A64).withValues(alpha: 0.65));
+
+    canvas.restore();
+  }
+}
+
+class _Pterodactyl {
+  double x, y, speed, wingPhase, scale;
+  _Pterodactyl({
+    required this.x,
+    required this.y,
+    required this.speed,
+    required this.wingPhase,
+    required this.scale,
+  });
 }
 
 class _Cloud {

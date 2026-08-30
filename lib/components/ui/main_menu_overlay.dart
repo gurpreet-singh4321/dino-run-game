@@ -224,6 +224,34 @@ class _MainMenuOverlayState extends State<MainMenuOverlay> with TickerProviderSt
     widget.game.overlays.add('SettingsDialog');
   }
 
+  void _triggerDinoRoarEasterEgg() {
+    AudioManager.playJump();
+    widget.game.coinManager.addCoins(10);
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('🦖 ', style: TextStyle(fontSize: 18)),
+            Text(
+              'ROAAARRR! Secret Prehistoric Fossil Found! +10 Coins',
+              style: TextStyle(color: Color(0xFFFEF08A), fontWeight: FontWeight.w900, fontSize: 11),
+            ),
+          ],
+        ),
+        backgroundColor: const Color(0xFF1E293B),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: Color(0xFF10B981), width: 1.2),
+        ),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+    setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     final coinManager = widget.game.coinManager;
@@ -605,7 +633,7 @@ class _MainMenuOverlayState extends State<MainMenuOverlay> with TickerProviderSt
         ),
         const SizedBox(height: 5),
 
-        // Realms List with crisp click handling
+        // Realms List with generous tap area and instant touch response
         Expanded(
           child: SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
@@ -616,30 +644,31 @@ class _MainMenuOverlayState extends State<MainMenuOverlay> with TickerProviderSt
                 final realmColor = r['color'] as Color;
 
                 return Padding(
-                  padding: const EdgeInsets.only(bottom: 4.0),
-                  child: MouseRegion(
-                    cursor: SystemMouseCursors.click,
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
+                  padding: const EdgeInsets.only(bottom: 6.0),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(10),
                       onTap: () => _selectRealm(index),
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 180),
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        constraints: const BoxConstraints(minHeight: 46),
                         decoration: BoxDecoration(
                           color: isSelected
                               ? const Color(0xFF1E293B).withValues(alpha: 0.98)
-                              : const Color(0xFF0F172A).withValues(alpha: 0.65),
-                          borderRadius: BorderRadius.circular(8),
+                              : const Color(0xFF0F172A).withValues(alpha: 0.72),
+                          borderRadius: BorderRadius.circular(10),
                           border: Border.all(
-                            color: isSelected ? realmColor : const Color(0xFF334155).withValues(alpha: 0.5),
-                            width: isSelected ? 1.8 : 0.8,
+                            color: isSelected ? realmColor : const Color(0xFF334155).withValues(alpha: 0.6),
+                            width: isSelected ? 2.0 : 1.0,
                           ),
                           boxShadow: isSelected
                               ? [
                                   BoxShadow(
-                                    color: realmColor.withValues(alpha: 0.4),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 1),
+                                    color: realmColor.withValues(alpha: 0.45),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 2),
                                   ),
                                 ]
                               : null,
@@ -647,14 +676,14 @@ class _MainMenuOverlayState extends State<MainMenuOverlay> with TickerProviderSt
                         child: Row(
                           children: [
                             Container(
-                              padding: const EdgeInsets.all(4),
+                              padding: const EdgeInsets.all(6),
                               decoration: BoxDecoration(
-                                color: realmColor.withValues(alpha: isSelected ? 0.3 : 0.12),
-                                borderRadius: BorderRadius.circular(6),
+                                color: realmColor.withValues(alpha: isSelected ? 0.35 : 0.15),
+                                borderRadius: BorderRadius.circular(8),
                               ),
-                              child: Icon(r['icon'] as IconData, color: realmColor, size: 14),
+                              child: Icon(r['icon'] as IconData, color: realmColor, size: 16),
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 10),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -666,23 +695,23 @@ class _MainMenuOverlayState extends State<MainMenuOverlay> with TickerProviderSt
                                         r['name'] as String,
                                         style: TextStyle(
                                           color: isSelected ? Colors.white : const Color(0xFFCBD5E1),
-                                          fontSize: 10,
-                                          fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
+                                          fontSize: 10.5,
+                                          fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
                                         ),
                                       ),
                                       if (r['badge'] != null) ...[
-                                        const SizedBox(width: 4),
+                                        const SizedBox(width: 6),
                                         Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
                                           decoration: BoxDecoration(
                                             color: const Color(0xFF78350F),
-                                            borderRadius: BorderRadius.circular(3),
+                                            borderRadius: BorderRadius.circular(4),
                                           ),
                                           child: Text(
                                             r['badge'] as String,
                                             style: const TextStyle(
                                               color: Color(0xFFFCD34D),
-                                              fontSize: 7,
+                                              fontSize: 7.5,
                                               fontWeight: FontWeight.w800,
                                             ),
                                           ),
@@ -690,11 +719,12 @@ class _MainMenuOverlayState extends State<MainMenuOverlay> with TickerProviderSt
                                       ],
                                     ],
                                   ),
+                                  const SizedBox(height: 1),
                                   Text(
                                     '${r['tag']} • ${r['bonus']}',
                                     style: TextStyle(
                                       color: isSelected ? realmColor : const Color(0xFF64748B),
-                                      fontSize: 7.5,
+                                      fontSize: 8,
                                       fontWeight: FontWeight.w600,
                                       letterSpacing: 0.4,
                                     ),
@@ -703,9 +733,16 @@ class _MainMenuOverlayState extends State<MainMenuOverlay> with TickerProviderSt
                               ),
                             ),
                             if (isSelected)
-                              Icon(Icons.check_circle_rounded, color: realmColor, size: 15)
+                              Container(
+                                padding: const EdgeInsets.all(2),
+                                decoration: BoxDecoration(
+                                  color: realmColor.withValues(alpha: 0.2),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(Icons.check_circle_rounded, color: realmColor, size: 16),
+                              )
                             else
-                              const Icon(Icons.chevron_right, color: Color(0xFF475569), size: 14),
+                              const Icon(Icons.chevron_right, color: Color(0xFF475569), size: 15),
                           ],
                         ),
                       ),
@@ -771,35 +808,44 @@ class _MainMenuOverlayState extends State<MainMenuOverlay> with TickerProviderSt
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Active Epoch Pill
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              decoration: BoxDecoration(
-                color: selectedRealmColor.withValues(alpha: 0.18),
+            // Active Epoch Pill (Tappable to cycle realms easily)
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: selectedRealmColor, width: 1.4),
-                boxShadow: [
-                  BoxShadow(
-                    color: selectedRealmColor.withValues(alpha: 0.35),
-                    blurRadius: 10,
+                onTap: () {
+                  _selectRealm((_selectedRealmIndex + 1) % _realms.length);
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: selectedRealmColor.withValues(alpha: 0.22),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: selectedRealmColor, width: 1.6),
+                    boxShadow: [
+                      BoxShadow(
+                        color: selectedRealmColor.withValues(alpha: 0.4),
+                        blurRadius: 10,
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(selectedRealm['icon'] as IconData, color: selectedRealmColor, size: 12),
-                  const SizedBox(width: 6),
-                  Text(
-                    'EPOCH: ${(selectedRealm['name'] as String).toUpperCase()} (${selectedRealm['tag']})',
-                    style: TextStyle(
-                      color: selectedRealmColor,
-                      fontSize: 9.5,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.0,
-                    ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(selectedRealm['icon'] as IconData, color: selectedRealmColor, size: 14),
+                      const SizedBox(width: 6),
+                      Text(
+                        'EPOCH: ${(selectedRealm['name'] as String).toUpperCase()} ❯',
+                        style: TextStyle(
+                          color: selectedRealmColor,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.0,
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
             const SizedBox(width: 8),
@@ -916,12 +962,22 @@ class _MainMenuOverlayState extends State<MainMenuOverlay> with TickerProviderSt
                   Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      SizedBox(
-                        width: 80,
-                        height: 96,
-                        child: _SkinPreviewWidget(
-                          skin: currentSkin,
-                          ticker: _runnerAnimController,
+                      MouseRegion(
+                        cursor: SystemMouseCursors.click,
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: _triggerDinoRoarEasterEgg,
+                          child: Tooltip(
+                            message: 'Tap Dino for a surprise!',
+                            child: SizedBox(
+                              width: 80,
+                              height: 96,
+                              child: _SkinPreviewWidget(
+                                skin: currentSkin,
+                                ticker: _runnerAnimController,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 6),

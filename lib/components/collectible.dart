@@ -5,7 +5,7 @@ import 'package:flame/collisions.dart';
 import '../game/dino_game.dart';
 import '../game/game_state.dart';
 
-enum CollectibleType { coin, doubleCoin, shield, magnet, gravity, giant }
+enum CollectibleType { coin, doubleCoin, shield, magnet, gravity, giant, dinoEgg }
 
 class Collectible extends PositionComponent with CollisionCallbacks, HasGameReference<DinoGame> {
   final CollectibleType collectType;
@@ -114,6 +114,10 @@ class Collectible extends PositionComponent with CollisionCallbacks, HasGameRefe
         game.player.giantTimer = (game.player.giantTimer + 10.0).clamp(0.0, 25.0);
         game.player.scale = Vector2.all(3.0);
         break;
+      case CollectibleType.dinoEgg:
+        game.score += (100 * cosmicBonus).toInt();
+        game.coinManager.addCoins(5);
+        break;
     }
 
     game.particlePool.emitCoinCollect(position + size / 2);
@@ -142,6 +146,9 @@ class Collectible extends PositionComponent with CollisionCallbacks, HasGameRefe
         break;
       case CollectibleType.giant:
         _renderGiant(canvas);
+        break;
+      case CollectibleType.dinoEgg:
+        _renderDinoEgg(canvas);
         break;
     }
   }
@@ -455,5 +462,84 @@ class Collectible extends PositionComponent with CollisionCallbacks, HasGameRefe
     final starGradient = const RadialGradient(colors: [Color(0xFFFFFF8D), Color(0xFFFFD700), Color(0xFFFFAB00)]);
     canvas.drawPath(starPath, Paint()..shader = starGradient.createShader(Rect.fromCircle(center: Offset(cx, cy), radius: 12)));
     canvas.drawPath(starPath, Paint()..color = Colors.white.withValues(alpha: 0.8)..style = PaintingStyle.stroke..strokeWidth = 1.0);
+  }
+
+  void _renderDinoEgg(Canvas canvas) {
+    final cx = size.x / 2;
+    final cy = size.y / 2;
+
+    // 1. Golden Life Pulse Aura
+    final pulse = 0.85 + math.sin(_floatOffset * 5.0) * 0.15;
+    final auraRadius = 22.0 * pulse;
+    canvas.drawCircle(
+      Offset(cx, cy),
+      auraRadius,
+      Paint()
+        ..color = const Color(0xFFFFD700).withValues(alpha: 0.40 * pulse)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10),
+    );
+
+    // 2. Dinosaur Egg Shell Body (Ovoid Shape)
+    final eggPath = Path()
+      ..moveTo(cx, cy - 18)
+      ..cubicTo(cx + 14, cy - 18, cx + 16, cy + 10, cx + 12, cy + 18)
+      ..cubicTo(cx + 8, cy + 22, cx - 8, cy + 22, cx - 12, cy + 18)
+      ..cubicTo(cx - 16, cy + 10, cx - 14, cy - 18, cx, cy - 18)
+      ..close();
+
+    final eggGradient = RadialGradient(
+      center: const Alignment(-0.3, -0.4),
+      colors: const [
+        Color(0xFFFFF9C4), // Golden ivory shell
+        Color(0xFFFFE082),
+        Color(0xFFFFB300), // Amber gold base
+        Color(0xFFFF8F00),
+      ],
+      stops: const [0.0, 0.35, 0.75, 1.0],
+    );
+    canvas.drawPath(eggPath, Paint()..shader = eggGradient.createShader(Rect.fromCenter(center: Offset(cx, cy), width: 32, height: 40)));
+
+    // Golden Shell Rim Outline
+    canvas.drawPath(
+      eggPath,
+      Paint()
+        ..color = const Color(0xFFFFF59D)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.6,
+    );
+
+    // 3. Prehistoric Turquoise & Emerald Spots
+    final spotPaint1 = Paint()..color = const Color(0xFF00E5FF).withValues(alpha: 0.75);
+    final spotPaint2 = Paint()..color = const Color(0xFF76FF03).withValues(alpha: 0.70);
+    final spotPaint3 = Paint()..color = const Color(0xFFFF4081).withValues(alpha: 0.75);
+
+    canvas.drawOval(Rect.fromCenter(center: Offset(cx - 5, cy - 6), width: 6.5, height: 8), spotPaint1);
+    canvas.drawOval(Rect.fromCenter(center: Offset(cx + 6, cy + 4), width: 7.5, height: 9), spotPaint2);
+    canvas.drawOval(Rect.fromCenter(center: Offset(cx - 4, cy + 10), width: 5.5, height: 6), spotPaint3);
+    canvas.drawOval(Rect.fromCenter(center: Offset(cx + 5, cy - 10), width: 4.5, height: 5.5), spotPaint2);
+
+    // 4. Glowing Prehistoric Fossil Crack with Pulsing Energy
+    final crackPath = Path()
+      ..moveTo(cx - 6, cy - 1)
+      ..lineTo(cx - 1, cy + 3)
+      ..lineTo(cx + 4, cy + 1)
+      ..lineTo(cx + 8, cy + 7);
+    canvas.drawPath(
+      crackPath,
+      Paint()
+        ..color = Colors.white
+        ..strokeWidth = 1.6
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.0),
+    );
+
+    // 5. Sparkle Starlets Orbiting the Egg
+    for (int i = 0; i < 3; i++) {
+      final a = _floatOffset * 3.0 + (i * math.pi * 2 / 3);
+      final sx = cx + math.cos(a) * 17.0;
+      final sy = cy + math.sin(a) * 17.0;
+      canvas.drawCircle(Offset(sx, sy), 1.5, Paint()..color = Colors.white);
+    }
   }
 }

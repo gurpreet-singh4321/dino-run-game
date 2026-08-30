@@ -210,7 +210,7 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
 
     // Biome-specific ground surface details
     if (currentBiome == 'FOREST' && detailAlpha > 0.05) {
-      // Grass tufts along ground surface
+      // 1. Grass tufts along ground surface
       final grassPaint = Paint()
         ..color = const Color(0xFF2E7D32).withValues(alpha: detailAlpha)
         ..strokeWidth = 2.0;
@@ -218,6 +218,26 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
         canvas.drawLine(Offset(gx, y), Offset(gx - 3, y - 6), grassPaint);
         canvas.drawLine(Offset(gx, y), Offset(gx + 3, y - 8), grassPaint);
         canvas.drawLine(Offset(gx, y), Offset(gx + 6, y - 5), grassPaint);
+      }
+
+      // 2. Easter Egg: Glowing Dinosaur Fossil Tracks & Amber Stones on Forest Floor
+      final fossilPaint = Paint()
+        ..color = const Color(0xFF81C784).withValues(alpha: 0.55 * detailAlpha)
+        ..strokeWidth = 1.8
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round;
+      final amberPaint = Paint()..color = const Color(0xFFFFD54F).withValues(alpha: 0.85 * detailAlpha);
+
+      for (double fx = -(_scrollOffset % 190.0) + 70; fx < w + 190; fx += 190.0) {
+        // 3-toed dinosaur footprint impression
+        canvas.drawLine(Offset(fx, y + 16), Offset(fx - 4, y + 8), fossilPaint);
+        canvas.drawLine(Offset(fx, y + 16), Offset(fx, y + 6), fossilPaint);
+        canvas.drawLine(Offset(fx, y + 16), Offset(fx + 4, y + 8), fossilPaint);
+        canvas.drawCircle(Offset(fx, y + 17), 2.0, fossilPaint..style = PaintingStyle.fill);
+
+        // Prehistoric glowing amber stone
+        canvas.drawOval(Rect.fromCenter(center: Offset(fx + 45, y + 24), width: 7, height: 5), amberPaint);
+        canvas.drawCircle(Offset(fx + 45, y + 24), 1.0, Paint()..color = Colors.white);
       }
     } else if (currentBiome == 'ICE' && detailAlpha > 0.05) {
       // Frosty ice sheen top rim

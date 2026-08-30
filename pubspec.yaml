@@ -52,4 +52,8 @@ flutter:
     - assets/images/desert_bg_flawless.jpg
     - assets/images/desert_bg_v3.jpg
     - assets/images/rain_bg.jpg
+    - assets/images/forest_bg.jpg
+    - assets/images/ice_bg.jpg
+    - assets/images/volcano_bg.jpg
+    - assets/images/cosmos_bg.jpg
     - assets/audio/

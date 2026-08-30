@@ -330,12 +330,13 @@ class SpawnManager extends Component with HasGameReference<DinoGame> {
         _coins.add(coin);
       }
     } else {
-      // Spawn a single powerup cleanly away from obstacles (no duplicate repeats!)
+      // Spawn a single powerup or prehistoric dino egg cleanly away from obstacles
       final availablePowerups = [
         CollectibleType.shield,
         CollectibleType.magnet,
         CollectibleType.giant,
         CollectibleType.gravity,
+        CollectibleType.dinoEgg,
       ];
       if (_lastPowerupType != null && availablePowerups.length > 1) {
         availablePowerups.remove(_lastPowerupType);
