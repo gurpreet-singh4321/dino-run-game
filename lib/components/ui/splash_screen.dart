@@ -8,6 +8,7 @@ import '../../managers/audio_manager.dart';
 import '../../skins/rive_dino_skin.dart';
 import 'pause_menu.dart';
 import 'settings_dialog.dart';
+import 'main_menu_overlay.dart';
 
 class SplashScreen extends StatefulWidget {
   final CoinManager coinManager;
@@ -66,6 +67,8 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   Future<void> _preloadAssets() async {
     try {
       await Flame.images.load('dino_sprite.png');
+      await Flame.images.load('desert_bg_v3.jpg');
+      await Flame.images.load('rain_bg.jpg');
       await AudioManager.preloadAll();
       await RiveDinoSkin.preload();
     } catch (_) {}
@@ -92,6 +95,9 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                   child: GameWidget<DinoGame>(
                     game: game,
                     overlayBuilderMap: {
+                      'MainMenuOverlay': (BuildContext context, DinoGame game) {
+                        return MainMenuOverlay(game: game);
+                      },
                       'PauseMenu': (BuildContext context, DinoGame game) {
                         return PauseMenu(game: game);
                       },
@@ -103,6 +109,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                         );
                       },
                     },
+                    initialActiveOverlays: const ['MainMenuOverlay'],
                     autofocus: true,
                   ),
                 ),

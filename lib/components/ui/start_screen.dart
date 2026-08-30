@@ -22,7 +22,7 @@ class StartScreen extends PositionComponent with HasGameReference<DinoGame> {
 
   @override
   void render(Canvas canvas) {
-    if (game.state != GameState.menu) return;
+    if (game.state != GameState.menu || game.overlays.isActive('MainMenuOverlay')) return;
 
     final cx = game.size.x / 2;
     final cy = game.size.y / 2;

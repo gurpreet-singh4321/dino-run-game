@@ -23,10 +23,10 @@ class BiomeManager extends Component with HasGameReference<DinoGame> {
     ),
     Biome(
       name: 'RAIN',
-      skyTop: Color(0xFF546E7A),
-      skyBottom: Color(0xFF90A4AE),
-      groundTop: Color(0xFF795548),
-      groundBottom: Color(0xFF3E2723),
+      skyTop: Color(0xFF1E3342),
+      skyBottom: Color(0xFF4B6B7C),
+      groundTop: Color(0xFF35483E),
+      groundBottom: Color(0xFF1A2621),
     ),
     Biome(
       name: 'FOREST',
@@ -72,8 +72,10 @@ class BiomeManager extends Component with HasGameReference<DinoGame> {
     }
   }
 
+  int _initialStage = 0;
+
   void updateBiome(double score, double speed) {
-    int targetStage = (score / biomeScoreInterval).floor();
+    int targetStage = _initialStage + (score / biomeScoreInterval).floor();
 
     if (targetStage > currentStage && !isTransitioning) {
       isTransitioning = true;
@@ -103,8 +105,9 @@ class BiomeManager extends Component with HasGameReference<DinoGame> {
   Color get interpolatedGroundBottom =>
       Color.lerp(current.groundBottom, next.groundBottom, isTransitioning ? progress : 0.0)!;
 
-  void reset() {
-    currentStage = 0;
+  void reset({int startingStage = 0}) {
+    _initialStage = startingStage;
+    currentStage = startingStage;
     progress = 0.0;
     isTransitioning = false;
   }

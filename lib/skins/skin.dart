@@ -14,6 +14,15 @@ abstract class CharacterSkin {
   /// Display name shown in the shop / selection UI.
   String get displayName;
 
+  /// Alias for displayName
+  String get name => displayName;
+
+  /// Flavor description
+  String get description => '';
+
+  /// Rarity tag (Common, Rare, Epic, Legendary)
+  String get rarity => 'Common';
+
   /// Price in coins. 0 = free / default.
   int get price;
 

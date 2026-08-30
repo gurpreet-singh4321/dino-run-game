@@ -197,7 +197,8 @@ class DinoGame extends FlameGame with HasCollisionDetection, TapCallbacks, PanDe
   }
 
   void _updateSpaceMode(double dt) {
-    score += dt * 5;
+    final cosmicBonus = 1.0 + (coinManager.cosmicLevel * 0.4);
+    score += dt * 5 * cosmicBonus;
     spacePhaseTimer -= dt;
 
     switch (spacePhase) {
@@ -252,11 +253,13 @@ class DinoGame extends FlameGame with HasCollisionDetection, TapCallbacks, PanDe
     spawnManager.clearGroundEntities();
     player.exitSpaceMode();
     spawnManager.resumeGroundSpawning();
-    player.invincibleTimer = 3.0;
+    final shieldLvl = coinManager.shieldLevel;
+    player.invincibleTimer = 3.0 + (shieldLvl * 0.5);
   }
 
-  void startGame() {
+  void startGame({int? startingStage}) {
     state = GameState.playing;
+    overlays.remove('MainMenuOverlay');
     score = 0;
     combo = 0;
     comboTimer = 0;
@@ -266,7 +269,7 @@ class DinoGame extends FlameGame with HasCollisionDetection, TapCallbacks, PanDe
     spaceTransitionProgress = 0;
     coinManager.resetRunCoins();
     speedManager.reset();
-    biomeManager.reset();
+    biomeManager.reset(startingStage: startingStage ?? biomeManager.currentStage);
     player.reset();
     spawnManager.reset();
     AudioManager.playGameplayBgm();
@@ -320,6 +323,7 @@ class DinoGame extends FlameGame with HasCollisionDetection, TapCallbacks, PanDe
   void exitToMenu() {
     state = GameState.menu;
     overlays.remove('PauseMenu');
+    overlays.add('MainMenuOverlay');
     resumeEngine();
     speedManager.reset();
     biomeManager.reset();

@@ -166,6 +166,7 @@ class SpawnManager extends Component with HasGameReference<DinoGame> {
       ObstacleType.rock,
       ObstacleType.bush,
       ObstacleType.pillar,
+      ObstacleType.lavaPit,
     ];
     if (game.score > 250) {
       types.add(ObstacleType.pipePair);
@@ -195,6 +196,7 @@ class SpawnManager extends Component with HasGameReference<DinoGame> {
         case ObstacleType.cactusTall:
         case ObstacleType.rock:
         case ObstacleType.bush:
+        case ObstacleType.lavaPit:
           // SIT EXACTLY ON GROUND LINE flush
           obs.position = Vector2(offsetX, groundY - obs.size.y);
           break;

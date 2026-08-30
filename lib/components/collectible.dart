@@ -61,14 +61,18 @@ class Collectible extends PositionComponent with CollisionCallbacks, HasGameRefe
       }
     }
 
-    // Magnet attraction
+    // Magnet attraction (Enhanced by Magnet Booster upgrade)
     if (game.player.magnetTimer > 0) {
+      final magnetLvl = game.coinManager.magnetLevel;
+      final pullRadius = 160.0 + (magnetLvl * 30.0);
+      final pullSpeed = 320.0 + (magnetLvl * 40.0);
+
       final dx = game.player.position.x - position.x;
       final dy = game.player.position.y - position.y;
       final dist = math.sqrt(dx * dx + dy * dy);
-      if (dist < 160 && dist > 5) {
-        position.x += dx / dist * 320 * dt;
-        position.y += dy / dist * 320 * dt;
+      if (dist < pullRadius && dist > 5) {
+        position.x += dx / dist * pullSpeed * dt;
+        position.y += dy / dist * pullSpeed * dt;
       }
     }
   }
@@ -77,20 +81,31 @@ class Collectible extends PositionComponent with CollisionCallbacks, HasGameRefe
     if (_collected) return;
     _collected = true;
 
+    final magnetLvl = game.coinManager.magnetLevel;
+    final shieldLvl = game.coinManager.shieldLevel;
+    final cosmicLvl = game.coinManager.cosmicLevel;
+    final multLvl = game.coinManager.multiplierLevel;
+
+    final cosmicBonus = (game.state == GameState.spaceMode ? (1.0 + cosmicLvl * 0.5) : 1.0);
+
     switch (collectType) {
       case CollectibleType.coin:
-        game.score += 25;
-        game.coinManager.addCoins(1);
+        final bonus = (multLvl > 0 && math.Random().nextDouble() < multLvl * 0.2) ? 2 : 1;
+        game.score += (25 * bonus * cosmicBonus).toInt();
+        game.coinManager.addCoins(bonus);
         break;
       case CollectibleType.doubleCoin:
-        game.score += 50;
-        game.coinManager.addCoins(2); // Grants 2x coins!
+        final bonus = 2 + (multLvl > 0 ? 1 : 0);
+        game.score += (50 * (bonus / 2) * cosmicBonus).toInt();
+        game.coinManager.addCoins(bonus);
         break;
       case CollectibleType.shield:
-        game.player.shieldTimer = (game.player.shieldTimer + 8.0).clamp(0.0, 20.0);
+        final dur = 8.0 + (shieldLvl * 2.0);
+        game.player.shieldTimer = (game.player.shieldTimer + dur).clamp(0.0, 30.0);
         break;
       case CollectibleType.magnet:
-        game.player.magnetTimer = (game.player.magnetTimer + 8.0).clamp(0.0, 20.0);
+        final dur = 8.0 + (magnetLvl * 2.0);
+        game.player.magnetTimer = (game.player.magnetTimer + dur).clamp(0.0, 30.0);
         break;
       case CollectibleType.gravity:
         game.enterSpaceMode();

@@ -5,7 +5,7 @@ import 'package:flame/collisions.dart';
 import '../game/dino_game.dart';
 import '../game/game_state.dart';
 
-enum ObstacleType { cactusSmall, cactusTall, rock, bird, bush, pillar, ceilingPipe, pipePair }
+enum ObstacleType { cactusSmall, cactusTall, rock, bird, bush, pillar, ceilingPipe, pipePair, lavaPit }
 
 class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReference<DinoGame> {
   final ObstacleType type;
@@ -81,6 +81,13 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
       case ObstacleType.pipePair:
         size = Vector2(65, 300);
         break;
+      case ObstacleType.lavaPit:
+        // 1 or 2 vents clustered (matching reference image)
+        final isDoubleVent = rng.nextDouble() < 0.45;
+        final w = isDoubleVent ? (88.0 + rng.nextDouble() * 16.0) : (52.0 + rng.nextDouble() * 10.0);
+        final h = 65.0 + rng.nextDouble() * 35.0; // 65-100px eruption height
+        size = Vector2(w, h);
+        break;
     }
   }
 
@@ -101,6 +108,12 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
       );
       add(_topPipeHitbox!);
       add(_bottomPipeHitbox!);
+    } else if (type == ObstacleType.lavaPit) {
+      // Inset hitbox for fair and clean jump clearance over volcanic eruption
+      add(RectangleHitbox(
+        position: Vector2(size.x * 0.12, size.y * 0.15),
+        size: Vector2(size.x * 0.76, size.y * 0.85),
+      ));
     } else {
       add(RectangleHitbox(size: size * 0.85, position: size * 0.075));
     }
@@ -225,6 +238,9 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
         break;
       case ObstacleType.pipePair:
         _renderPipePair(canvas);
+        break;
+      case ObstacleType.lavaPit:
+        _renderLavaPit(canvas);
         break;
     }
   }
@@ -740,6 +756,201 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
       // Soft Ground Shadow
       final shadowPaint = Paint()..color = Colors.black.withValues(alpha: 0.30);
       canvas.drawOval(Rect.fromLTWH(w * 0.05, h - 4, w * 0.9, 8), shadowPaint);
+    }
+  }
+
+  /// 🌋 Renders 1 or 2 clustered volcanic magma vents matching reference image
+  void _renderLavaPit(Canvas canvas) {
+    final w = size.x;
+    final h = size.y;
+    final rng = math.Random(_seed);
+    final isDouble = w > 65;
+    final ventCount = isDouble ? 2 : 1;
+
+    final ventXs = isDouble ? [w * 0.32, w * 0.72] : [w * 0.50];
+    final ventWidths = isDouble ? [w * 0.46, w * 0.44] : [w * 0.85];
+
+    // 1. Dynamic Ground Fire Shimmer & Heat Glow
+    final glowPulse = 0.85 + math.sin(age * 8.0) * 0.15;
+    final glowShader = RadialGradient(
+      center: Alignment.center,
+      colors: [
+        const Color(0xFFFF9100).withValues(alpha: 0.55 * glowPulse),
+        const Color(0xFFFF3D00).withValues(alpha: 0.30 * glowPulse),
+        Colors.transparent,
+      ],
+      stops: const [0.0, 0.45, 1.0],
+    ).createShader(Rect.fromCenter(center: Offset(w / 2, h - 4), width: w * 1.5, height: 30));
+    canvas.drawOval(Rect.fromCenter(center: Offset(w / 2, h - 4), width: w * 1.5, height: 30), Paint()..shader = glowShader);
+
+    // 2. Basalt Volcanic Crater Mounds & Radiating Fire Veins
+    for (int v = 0; v < ventCount; v++) {
+      final vx = ventXs[v];
+      final vw = ventWidths[v];
+      final vLeft = vx - vw / 2;
+      final vRight = vx + vw / 2;
+      final moundHeight = 14.0 + (rng.nextDouble() * 4.0);
+
+      // Radiating Glowing Fire Cracks on Ground
+      final crackPaint = Paint()
+        ..color = const Color(0xFFFF6D00).withValues(alpha: 0.85)
+        ..strokeWidth = 1.6
+        ..style = PaintingStyle.stroke;
+      for (int c = 0; c < 4; c++) {
+        final ang = (c / 4.0) * math.pi + 0.1;
+        final cLen = vw * (0.45 + (c % 2) * 0.2);
+        canvas.drawLine(
+          Offset(vx, h - 2),
+          Offset(vx + math.cos(ang) * cLen, h - 2 + math.sin(ang) * 6),
+          crackPaint,
+        );
+      }
+
+      // Dark Jagged Basalt Mound Crater Body
+      final moundPath = Path()
+        ..moveTo(vLeft - 8, h)
+        ..lineTo(vLeft - 2, h - moundHeight * 0.6)
+        ..lineTo(vx - 10, h - moundHeight)
+        ..lineTo(vx + 10, h - moundHeight)
+        ..lineTo(vRight + 2, h - moundHeight * 0.6)
+        ..lineTo(vRight + 8, h)
+        ..close();
+
+      final moundShader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: const [
+          Color(0xFF3E2723), // Dark basalt crater rim
+          Color(0xFF211512),
+          Color(0xFF140D0B),
+        ],
+      ).createShader(Rect.fromLTWH(vLeft - 8, h - moundHeight, vw + 16, moundHeight));
+      canvas.drawPath(moundPath, Paint()..shader = moundShader);
+
+      // Molten Glowing Crater Core Vent Opening
+      final craterRimRect = Rect.fromCenter(center: Offset(vx, h - moundHeight + 2), width: vw * 0.55, height: 7);
+      final craterCoreShader = const RadialGradient(
+        colors: [
+          Color(0xFFFFFFFF),
+          Color(0xFFFFFF8D),
+          Color(0xFFFF9100),
+          Color(0xFFFF3D00),
+        ],
+        stops: [0.0, 0.3, 0.7, 1.0],
+      ).createShader(craterRimRect);
+      canvas.drawOval(craterRimRect, Paint()..shader = craterCoreShader);
+    }
+
+    // 3. Dynamic Roaring Fire Flames & Magma Eruption Column
+    for (int v = 0; v < ventCount; v++) {
+      final vx = ventXs[v];
+      final vw = ventWidths[v];
+      final vh = h - 8.0 - (v * 12.0); // Flame column height
+      final topY = h - vh;
+      final halfW = vw * 0.26;
+
+      // Multi-harmonic dancing fire flame physics
+      final fPhase = age * (12.0 + v * 3.0) + _wobblePhase;
+      final wave1 = math.sin(fPhase) * 4.0;
+      final wave2 = math.cos(fPhase * 1.4) * 3.0;
+
+      // Outer Flickering Roaring Fire Jet
+      final outerFlamePath = Path()
+        ..moveTo(vx - halfW - 3, h - 8)
+        ..cubicTo(
+          vx - halfW + wave1, h - vh * 0.35,
+          vx - halfW * 0.7 + wave2, topY + vh * 0.3,
+          vx + wave1 * 0.5, topY,
+        )
+        ..cubicTo(
+          vx + halfW * 0.7 - wave2, topY + vh * 0.3,
+          vx + halfW - wave1, h - vh * 0.35,
+          vx + halfW + 3, h - 8,
+        )
+        ..close();
+
+      final outerFlameShader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: const [
+          Color(0xFFFFD54F), // Bright fiery tip
+          Color(0xFFFF6D00), // Blazing solar orange mid
+          Color(0xFFD50000), // Crimson flame base
+          Color(0xFF7F0000),
+        ],
+        stops: const [0.0, 0.35, 0.75, 1.0],
+      ).createShader(Rect.fromLTWH(vx - halfW - 6, topY - 4, halfW * 2 + 12, vh + 8));
+      canvas.drawPath(outerFlamePath, Paint()..shader = outerFlameShader);
+
+      // Inner Licking Fire Core (Vibrant Yellow-Orange)
+      final innerFlamePath = Path()
+        ..moveTo(vx - halfW * 0.6, h - 8)
+        ..cubicTo(
+          vx - halfW * 0.4 + wave1, h - vh * 0.4,
+          vx - halfW * 0.3 + wave2, topY + vh * 0.25,
+          vx + wave1 * 0.3, topY + 4,
+        )
+        ..cubicTo(
+          vx + halfW * 0.3 - wave2, topY + vh * 0.25,
+          vx + halfW * 0.4 - wave1, h - vh * 0.4,
+          vx + halfW * 0.6, h - 8,
+        )
+        ..close();
+
+      final innerFlameShader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: const [
+          Color(0xFFFFFFFF), // White flame core
+          Color(0xFFFFFF8D), // White-gold fire
+          Color(0xFFFFAB00), // Orange fire
+        ],
+        stops: const [0.0, 0.4, 1.0],
+      ).createShader(Rect.fromLTWH(vx - halfW * 0.6, topY + 2, halfW * 1.2, vh));
+      canvas.drawPath(innerFlamePath, Paint()..shader = innerFlameShader);
+
+      // White-Hot Intense Fire Spine
+      canvas.drawLine(
+        Offset(vx, h - 8),
+        Offset(vx + wave1 * 0.4, topY + 4),
+        Paint()
+          ..color = Colors.white.withValues(alpha: 0.9)
+          ..strokeWidth = 2.2
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.5),
+      );
+
+      // 4. Leaping Fire Sparks & Fiery Globules leaping into the air
+      final sparkYellow = Paint()..color = const Color(0xFFFFFF8D);
+      final sparkOrange = Paint()..color = const Color(0xFFFF9100);
+      final sparkRed = Paint()..color = const Color(0xFFFF3D00);
+
+      for (int p = 0; p < 6; p++) {
+        final cycle = (age * 3.4 + p * 0.30 + v) % 1.2;
+        final prog = cycle / 1.2;
+        final dir = (p % 2 == 0) ? 1.0 : -1.0;
+        final spreadX = vx + dir * (6.0 + p * 3.8) * prog;
+        final sparkY = topY - (16.0 * math.sin(prog * math.pi)) + prog * prog * 24.0;
+        final r = (2.6 * (1.0 - prog)).clamp(0.6, 2.6);
+        final pPaint = (p % 3 == 0) ? sparkYellow : (p % 2 == 0) ? sparkOrange : sparkRed;
+        canvas.drawCircle(Offset(spreadX, sparkY), r, pPaint);
+      }
+
+      // 5. Billowing Rising Smoke Plumes from Flame Apex
+      final smokePaint = Paint()
+        ..color = const Color(0xFF37474F).withValues(alpha: 0.35)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
+
+      for (int s = 0; s < 3; s++) {
+        final sCycle = (age * 1.8 + s * 0.4 + v) % 1.4;
+        final sProg = sCycle / 1.4;
+        final sX = vx + math.sin(age * 3.0 + s) * (4.0 + sProg * 12.0);
+        final sY = topY - 8.0 - sProg * 32.0;
+        final sR = 5.0 + sProg * 10.0;
+        final sAlpha = (1.0 - sProg) * 0.35;
+        canvas.drawCircle(Offset(sX, sY), sR, smokePaint..color = const Color(0xFF37474F).withValues(alpha: sAlpha));
+      }
     }
   }
 }

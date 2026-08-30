@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flame_audio/flame_audio.dart';
+import 'settings_manager.dart';
 
 /// Manages dual background music tracks & sequence for Dino Run Epochs:
 /// - Title Screen Music: pixel_jump_title.mp3 (loops infinitely on title/menu)
@@ -137,4 +138,32 @@ class AudioManager {
       _bgmPlayer?.stop();
     } catch (_) {}
   }
+
+  // --- Sound Effects & UI Audio Helpers ---
+
+  static void playButton() {
+    ensureAudioPlaying();
+    SettingsManager.triggerVibration(duration: 15);
+  }
+
+  static void playCoin() {
+    ensureAudioPlaying();
+    SettingsManager.triggerVibration(duration: 25);
+  }
+
+  static void playJump() {
+    ensureAudioPlaying();
+    SettingsManager.triggerVibration(duration: 20);
+  }
+
+  static void playHit() {
+    ensureAudioPlaying();
+    SettingsManager.triggerVibration(duration: 50);
+  }
+
+  static void playUpgrade() {
+    ensureAudioPlaying();
+    SettingsManager.triggerVibration(duration: 40);
+  }
 }
+

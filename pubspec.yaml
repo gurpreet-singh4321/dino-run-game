@@ -16,6 +16,7 @@ dependencies:
   flame_rive: ^1.11.2
   rive: ^0.14.11
   vibration: ^2.0.0
+  rive_common: ^0.4.15
 
 dev_dependencies:
   flutter_test:
@@ -50,4 +51,5 @@ flutter:
     - assets/images/desert_bg_v2.jpg
     - assets/images/desert_bg_flawless.jpg
     - assets/images/desert_bg_v3.jpg
+    - assets/images/rain_bg.jpg
     - assets/audio/

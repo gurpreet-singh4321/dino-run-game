@@ -45,6 +45,11 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
   // Skin system
   late CharacterSkin skin;
 
+  void setSkin(CharacterSkin newSkin) {
+    skin = newSkin;
+    game.coinManager.setActiveSkin(newSkin.id);
+  }
+
   @override
   Future<void> onLoad() async {
     skin = SkinRegistry.getById(game.coinManager.activeSkinId);
@@ -261,6 +266,7 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
       velocityY = jumpForce;
       isOnGround = false;
       jumpsLeft--;
+      game.coinManager.recordJump();
       game.particlePool.emitJumpDust(Vector2(position.x + (size.x * scale.x) / 2, position.y + size.y * scale.y));
     }
   }
@@ -268,6 +274,7 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
   void enterSpaceMode() {
     inSpaceMode = true;
     velocityY = -700;
+    game.coinManager.recordSpaceTrip();
   }
 
   void exitSpaceMode() {
@@ -337,16 +344,19 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
 
   void _handleDamage() {
     GameVibration.mediumImpact();
+    final shieldLvl = game.coinManager.shieldLevel;
+    final postHitInvincibility = 1.2 + (shieldLvl * 0.4);
     if (shieldTimer > 0) {
       shieldTimer = 0;
-      invincibleTimer = 1.2;
+      invincibleTimer = postHitInvincibility;
+      game.coinManager.recordShieldHit();
       game.particlePool.emitShieldBreak(position);
     } else {
       lives--;
       if (lives <= 0) {
         die();
       } else {
-        invincibleTimer = 1.2;
+        invincibleTimer = postHitInvincibility;
         game.particlePool.emitShieldBreak(position);
       }
     }

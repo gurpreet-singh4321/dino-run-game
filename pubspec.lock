@@ -520,6 +520,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.14.11"
+  rive_common:
+    dependency: "direct main"
+    description:
+      name: rive_common
+      sha256: "2ba42f80d37a4efd0696fb715787c4785f8a13361e8aea9227c50f1e78cf763a"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.4.15"
   rive_native:
     dependency: transitive
     description:

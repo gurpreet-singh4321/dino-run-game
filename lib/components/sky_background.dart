@@ -31,6 +31,7 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
   double _lightningFlashAlpha = 0;
   final List<Offset> _lightningBoltPoints = [];
   ui.Image? _desertBgImage;
+  ui.Image? _rainBgImage;
 
   @override
   Future<void> onLoad() async {
@@ -46,6 +47,18 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     } catch (_) {
       try {
         _desertBgImage = await game.images.load('desert_bg_v3.jpg');
+      } catch (_) {}
+    }
+
+    try {
+      final data = await rootBundle.load('assets/images/rain_bg.jpg');
+      final bytes = data.buffer.asUint8List();
+      final codec = await ui.instantiateImageCodec(bytes);
+      final frame = await codec.getNextFrame();
+      _rainBgImage = frame.image;
+    } catch (_) {
+      try {
+        _rainBgImage = await game.images.load('rain_bg.jpg');
       } catch (_) {}
     }
 
@@ -355,14 +368,16 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       }
 
       // Sun
-      if (currentBiome != 'COSMOS' && currentBiome != 'VOLCANO' && !(currentBiome == 'DESERT' && _desertBgImage != null)) {
+      if (currentBiome != 'COSMOS' && currentBiome != 'VOLCANO' && currentBiome != 'RAIN' && !(currentBiome == 'DESERT' && _desertBgImage != null)) {
         _drawSun(canvas, size.x, skyBrightness);
       }
 
       // Clouds
-      final cloudAlpha = skyBrightness > 0.2 ? 0.75 : 0.2;
-      for (final cloud in _clouds) {
-        _drawCloud(canvas, cloud, cloudAlpha);
+      if (currentBiome != 'RAIN' && currentBiome != 'COSMOS' && !(currentBiome == 'DESERT' && _desertBgImage != null)) {
+        final cloudAlpha = skyBrightness > 0.2 ? 0.75 : 0.2;
+        for (final cloud in _clouds) {
+          _drawCloud(canvas, cloud, cloudAlpha);
+        }
       }
 
       // Rain & Lightning Bolt
@@ -1707,6 +1722,32 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       return;
     }
 
+    if (_rainBgImage != null && biome == 'RAIN') {
+      final img = _rainBgImage!;
+      final imgW = img.width.toDouble();
+      final imgH = img.height.toDouble();
+      final scale = size.y / imgH;
+      final tileW = imgW * scale;
+      final pShift = _bgScrollOffset % tileW;
+
+      final srcRect = Rect.fromLTWH(0, 0, imgW, imgH);
+      final paint = Paint()..filterQuality = FilterQuality.high;
+
+      // Draw seamlessly repeating tiles
+      double startX = -pShift;
+      while (startX < size.x + 50) {
+        canvas.drawImageRect(
+          img,
+          srcRect,
+          Rect.fromLTWH(startX, 0, tileW, size.y),
+          paint,
+        );
+        startX += tileW;
+      }
+      _drawRainAtmosphere(canvas, size.x, yGround);
+      return;
+    }
+
     final tileW = size.x;
     final pShift = _bgScrollOffset % tileW;
     canvas.save();
@@ -1720,6 +1761,8 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
   void _drawBiomeLandscape(Canvas canvas, String biome, double yGround) {
     if (biome == 'DESERT') {
       _drawDesertArtwork(canvas, size.x, yGround);
+    } else if (biome == 'RAIN') {
+      _drawRainTempleArtwork(canvas, size.x, yGround);
     } else if (biome == 'ICE') {
       // 1. Far jagged ice glaciers & frozen mountain peaks
       final glacierPath = Path()
@@ -2038,6 +2081,309 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     );
 
     canvas.restore();
+  }
+
+  /// 🌧️ Procedural Ancient Rain Temple & Meerkats Vector Artwork Fallback
+  void _drawRainTempleArtwork(Canvas canvas, double w, double yGround) {
+    // 1. Distant Rainforest Mountains & Misty Hills
+    final mountainPath = Path()
+      ..moveTo(0, yGround)
+      ..lineTo(0, yGround - 110)
+      ..quadraticBezierTo(w * 0.15, yGround - 170, w * 0.32, yGround - 130)
+      ..quadraticBezierTo(w * 0.50, yGround - 200, w * 0.70, yGround - 140)
+      ..quadraticBezierTo(w * 0.85, yGround - 180, w, yGround - 120)
+      ..lineTo(w, size.y)
+      ..lineTo(0, size.y);
+
+    final mountainShader = LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [
+        const Color(0xFF2E4756).withValues(alpha: 0.85),
+        const Color(0xFF1E323D).withValues(alpha: 0.95),
+      ],
+    ).createShader(Rect.fromLTWH(0, yGround - 200, w, 200));
+    canvas.drawPath(mountainPath, Paint()..shader = mountainShader);
+
+    // 2. Grand Ancient Angkor Wat / Mayan Stone Temple (Left)
+    _drawAncientTempleStupa(canvas, Offset(w * 0.22, yGround - 30), 1.0);
+
+    // 3. Middle Ancient Stone Temple Ruins & Frog Guardian Statue
+    _drawTempleRuinsAndFrog(canvas, Offset(w * 0.46, yGround - 35), 0.85);
+
+    // 4. Elevated Mossy Plateau on Right with Waterfall & Meerkats with Umbrellas
+    _drawMeerkatTemplePlateau(canvas, Offset(w * 0.82, yGround - 30), 1.0);
+
+    // 5. Ambient Low Rain Mist & Glowing Cyan Spores
+    _drawRainAtmosphere(canvas, w, yGround);
+  }
+
+  void _drawAncientTempleStupa(Canvas canvas, Offset pos, double scale) {
+    canvas.save();
+    canvas.translate(pos.dx, pos.dy);
+    canvas.scale(scale);
+
+    final stoneDark = const Color(0xFF2D3E3A);
+    final stoneMid = const Color(0xFF455A52);
+    final stoneLit = const Color(0xFF5C756B);
+    final mossGreen = const Color(0xFF4CAF50);
+
+    // Base Temple Structure Block
+    final baseRect = const Rect.fromLTWH(-70, -75, 140, 75);
+    final baseShader = LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [stoneLit, stoneMid, stoneDark],
+    ).createShader(baseRect);
+    canvas.drawRect(baseRect, Paint()..shader = baseShader);
+
+    // Tiered Stupa Spire Levels (5 tiers ascending to lotus crest)
+    for (int tier = 0; tier < 5; tier++) {
+      final tw = 120.0 - tier * 18.0;
+      final th = 18.0;
+      final ty = -75.0 - (tier + 1) * th;
+      final tRect = Rect.fromCenter(center: Offset(0, ty + th / 2), width: tw, height: th);
+      canvas.drawRRect(RRect.fromRectAndRadius(tRect, const Radius.circular(3)), Paint()..color = stoneMid);
+
+      // Cornice carved ledge
+      canvas.drawRect(Rect.fromLTWH(-tw / 2 - 4, ty + th - 3, tw + 8, 3), Paint()..color = stoneDark);
+
+      // Creeping moss patch
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(Rect.fromLTWH(-tw / 2 + 6, ty + 2, 22, 6), const Radius.circular(2)),
+        Paint()..color = mossGreen.withValues(alpha: 0.65),
+      );
+    }
+
+    // Top Stupa Pinnacle / Finial
+    final finialPath = Path()
+      ..moveTo(-8, -170)
+      ..lineTo(0, -195)
+      ..lineTo(8, -170)
+      ..close();
+    canvas.drawPath(finialPath, Paint()..color = stoneLit);
+
+    // Temple Portal Entrance with Depth Arch
+    final portalPath = Path()
+      ..moveTo(-18, 0)
+      ..lineTo(-18, -40)
+      ..quadraticBezierTo(0, -52, 18, -40)
+      ..lineTo(18, 0)
+      ..close();
+    canvas.drawPath(portalPath, Paint()..color = const Color(0xFF141E1C));
+
+    // Cascading Waterfall spilling down temple stone steps
+    final waterPaint = Paint()
+      ..color = const Color(0xFF80DEEA).withValues(alpha: 0.85)
+      ..strokeWidth = 4.0
+      ..strokeCap = StrokeCap.round;
+    final waterFoam = Paint()..color = Colors.white.withValues(alpha: 0.9);
+
+    for (int k = -1; k <= 1; k++) {
+      final wx = k * 10.0;
+      canvas.drawLine(Offset(wx, -55), Offset(wx, -15), waterPaint);
+      canvas.drawLine(Offset(wx, -15), Offset(wx + (k * 4), 10), waterPaint);
+      canvas.drawCircle(Offset(wx, 8), 3.5, waterFoam);
+    }
+
+    // Forest Pool at base of temple
+    final poolRect = const Rect.fromLTWH(-80, 2, 160, 25);
+    final poolShader = LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [
+        const Color(0xFF80DEEA).withValues(alpha: 0.75),
+        const Color(0xFF00838F).withValues(alpha: 0.9),
+      ],
+    ).createShader(poolRect);
+    canvas.drawOval(poolRect, Paint()..shader = poolShader);
+
+    canvas.restore();
+  }
+
+  void _drawTempleRuinsAndFrog(Canvas canvas, Offset pos, double scale) {
+    canvas.save();
+    canvas.translate(pos.dx, pos.dy);
+    canvas.scale(scale);
+
+    final stoneDark = const Color(0xFF263632);
+    final stoneMid = const Color(0xFF3F554E);
+    final stoneLit = const Color(0xFF557067);
+
+    // Ruined Temple Stupa Tower in background
+    final towerPath = Path()
+      ..moveTo(-35, 0)
+      ..lineTo(-30, -90)
+      ..lineTo(-15, -115)
+      ..lineTo(15, -115)
+      ..lineTo(30, -90)
+      ..lineTo(35, 0)
+      ..close();
+    canvas.drawPath(towerPath, Paint()..color = stoneDark);
+
+    // Ancient Stone Carved Frog Statue on Pedestal Plinth
+    final plinthRect = const Rect.fromLTWH(-25, -28, 50, 28);
+    canvas.drawRect(plinthRect, Paint()..color = stoneMid);
+
+    // Frog Body & Head
+    final frogBody = Path()
+      ..moveTo(-20, -28)
+      ..cubicTo(-26, -42, -18, -55, 0, -56)
+      ..cubicTo(18, -55, 26, -42, 20, -28)
+      ..close();
+    canvas.drawPath(frogBody, Paint()..color = stoneLit);
+
+    // Frog Eyes on top
+    canvas.drawCircle(const Offset(-10, -56), 6.5, Paint()..color = stoneLit);
+    canvas.drawCircle(const Offset(10, -56), 6.5, Paint()..color = stoneLit);
+    canvas.drawCircle(const Offset(-10, -56), 3.0, Paint()..color = stoneDark);
+    canvas.drawCircle(const Offset(10, -56), 3.0, Paint()..color = stoneDark);
+
+    // Sprouting Leaf Crown on Frog Head
+    final leafPaint = Paint()..color = const Color(0xFF66BB6A);
+    canvas.drawOval(const Rect.fromLTWH(-5, -68, 10, 14), leafPaint);
+
+    // Stone columns with creeping jungle vines
+    final colPaint = Paint()..color = stoneMid;
+    canvas.drawRect(const Rect.fromLTWH(-65, -70, 14, 70), colPaint);
+    canvas.drawRect(const Rect.fromLTWH(50, -70, 14, 70), colPaint);
+
+    final vinePaint = Paint()
+      ..color = const Color(0xFF2E7D32)
+      ..strokeWidth = 2.0
+      ..style = ui.PaintingStyle.stroke;
+    for (double vy = -65; vy < 0; vy += 14) {
+      canvas.drawLine(Offset(-65, vy), Offset(-51, vy + 8), vinePaint);
+      canvas.drawLine(Offset(50, vy), Offset(64, vy + 8), vinePaint);
+    }
+
+    canvas.restore();
+  }
+
+  void _drawMeerkatTemplePlateau(Canvas canvas, Offset pos, double scale) {
+    canvas.save();
+    canvas.translate(pos.dx, pos.dy);
+    canvas.scale(scale);
+
+    final stoneWall = const Color(0xFF354841);
+    final stoneDark = const Color(0xFF212F2B);
+
+    // Elevated Stone Ledge Wall
+    final wallPath = Path()
+      ..moveTo(-50, 0)
+      ..lineTo(-50, -75)
+      ..lineTo(90, -75)
+      ..lineTo(90, 0)
+      ..close();
+    canvas.drawPath(wallPath, Paint()..color = stoneWall);
+    canvas.drawLine(const Offset(-50, -35), const Offset(90, -35), Paint()..color = stoneDark..strokeWidth = 1.5);
+
+    // Cascading Waterfalls from wall ledge
+    final waterPaint = Paint()
+      ..color = const Color(0xFF80DEEA).withValues(alpha: 0.85)
+      ..strokeWidth = 3.5;
+    for (int i = 0; i < 3; i++) {
+      final wx = -30.0 + i * 25.0;
+      canvas.drawLine(Offset(wx, -75), Offset(wx, 0), waterPaint);
+      canvas.drawCircle(Offset(wx, 2), 3.0, Paint()..color = Colors.white);
+    }
+
+    // 2 Cute Meerkats with Green Umbrellas standing on the ledge!
+    _drawMeerkatWithUmbrella(canvas, const Offset(-15, -75), scale: 0.95);
+    _drawMeerkatWithUmbrella(canvas, const Offset(18, -75), scale: 1.05);
+
+    // Bioluminescent Cyan Glowing Mushrooms along the ledge
+    final mushStalk = Paint()..color = const Color(0xFFB2EBF2)..strokeWidth = 1.6;
+    final mushCap = Paint()
+      ..color = const Color(0xFF00E5FF)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
+
+    for (int m = 0; m < 4; m++) {
+      final mx = 45.0 + m * 10.0;
+      canvas.drawLine(Offset(mx, -75), Offset(mx, -83), mushStalk);
+      canvas.drawCircle(Offset(mx, -83), 3.5, mushCap);
+    }
+
+    canvas.restore();
+  }
+
+  void _drawMeerkatWithUmbrella(Canvas canvas, Offset pos, {required double scale}) {
+    canvas.save();
+    canvas.translate(pos.dx, pos.dy);
+    canvas.scale(scale);
+
+    final furLight = const Color(0xFFD7CCC8);
+    final furDark = const Color(0xFF8D6E63);
+    final eyeBlack = const Color(0xFF212121);
+
+    // Meerkat Body (slender standing posture)
+    final bodyPath = Path()
+      ..moveTo(-4, 0)
+      ..lineTo(-5, -22)
+      ..quadraticBezierTo(0, -28, 5, -22)
+      ..lineTo(4, 0)
+      ..close();
+    canvas.drawPath(bodyPath, Paint()..color = furLight);
+
+    // Belly patch & dark back stripes
+    canvas.drawOval(const Rect.fromLTWH(-2.5, -18, 5, 12), Paint()..color = const Color(0xFFEFEBE9));
+    for (int s = 0; s < 3; s++) {
+      final sy = -16.0 + s * 4.0;
+      canvas.drawLine(Offset(1, sy), Offset(4, sy), Paint()..color = furDark..strokeWidth = 1.4);
+    }
+
+    // Meerkat Head & Snout
+    canvas.drawCircle(const Offset(0, -25), 4.5, Paint()..color = furLight);
+    canvas.drawCircle(const Offset(2.5, -25), 1.2, Paint()..color = eyeBlack); // Eye
+    canvas.drawCircle(const Offset(4.0, -24), 0.8, Paint()..color = eyeBlack); // Snout nose
+    // Dark ear
+    canvas.drawCircle(const Offset(-3.5, -27), 1.5, Paint()..color = furDark);
+
+    // Tail for balance
+    final tailPath = Path()
+      ..moveTo(-3, -2)
+      ..quadraticBezierTo(-10, -2, -12, 0);
+    canvas.drawPath(tailPath, Paint()..color = furDark..strokeWidth = 1.8..style = ui.PaintingStyle.stroke);
+
+    // Umbrella Handle (held by meerkat)
+    final handlePaint = Paint()..color = const Color(0xFF4E342E)..strokeWidth = 1.4;
+    canvas.drawLine(const Offset(1, -12), const Offset(1, -38), handlePaint);
+    // Umbrella Hook Handle at bottom
+    canvas.drawArc(const Rect.fromLTWH(-1, -14, 4, 4), 0, math.pi, false, handlePaint..style = ui.PaintingStyle.stroke);
+
+    // Green Rainforest Leaf Umbrella Canopy
+    final umbrellaCanopy = Path()
+      ..moveTo(-15, -36)
+      ..quadraticBezierTo(1, -48, 17, -36)
+      ..lineTo(1, -38)
+      ..close();
+    final umbrellaGrad = LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: const [
+        Color(0xFF81C784),
+        Color(0xFF388E3C),
+      ],
+    ).createShader(const Rect.fromLTWH(-15, -48, 32, 14));
+    canvas.drawPath(umbrellaCanopy, Paint()..shader = umbrellaGrad);
+
+    // Umbrella top spike
+    canvas.drawLine(const Offset(1, -48), const Offset(1, -52), handlePaint);
+
+    canvas.restore();
+  }
+
+  void _drawRainAtmosphere(Canvas canvas, double w, double yGround) {
+    // Soft bioluminescent floating spores & mist
+    final sporePaint = Paint()
+      ..color = const Color(0xFF00E5FF).withValues(alpha: 0.45)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
+
+    for (int i = 0; i < 15; i++) {
+      final sx = ((i * 73 + _time * 15) % w);
+      final sy = yGround - 30 - math.sin(_time * 1.5 + i) * 20;
+      canvas.drawCircle(Offset(sx, sy), 1.5, sporePaint);
+    }
   }
 }
 

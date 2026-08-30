@@ -1,23 +1,19 @@
 import 'skin.dart';
 import 'default_dino_skin.dart';
 import 'rive_dino_skin.dart';
+import 'special_skins.dart';
 
 /// Registry of all available character skins.
-///
-/// To add a new skin:
-/// 1. Create a class extending `CharacterSkin` (see `DefaultDinoSkin`)
-/// 2. Add an instance to the `_all` list below
-/// 3. That's it — it will appear in the shop automatically
 class SkinRegistry {
   SkinRegistry._();
 
   static final List<CharacterSkin> _all = [
     RiveDinoSkin(),
     DefaultDinoSkin(),
-    // Add new skins here:
-    // NinjaDinoSkin(),
-    // RobotDinoSkin(),
-    // FlamingoSkin(),
+    CyberNeonDinoSkin(),
+    GoldenEmperorSkin(),
+    AstronautDinoSkin(),
+    MagmaDragonSkin(),
   ];
 
   /// All registered skins.
