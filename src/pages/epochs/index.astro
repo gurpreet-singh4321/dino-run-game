@@ -1,0 +1,304 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Navbar from '../../components/Navbar';
+import Footer from '../../components/Footer';
+import AudioPlayerWidget from '../../components/AudioPlayerWidget';
+import { Sun, Drop, Tree, Snowflake, Fire, Planet, GameController, Sparkle, Gauge, Trophy } from '@phosphor-icons/react';
+
+const biomes = [
+  {
+    id: "desert",
+    name: "Desert Dunes",
+    epoch: "Epoch 01",
+    scoreRange: "0 — 4,500 PTS",
+    themeColor: "#f59e0b",
+    image: "/assets/backgrounds/bg_desert.jpg",
+    speedMin: "350 px/s",
+    speedMax: "650 px/s",
+    fogDensity: "Low (0.05)",
+    hazards: ["Saguaro Cactus Pairs", "Low-Flight Pterodactyls", "Ground Crags"],
+    summary: "The foundational era where players calibrate their timing and baseline jumping cadence.",
+    description: "The journey commences in scorching prehistoric badlands. Golden amber dunes stretch across the horizon beneath a shimmering sun. Here, single and clustered saguaro cacti serve as primary obstacles. Obstacle spacing remains forgiving (380–520 pixels), allowing runners to establish a steady rhythmic cadence. Ground friction is standardized at 1.0, making initial apex jumps crisp and predictable.",
+    tactics: [
+      "Target jumping at roughly 120 pixels before single cacti to maximize hangtime margin.",
+      "Stay grounded whenever a high-altitude pterodactyl passes overhead; do not panic jump.",
+      "Use this epoch to lock into the game's audio beats."
+    ]
+  },
+  {
+    id: "rain",
+    name: "Monsoon Basin",
+    epoch: "Epoch 02",
+    scoreRange: "4,500 — 9,000 PTS",
+    themeColor: "#06b6d4",
+    image: "/assets/backgrounds/bg_rain.jpg",
+    speedMin: "650 px/s",
+    speedMax: "950 px/s",
+    fogDensity: "Medium Deluge (0.35)",
+    hazards: ["Slick Mud Cliffs", "Cascading Torrent Rain", "Mid-Altitude Raptors"],
+    summary: "High humidity and torrential rainfall reduce visual distance while velocity ramps up.",
+    description: "Triggered at 4,500 points following a 3.5-second atmospheric fog sweep, Monsoon Basin introduces torrential weather shaders. Rain streaks fall at a 65-degree trajectory across the screen. Water-logged soil creates visual motion streaks, requiring heightened focus on incoming obstacle silhouettes. Mid-altitude pterodactyls appear frequently here, necessitating split-second aerial duck inputs.",
+    tactics: [
+      "Tap DOWN arrow in mid-air if an airborne pterodactyl aligns with your descending arc.",
+      "Anticipate double cactus clusters immediately following sudden rain flashes.",
+      "Watch the bottom terrain line for mud bank height shifts."
+    ]
+  },
+  {
+    id: "forest",
+    name: "Primeval Forest",
+    epoch: "Epoch 03",
+    scoreRange: "9,000 — 13,500 PTS",
+    themeColor: "#10b981",
+    image: "/assets/backgrounds/bg_forest.jpg",
+    speedMin: "950 px/s",
+    speedMax: "1,200 px/s",
+    fogDensity: "Canopy Mist (0.25)",
+    hazards: ["Dense Fern Roots", "Twin Pterodactyl Squadrons", "High-Speed Hurdles"],
+    summary: "Thick prehistoric vegetation and rapid obstacle clusters demand razor-sharp reflexes.",
+    description: "At 9,000 points, the arid storm clears into a sprawling, bioluminescent Jurassic forest. Massive redwood roots and glowing flora create higher vertical visual complexity. Ground speed now exceeds 1,000 pixels per second. Obstacle clusters frequently generate with variable inter-hazard intervals, punishing automatic rhythmic tapping.",
+    tactics: [
+      "Avoid early takeoffs on tall root obstacles; wait until the dino's snout reaches 90px proximity.",
+      "Listen for the distinctive audio chirp preceding pterodactyl squadrons.",
+      "Prepare for rapid double jumps: tap, land, instant tap."
+    ]
+  },
+  {
+    id: "ice",
+    name: "Glacial Permafrost",
+    epoch: "Epoch 04",
+    scoreRange: "13,500 — 18,000 PTS",
+    themeColor: "#38bdf8",
+    image: "/assets/backgrounds/bg_ice.jpg",
+    speedMin: "1,200 px/s",
+    speedMax: "1,450 px/s",
+    fogDensity: "Sub-Zero Blizzard (0.45)",
+    hazards: ["Glacial Ice Spikes", "Frost Crystals", "Low Gliding Ice Raptors"],
+    summary: "Sub-zero temperatures and high-contrast ice spikes test muscle memory under maximum speed.",
+    description: "Entering Epoch 04 transports runners into an unforgiving glacial expanse framed by shimmering aurora borealis shaders. Crystal ice shards replace cacti, featuring sharper, narrower hitboxes that allow less margin for error. Velocity reaches supersonic thresholds where human visual-motor reaction time must be coupled with predictive obstacle scanning.",
+    tactics: [
+      "Keep your eyes focused on the far right 20% of the screen rather than looking at the dino sprite.",
+      "Prioritize ducking over jumping when pterodactyls fly at medium altitude.",
+      "Keep finger movements minimal to avoid input fatigue over 10+ minute runs."
+    ]
+  },
+  {
+    id: "volcano",
+    name: "Magma Caldera",
+    epoch: "Epoch 05",
+    scoreRange: "18,000 — 22,500 PTS",
+    themeColor: "#ef4444",
+    image: "/assets/backgrounds/bg_volcano.jpg",
+    speedMin: "1,450 px/s",
+    speedMax: "1,700 px/s",
+    fogDensity: "Volcanic Ash Haze (0.50)",
+    hazards: ["Molten Basalt Spires", "Ash Storms", "Super-Fast Raptor Dives"],
+    summary: "An apocalyptic volcanic terrain with burning obsidian crags and hyper-velocity hazards.",
+    description: "At 18,000 points, magma cracks erupt across the ground and ash particles rain down. The background glows with intense orange-red lava fountains. The Flame engine's deterministic obstacle generator pushes cluster density to maximum safe limits, requiring frame-perfect jump executions.",
+    tactics: [
+      "Execute micro-hops on single spires to touch ground as quickly as possible.",
+      "Do not linger in the air; prolonged float time leaves you vulnerable to sudden pterodactyls.",
+      "Maintain mental composure as visual contrast reaches its most intense state."
+    ]
+  },
+  {
+    id: "cosmos",
+    name: "Cosmic Singularity",
+    epoch: "Epoch 06",
+    scoreRange: "22,500+ PTS (Infinite Warp)",
+    themeColor: "#a855f7",
+    image: "/assets/backgrounds/bg_cosmos.jpg",
+    speedMin: "1,700 px/s",
+    speedMax: "1,800 px/s (Terminal Limit)",
+    fogDensity: "Spacetime Nebula Shimmer (0.30)",
+    hazards: ["Void Asteroids", "Spacetime Rifts", "Hyper-Velocity Pterodactyls"],
+    summary: "The ultimate endless endgame: enter the cosmic void where only master speedrunners survive.",
+    description: "The culmination of Dino Run Epochs. Spacetime shatters at 22,500 points into an endless deep space void. Neon nebula spirals and floating asteroids populate the horizon. Game velocity plateaus at the terminal cap of 1,800 px/s, creating a continuous test of pure flow-state endurance.",
+    tactics: [
+      "You have entered legendary status. Every jump requires pure muscle memory.",
+      "Execute near-miss grazing to accumulate massive bonus multipliers.",
+      "Submit your final score and screenshot to community leaderboards."
+    ]
+  }
+];
+
+const articleData = {
+  headline: "The Complete Dino Run Epochs Codex: All 6 Biomes, Speed Curves, and Survival Strategies",
+  description: "An exhaustive tactical guide to the 6 environmental eras in Dino Run Epochs, featuring obstacle breakdown math, velocity ranges, and high-score maneuvers.",
+  datePublished: "2026-08-30",
+  dateModified: "2026-08-31",
+  authorName: "Dino Run Epochs Game Systems Team"
+};
+---
+
+<Layout 
+	title="The 6 Epochs Codex - Complete Biome & Speed Guide | Dino Run Epochs"
+	description="Comprehensive tactical guide to all 6 atmospheric eras in Dino Run Epochs: Desert Dunes, Monsoon Basin, Primeval Forest, Glacial Permafrost, Magma Caldera, and Cosmic Singularity."
+	canonicalPath="/epochs"
+	ogType="article"
+	articleData={articleData}
+>
+	<Navbar pathname={Astro.url.pathname} client:load />
+	
+	<main class="w-full pt-32 pb-24 px-4 md:px-8 max-w-[1300px] mx-auto text-slate-200">
+		
+		{/* Codex Header */}
+		<header class="mb-16 border-b border-white/10 pb-10">
+			<div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-300 text-xs font-['Geist_Mono'] font-medium mb-4">
+				<Sparkle size={14} weight="fill" className="text-amber-400" />
+				COMPREHENSIVE LEVEL & VELOCITY CODEX
+			</div>
+			
+			<h1 class="text-4xl sm:text-6xl font-bold tracking-tight text-white font-['Chakra_Petch'] uppercase leading-tight">
+				THE SIX PROCEDURAL <br />
+				<span class="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-orange-400 to-rose-400">
+					EPOCHS OF SURVIVAL
+				</span>
+			</h1>
+
+			{/* AEO TL;DR Direct-Answer Block */}
+			<blockquote class="my-6 p-5 rounded-xl bg-slate-900/90 border-l-4 border-amber-500 text-slate-300 text-sm sm:text-base leading-relaxed font-['Outfit']">
+				<strong class="text-white block font-['Chakra_Petch'] mb-1 uppercase tracking-wider text-xs">Tactical Overview (TL;DR):</strong>
+				Dino Run Epochs dynamically interpolates across 6 distinct environmental eras every 4,500 score points. Velocity scales logarithmically from 350 px/s in Epoch 01 (Desert) up to 1,800 px/s in Epoch 06 (Cosmos). Success requires adapting your jump distance from 120px in early eras to predictive 200px reaction windows at hyper-velocity.
+			</blockquote>
+
+			<div class="flex flex-wrap items-center gap-6 text-xs font-['Geist_Mono'] text-slate-400 pt-2">
+				<span>AUTHOR: Game Design & Physics Team</span>
+				<span>•</span>
+				<span>VERIFIED ENGINE DATA (Flutter Flame v1.20)</span>
+				<span>•</span>
+				<span>READ TIME: 6 MIN</span>
+			</div>
+		</header>
+
+		{/* Fast Navigation Grid */}
+		<nav class="mb-16 p-6 rounded-2xl glass-panel border border-white/10" aria-label="Epochs Quick Jump">
+			<h2 class="text-xs font-['Geist_Mono'] uppercase tracking-widest text-slate-400 mb-4 flex items-center gap-2">
+				<Gauge size={16} className="text-amber-400" />
+				Jump Directly to an Epoch:
+			</h2>
+			<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+				{biomes.map(b => (
+					<a 
+						href={`#${b.id}`}
+						class="p-3 rounded-xl border border-white/5 bg-slate-900/60 hover:bg-white/10 hover:border-amber-500/40 transition-all flex flex-col items-center text-center gap-1 group"
+					>
+						<span class="text-[10px] font-['Geist_Mono'] font-bold text-amber-400">{b.epoch}</span>
+						<span class="text-xs font-['Chakra_Petch'] font-bold text-white group-hover:text-amber-300 truncate max-w-full">{b.name}</span>
+						<span class="text-[10px] font-['Geist_Mono'] text-slate-400">{b.scoreRange.split(' ')[0]}</span>
+					</a>
+				))}
+			</div>
+		</nav>
+
+		{/* Deep Biome Sections */}
+		<div class="space-y-20">
+			{biomes.map((biome, idx) => (
+				<article 
+					id={biome.id} 
+					class="glass-panel rounded-3xl p-6 md:p-10 border border-white/15 relative overflow-hidden scroll-mt-28"
+				>
+					{/* Header Row */}
+					<div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-white/10">
+						<div>
+							<div class="flex items-center gap-3 mb-2">
+								<span class="text-xs font-['Geist_Mono'] font-bold px-2.5 py-1 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30">
+									{biome.epoch}
+								</span>
+								<span class="text-xs font-['Geist_Mono'] text-slate-400">
+									SCORE THRESHOLD: {biome.scoreRange}
+								</span>
+							</div>
+							<h2 class="text-3xl sm:text-4xl font-bold text-white font-['Chakra_Petch']">
+								{biome.name}
+							</h2>
+						</div>
+
+						<div class="flex items-center gap-3 font-['Geist_Mono'] text-xs text-slate-300">
+							<div class="px-3 py-1.5 rounded-lg bg-slate-950/80 border border-white/10">
+								<span class="text-slate-400">SPEED: </span>
+								<strong class="text-amber-300">{biome.speedMin} → {biome.speedMax}</strong>
+							</div>
+						</div>
+					</div>
+
+					{/* Image Preview Window */}
+					<div class="my-6 relative w-full h-[220px] sm:h-[320px] rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
+						<img 
+							src={biome.image} 
+							alt={`Dino Run Epochs ${biome.name} Environment Art`}
+							class="w-full h-full object-cover object-center"
+							loading="lazy"
+						/>
+						<div class="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-transparent to-black/20 pointer-events-none" />
+						<div class="absolute bottom-4 left-4 text-xs font-['Geist_Mono'] text-white font-semibold bg-slate-950/80 px-3 py-1 rounded-md border border-white/10">
+							ERA COLOR PALETTE ACCENT: {biome.themeColor}
+						</div>
+					</div>
+
+					{/* Content Grid */}
+					<div class="grid grid-cols-1 lg:grid-cols-12 gap-8 font-['Outfit']">
+						
+						{/* Left: Detailed Mechanics Description */}
+						<div class="lg:col-span-7 space-y-4 text-slate-300 leading-relaxed text-base">
+							<h3 class="font-['Chakra_Petch'] font-bold text-xl text-white">Atmospheric & Environmental Dynamics</h3>
+							<p>{biome.description}</p>
+							
+							<div class="pt-4">
+								<h4 class="font-['Chakra_Petch'] font-bold text-base text-amber-300 mb-2">Key Era Hazards:</h4>
+								<div class="flex flex-wrap gap-2">
+									{biome.hazards.map(hazard => (
+										<span class="px-3 py-1 rounded-lg bg-slate-900 border border-white/10 text-xs font-['Geist_Mono'] text-slate-300">
+											⚠️ {hazard}
+										</span>
+									))}
+								</div>
+							</div>
+						</div>
+
+						{/* Right: Tactics Callout */}
+						<div class="lg:col-span-5 bg-slate-950/70 p-6 rounded-2xl border border-white/10 space-y-4">
+							<h3 class="font-['Chakra_Petch'] font-bold text-lg text-white flex items-center gap-2">
+								<Trophy size={20} className="text-amber-400" />
+								Tactical Survival Rules
+							</h3>
+							<ul class="space-y-3 text-sm text-slate-300">
+								{biome.tactics.map((tactic, tIdx) => (
+									<li class="flex items-start gap-2.5">
+										<span class="w-5 h-5 rounded-full bg-amber-500/10 text-amber-400 text-xs font-['Geist_Mono'] font-bold flex items-center justify-center shrink-0 mt-0.5">
+											{tIdx + 1}
+										</span>
+										<span class="leading-relaxed">{tactic}</span>
+									</li>
+								))}
+							</ul>
+						</div>
+
+					</div>
+
+				</article>
+			))}
+		</div>
+
+		{/* Call to Action Bar */}
+		<div class="mt-20 p-8 md:p-12 rounded-3xl glass-panel border border-amber-500/30 text-center flex flex-col items-center">
+			<h2 class="text-3xl sm:text-4xl font-bold text-white font-['Chakra_Petch'] uppercase mb-3">
+				READY TO TEST YOUR REFLEXES?
+			</h2>
+			<p class="text-slate-300 text-base max-w-[50ch] mb-8 font-['Outfit']">
+				Launch into Desert Dunes right now and battle through all 6 procedural epochs in your browser.
+			</p>
+			<a 
+				href="/#arcade"
+				class="px-8 py-4 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:brightness-110 text-slate-950 font-['Chakra_Petch'] font-bold text-sm uppercase tracking-wider transition-all shadow-lg flex items-center gap-2"
+			>
+				<GameController size={18} weight="bold" />
+				<span>Launch Arcade Arena</span>
+			</a>
+		</div>
+
+	</main>
+
+	<AudioPlayerWidget client:load />
+	<Footer client:visible />
+</Layout>

@@ -1,0 +1,226 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Navbar from '../../components/Navbar';
+import Footer from '../../components/Footer';
+import AudioPlayerWidget from '../../components/AudioPlayerWidget';
+import { Crosshair, Keyboard, HandTap, Gauge, Trophy, WarningOctagon, Sparkle, Question } from '@phosphor-icons/react';
+
+const articleData = {
+  headline: "How to Play Dino Run Epochs: The Master Tactics & High-Score Guide",
+  description: "Master controls, jump arcs, aerial ducking, and reaction timing across all 6 epochs. An in-depth strategy guide with frame data and obstacle physics.",
+  datePublished: "2026-08-30",
+  dateModified: "2026-08-31",
+  authorName: "Dino Run Epochs Tactical Council"
+};
+
+const faqs = [
+  {
+    q: "What is the key to jumping over triple cacti clusters?",
+    a: "Triple cacti require late takeoffs. Initiating your jump too early causes your rear heel hitbox to clip the third cactus upon landing. Wait until your character is roughly 100 to 120 pixels away from the first cactus before leaping."
+  },
+  {
+    q: "How does the aerial duck mechanic work?",
+    a: "Pressing the Down Arrow key while airborne cancels upward vertical momentum and rapidly accelerates downward gravity, dropping the dinosaur onto the terrain immediately to evade sudden mid-air pterodactyls."
+  },
+  {
+    q: "When do Epoch Transitions take place?",
+    a: "Atmospheric shifts occur every 4,500 score points (~3 to 4 minutes of uninterrupted survival). The game performs a 3.5-second sine wave transition with fog effects while sky and terrain colors dynamically morph."
+  },
+  {
+    q: "What is the maximum velocity in Dino Run Epochs?",
+    a: "The game starts at 350 px/s and scales logarithmically to a terminal velocity cap of 1,800 px/s in Epoch 06 (Cosmic Singularity)."
+  },
+  {
+    q: "Are near-miss bonuses tracked?",
+    a: "Yes. Passing within 8 pixels of an obstacle without colliding awards a Near-Miss Combo multiplier, rapidly inflating your score accumulation rate."
+  }
+];
+---
+
+<Layout 
+	title="How to Play Dino Run Epochs - Tactics, Controls & High-Score Guide"
+	description="Complete masterclass guide on Dino Run Epochs: desktop & mobile controls, apex jump calculations, aerial duck physics, hitbox analysis, and 50,000+ point survival strategies."
+	canonicalPath="/guides/how-to-play-dino-runner"
+	ogType="article"
+	articleData={articleData}
+>
+	<Navbar pathname={Astro.url.pathname} client:load />
+	
+	<main class="w-full pt-32 pb-24 px-4 md:px-8 max-w-[1100px] mx-auto text-slate-200">
+		
+		{/* Article Header */}
+		<header class="mb-14 border-b border-white/10 pb-8">
+			<div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-sky-500/30 bg-sky-500/10 text-sky-300 text-xs font-['Geist_Mono'] font-medium mb-4">
+				<Crosshair size={14} weight="bold" />
+				GAMEPLAY STRATEGY CODEX
+			</div>
+			
+			<h1 class="text-3xl sm:text-5xl md:text-6xl font-bold tracking-tight text-white font-['Chakra_Petch'] uppercase leading-tight">
+				HOW TO PLAY DINO RUN EPOCHS: <br />
+				<span class="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-cyan-400 to-amber-400">
+					TACTICS & HIGH-SCORE MASTERCLASS
+				</span>
+			</h1>
+
+			{/* AEO TL;DR Direct-Answer Block */}
+			<blockquote class="my-6 p-5 rounded-xl bg-slate-900/90 border-l-4 border-sky-400 text-slate-300 text-sm sm:text-base leading-relaxed font-['Outfit']">
+				<strong class="text-white block font-['Chakra_Petch'] mb-1 uppercase tracking-wider text-xs">Direct Answer (TL;DR):</strong>
+				To play Dino Run Epochs, press <kbd class="px-1.5 py-0.5 rounded bg-white/10 text-white font-mono text-xs">SPACE</kbd> or <kbd class="px-1.5 py-0.5 rounded bg-white/10 text-white font-mono text-xs">UP ARROW</kbd> to jump over low obstacles, and press <kbd class="px-1.5 py-0.5 rounded bg-white/10 text-white font-mono text-xs">DOWN ARROW</kbd> to duck beneath mid-altitude pterodactyls or rapidly drop down from an apex jump. Surviving requires late takeoffs on multi-cactus clusters and keeping eyes locked on the rightmost 25% of the screen.
+			</blockquote>
+
+			<div class="flex flex-wrap items-center gap-6 text-xs font-['Geist_Mono'] text-slate-400 pt-2">
+				<span>BY: Lead Game Systems Architect</span>
+				<span>•</span>
+				<span>PUBLISHED: AUGUST 2026</span>
+				<span>•</span>
+				<span>READ TIME: 8 MIN</span>
+			</div>
+		</header>
+
+		{/* Article Content */}
+		<article class="space-y-12 font-['Outfit'] text-slate-300 text-base leading-relaxed">
+			
+			{/* Section 1: Definition & Concept */}
+			<section class="space-y-4">
+				<h2 class="text-2xl sm:text-3xl font-bold text-white font-['Chakra_Petch']">
+					1. What Is Dino Run Epochs?
+				</h2>
+				<p>
+					<strong>Dino Run Epochs is a 60FPS procedural infinite runner built with Flutter and Flame Engine, where players navigate an evolving dinosaur through 6 geological eras.</strong> Unlike the original static 1991/2014 offline Chrome dinosaur game, Epochs introduces non-linear velocity scaling, multi-altitude aerial hazards, interactive Rive skeletal physics, and smooth biome transitions every 4,500 score points.
+				</p>
+			</section>
+
+			{/* Section 2: Input Controls Matrix */}
+			<section class="space-y-6">
+				<h2 class="text-2xl sm:text-3xl font-bold text-white font-['Chakra_Petch']">
+					2. Hardware Input Mapping & Controls
+				</h2>
+				<p>
+					The Flame engine processes inputs on a decoupled event queue at 60Hz. Below is the comprehensive input specification across desktop and mobile devices:
+				</p>
+
+				<div class="overflow-x-auto">
+					<table class="w-full text-left border-collapse font-['Geist_Mono'] text-xs sm:text-sm">
+						<thead>
+							<tr class="border-b border-white/20 text-amber-400 bg-slate-900/80">
+								<th class="p-3">Action</th>
+								<th class="p-3">Desktop Keyboard</th>
+								<th class="p-3">Mobile Touch Screen</th>
+								<th class="p-3">Tactical Effect</th>
+							</tr>
+						</thead>
+						<tbody class="divide-y divide-white/10">
+							<tr class="hover:bg-white/5">
+								<td class="p-3 font-bold text-white">Full Jump</td>
+								<td class="p-3"><kbd class="px-2 py-1 bg-white/10 rounded">SPACE</kbd> or <kbd class="px-2 py-1 bg-white/10 rounded">↑ ARROW</kbd></td>
+								<td class="p-3">Tap screen center/upper half</td>
+								<td class="p-3 text-slate-300">Launches full parabolic jump arc (apex: 140px)</td>
+							</tr>
+							<tr class="hover:bg-white/5">
+								<td class="p-3 font-bold text-white">Aerial Duck / Fast Fall</td>
+								<td class="p-3"><kbd class="px-2 py-1 bg-white/10 rounded">↓ ARROW</kbd></td>
+								<td class="p-3">Swipe down or tap bottom third</td>
+								<td class="p-3 text-slate-300">Doubles downward gravity; instantly truncates float time</td>
+							</tr>
+							<tr class="hover:bg-white/5">
+								<td class="p-3 font-bold text-white">Ground Crouch</td>
+								<td class="p-3"><kbd class="px-2 py-1 bg-white/10 rounded">↓ ARROW (Hold)</kbd></td>
+								<td class="p-3">Hold bottom half of screen</td>
+								<td class="p-3 text-slate-300">Compresses hitbox height by 52% to slide under flyers</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+			</section>
+
+			{/* Section 3: Jump Arc Geometry */}
+			<section class="space-y-4">
+				<h2 class="text-2xl sm:text-3xl font-bold text-white font-['Chakra_Petch']">
+					3. Jump Arc Geometry & Multi-Cluster Obstacles
+				</h2>
+				<p>
+					The single most common cause of early game termination is <em>Premature Jump Execution</em>. Because the dinosaur travels horizontally while in the air, jumping too early against a double or triple cactus cluster causes your horizontal travel to finish while you are still above the final hazard.
+				</p>
+				
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-6">
+					<div class="p-6 rounded-2xl bg-slate-900 border border-white/10 space-y-3">
+						<h3 class="font-['Chakra_Petch'] font-bold text-lg text-amber-400">Single Saguaro Rule</h3>
+						<p class="text-sm text-slate-300">
+							For standalone hazards, launch your jump at roughly <strong>120 to 140 pixels</strong> before the obstacle. This ensures you peak directly above the obstacle with maximum vertical clearance.
+						</p>
+					</div>
+
+					<div class="p-6 rounded-2xl bg-slate-900 border border-white/10 space-y-3">
+						<h3 class="font-['Chakra_Petch'] font-bold text-lg text-cyan-400">Triple Cluster Rule</h3>
+						<p class="text-sm text-slate-300">
+							Hold your jump until the dinosaur is merely <strong>90 to 100 pixels</strong> away from the first cactus. The apex of your arc will shift across cacti #2 and #3, ensuring clean clearance.
+						</p>
+					</div>
+				</div>
+			</section>
+
+			{/* Section 4: The 3 Pterodactyl Altitudes */}
+			<section class="space-y-4">
+				<h2 class="text-2xl sm:text-3xl font-bold text-white font-['Chakra_Petch']">
+					4. The Tri-Altitude Pterodactyl Doctrine
+				</h2>
+				<p>
+					Introduced in late Desert (Epoch 01) and occurring constantly from Monsoon (Epoch 02) onward, prehistoric pterodactyls cruise at three mathematically calibrated altitudes:
+				</p>
+				<ul class="list-disc pl-6 space-y-2 text-slate-300">
+					<li><strong>High Altitude (Altitude 01):</strong> Flying high above ground. <span class="text-emerald-400 font-bold">Action: Do Nothing.</span> The dinosaur can sprint directly underneath without crouching. Jumping here is lethal because you will collide with its underbelly.</li>
+					<li><strong>Medium Altitude (Altitude 02):</strong> Cruising at head height. <span class="text-amber-400 font-bold">Action: Crouch (<kbd class="px-1.5 py-0.5 bg-white/10 rounded">↓</kbd>).</span> Press and hold Down Arrow to flatten your silhouette. Jumping over medium-altitude flyers is high risk due to narrow vertical window margins.</li>
+					<li><strong>Low Altitude (Altitude 03):</strong> Skimming just above terrain. <span class="text-rose-400 font-bold">Action: Apex Jump (<kbd class="px-1.5 py-0.5 bg-white/10 rounded">SPACE</kbd>).</span> Treat exactly like a cactus obstacle and leap cleanly over its wings.</li>
+				</ul>
+			</section>
+
+			{/* Section 5: FAQs */}
+			<section class="space-y-6 pt-6 border-t border-white/10">
+				<h2 class="text-2xl sm:text-3xl font-bold text-white font-['Chakra_Petch'] flex items-center gap-2">
+					<Question size={26} className="text-amber-400" />
+					Frequently Asked Questions (FAQ)
+				</h2>
+				<div class="space-y-4">
+					{faqs.map((faq, idx) => (
+						<div class="p-6 rounded-2xl glass-card border border-white/10">
+							<h3 class="font-['Chakra_Petch'] font-bold text-base sm:text-lg text-white mb-2">{faq.q}</h3>
+							<p class="text-sm sm:text-base text-slate-300 leading-relaxed font-normal">{faq.a}</p>
+						</div>
+					))}
+				</div>
+			</section>
+
+		</article>
+
+		{/* Next Guide Recommendations */}
+		<div class="mt-16 pt-8 border-t border-white/10 grid grid-cols-1 sm:grid-cols-2 gap-6">
+			<a 
+				href="/epochs"
+				class="p-6 rounded-2xl glass-panel border border-white/10 hover:border-amber-500/40 transition-all flex flex-col justify-between group"
+			>
+				<div>
+					<span class="text-xs font-['Geist_Mono'] text-amber-400 font-bold uppercase">Next Guide</span>
+					<h3 class="font-['Chakra_Petch'] font-bold text-xl text-white mt-1 group-hover:text-amber-300">The 6 Epochs Codex</h3>
+					<p class="text-sm text-slate-400 mt-2">Explore environmental weather shaders and obstacle frequencies for all 6 eras.</p>
+				</div>
+				<span class="text-xs font-['Geist_Mono'] text-amber-400 mt-4 inline-block">Read Epochs Codex →</span>
+			</a>
+
+			<a 
+				href="/guides/tech-stack-flutter-wasm"
+				class="p-6 rounded-2xl glass-panel border border-white/10 hover:border-sky-500/40 transition-all flex flex-col justify-between group"
+			>
+				<div>
+					<span class="text-xs font-['Geist_Mono'] text-sky-400 font-bold uppercase">Technical Devlog</span>
+					<h3 class="font-['Chakra_Petch'] font-bold text-xl text-white mt-1 group-hover:text-sky-300">Flutter Flame & WASM Architecture</h3>
+					<p class="text-sm text-slate-400 mt-2">How we achieved locked 60FPS browser performance with zero dropped frames.</p>
+				</div>
+				<span class="text-xs font-['Geist_Mono'] text-sky-400 mt-4 inline-block">Explore Architecture →</span>
+			</a>
+		</div>
+
+	</main>
+
+	<AudioPlayerWidget client:load />
+	<Footer client:visible />
+</Layout>

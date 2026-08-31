@@ -1,0 +1,113 @@
+@import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,400;0,500;0,600;0,700;1,700&family=Geist+Mono:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&family=Silkscreen:wght@400;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-canvas-bg: #090b10;
+  --color-canvas-surface: #0e121a;
+  --color-canvas-card: #131722;
+  --color-canvas-border: rgba(255, 255, 255, 0.08);
+
+  --color-accent-amber: #f59e0b;
+  --color-accent-blue: #38bdf8;
+  --color-accent-emerald: #10b981;
+
+  --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Chakra Petch', 'Outfit', sans-serif;
+  --font-pixel: 'Silkscreen', monospace;
+  --font-mono: 'Geist Mono', monospace;
+}
+
+@layer base {
+  :root {
+    --background: #090b10;
+    --foreground: #f8fafc;
+  }
+
+  * {
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+}
+
+@layer utilities {
+  /* Precision Surface Tokens (Linear & Steam Deck inspired) */
+  .surface-card {
+    background: rgba(14, 18, 26, 0.7);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 12px 32px -8px rgba(0, 0, 0, 0.6);
+  }
+
+  .surface-card-hover {
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .surface-card-hover:hover {
+    background: rgba(19, 24, 36, 0.85);
+    border-color: rgba(255, 255, 255, 0.16);
+    transform: translateY(-2px);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 20px 40px -12px rgba(0, 0, 0, 0.7);
+  }
+
+  .surface-panel {
+    background: rgba(11, 14, 21, 0.85);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 24px 48px -12px rgba(0, 0, 0, 0.75);
+  }
+
+  .surface-pill {
+    background: rgba(17, 22, 32, 0.75);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+
+  .surface-subtle {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .scanlines {
+    background: linear-gradient(
+      rgba(18, 16, 16, 0) 50%, 
+      rgba(0, 0, 0, 0.25) 50%
+    ), linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.01),
+      rgba(0, 0, 0, 0.01),
+      rgba(255, 255, 255, 0.01)
+    );
+    background-size: 100% 3px, 6px 100%;
+    pointer-events: none;
+  }
+
+  .pixelated {
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  section[id] {
+    scroll-margin-top: 5.5rem;
+  }
+}

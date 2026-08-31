@@ -1,82 +1,149 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import Header from '../components/Header.astro';
-import Footer from '../components/Footer.astro';
+import Navbar from '../components/Navbar';
+import Footer from '../components/Footer';
+import AudioPlayerWidget from '../components/AudioPlayerWidget';
+import { EnvelopeSimple, ChatTeardropText, Bug, Sparkle } from '@phosphor-icons/react';
 ---
 
 <Layout 
-  title="Contact Us & Support | Dino Run: Epochs" 
-  description="Have questions, feedback, or a bug report for Dino Run: Epochs? Reach out to our development and support team directly."
+	title="Contact & Support - Dino Run Epochs"
+	description="Contact the Dino Run Epochs team for support, bug reports, feature suggestions, or business inquiries. We reply within 24-48 business hours."
+	canonicalPath="/contact"
 >
-  <Header activePage="contact" />
+	<Navbar pathname={Astro.url.pathname} client:load />
+	
+	<main class="w-full pt-32 pb-20 px-4 md:px-8 max-w-[1000px] mx-auto text-slate-200">
+		<header class="mb-12 border-b border-white/10 pb-8">
+			<div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-amber-500/20 bg-amber-500/5 text-amber-400 text-xs font-['Geist_Mono'] font-medium mb-4">
+				COMMUNITY & SUPPORT
+			</div>
+			<h1 class="text-3xl sm:text-5xl font-bold tracking-tight text-white font-['Chakra_Petch'] uppercase">
+				GET IN <span class="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-400">TOUCH</span>
+			</h1>
+			<p class="mt-3 text-slate-300 text-base max-w-[55ch] font-['Outfit']">
+				Encountered a gameplay bug, frame drop, or have a suggestion for new biomes? Our engineering team is here to help.
+			</p>
+		</header>
 
-  <main class="content-page">
-    <div class="section-container">
-      <div class="content-hero">
-        <span class="badge">Player Support</span>
-        <h1>Contact & <span class="gradient-text">Feedback</span></h1>
-        <p>We'd love to hear from you! Reach out with suggestions, gameplay feedback, business inquiries, or bug reports.</p>
-      </div>
+		<div class="grid grid-cols-1 md:grid-cols-12 gap-8 font-['Outfit']">
+			
+			{/* Left Column: Direct Channels */}
+			<div class="md:col-span-5 space-y-6">
+				<div class="glass-panel p-6 rounded-2xl border-white/10 space-y-4">
+					<div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+						<EnvelopeSimple size={22} weight="bold" />
+					</div>
+					<h3 class="font-['Chakra_Petch'] font-bold text-lg text-white">Direct Email</h3>
+					<p class="text-slate-400 text-sm leading-relaxed">
+						For general support, feedback, press inquiries, or advertising partnerships:
+					</p>
+					<a 
+						href="mailto:dinorunepochs@gmail.com" 
+						class="inline-block font-['Geist_Mono'] text-sm text-amber-400 hover:underline"
+					>
+						dinorunepochs@gmail.com
+					</a>
+				</div>
 
-      <div class="content-body">
-        <div class="contact-grid">
-          <!-- Support Card 1: Direct Inquiries -->
-          <div class="content-card">
-            <h3>📧 Direct Email Support</h3>
-            <p>For general inquiries, partnership proposals, and support questions, contact us via email:</p>
-            <p style="margin-bottom: 8px;">
-              <strong>General Support:</strong> <a href="mailto:support@dinorunepochs.com" style="color: var(--accent-cyan);">support@dinorunepochs.com</a>
-            </p>
-            <p style="margin-bottom: 8px;">
-              <strong>Business & Press:</strong> <a href="mailto:press@dinorunepochs.com" style="color: var(--accent-cyan);">press@dinorunepochs.com</a>
-            </p>
-            <p style="margin-bottom: 0;">
-              <strong>Privacy & Legal:</strong> <a href="mailto:privacy@dinorunepochs.com" style="color: var(--accent-cyan);">privacy@dinorunepochs.com</a>
-            </p>
-          </div>
+				<div class="glass-panel p-6 rounded-2xl border-white/10 space-y-4">
+					<div class="w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400">
+						<Bug size={22} weight="bold" />
+					</div>
+					<h3 class="font-['Chakra_Petch'] font-bold text-lg text-white">Bug Reports</h3>
+					<p class="text-slate-400 text-sm leading-relaxed">
+						Please include your browser name, device model, and operating system when reporting frame rate drops or collision anomalies.
+					</p>
+					<p class="font-['Geist_Mono'] text-xs text-sky-400">Average response time: 24 hours</p>
+				</div>
+			</div>
 
-          <!-- Support Card 2: Bug Reporting -->
-          <div class="content-card" id="bug-report">
-            <h3>🐛 Bug Reports & Technical Issues</h3>
-            <p>Encountered a glitch or frame drop? Please include the following details in your email to help us diagnose and patch it quickly:</p>
-            <ul>
-              <li><strong>Device & OS:</strong> (e.g., iPhone 15 iOS 18, Windows 11 PC, Galaxy S24 Android 14)</li>
-              <li><strong>Browser:</strong> (e.g., Chrome v128, Safari, Firefox, Edge)</li>
-              <li><strong>Biome Encountered:</strong> (e.g., Volcanic Wasteland, Cosmos Zero-G)</li>
-              <li><strong>Description:</strong> A brief description of what happened and steps to reproduce.</li>
-            </ul>
-          </div>
-        </div>
+			{/* Right Column: Interactive Form */}
+			<div class="md:col-span-7">
+				<div class="glass-panel p-6 sm:p-8 rounded-2xl border-white/10">
+					<h3 class="font-['Chakra_Petch'] font-bold text-xl text-white mb-2">Send Us a Message</h3>
+					<p class="text-slate-400 text-xs sm:text-sm mb-6">
+						Fill out this form and our support desk will respond directly to your email address.
+					</p>
 
-        <h2>Frequently Requested Help</h2>
-        <div class="info-callout">
-          <p><strong>Looking for Quick Answers?</strong> Before sending an email, check out our comprehensive <a href="/faq" style="color: var(--accent-cyan); font-weight: 700;">FAQ & Troubleshooting Page</a> for immediate solutions regarding mobile fullscreen controls, audio issues, and local high score saves.</p>
-        </div>
+					<form 
+						id="contactForm"
+						class="space-y-4 font-['Outfit']"
+					>
+						<div>
+							<label for="name" class="block text-xs font-['Geist_Mono'] uppercase tracking-wider text-slate-300 mb-1.5">
+								Your Name
+							</label>
+							<input 
+								type="text" 
+								id="name" 
+								name="name" 
+								required 
+								placeholder="e.g. Alex Morgan" 
+								class="w-full px-4 py-3 rounded-xl bg-slate-900/80 border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-amber-500/50 transition-colors"
+							/>
+						</div>
 
-        <div class="content-card">
-          <h3>🎮 Community Feedback & Suggestions</h3>
-          <p>
-            Have a brilliant idea for a new Time Epoch, a crazy dinosaur skin, or a new powerup mechanic? We love player-driven development! Drop us an email with the subject <code>[Biome Idea]</code> or <code>[Skin Concept]</code> and our design team will review it for upcoming releases.
-          </p>
-        </div>
-      </div>
-    </div>
-  </main>
+						<div>
+							<label for="topic" class="block text-xs font-['Geist_Mono'] uppercase tracking-wider text-slate-300 mb-1.5">
+								Inquiry Topic
+							</label>
+							<select 
+								id="topic" 
+								name="topic" 
+								class="w-full px-4 py-3 rounded-xl bg-slate-900 border border-white/10 text-white text-sm focus:outline-none focus:border-amber-500/50 transition-colors"
+							>
+								<option value="gameplay">Gameplay Feedback / Suggestions</option>
+								<option value="bug">Technical Bug / Frame Drops</option>
+								<option value="partnership">Business & Sponsorship</option>
+								<option value="other">Other Inquiry</option>
+							</select>
+						</div>
 
-  <Footer />
+						<div>
+							<label for="message" class="block text-xs font-['Geist_Mono'] uppercase tracking-wider text-slate-300 mb-1.5">
+								Message
+							</label>
+							<textarea 
+								id="message" 
+								name="message" 
+								rows="4" 
+								required 
+								placeholder="Describe your suggestion, feedback, or system setup..." 
+								class="w-full px-4 py-3 rounded-xl bg-slate-900/80 border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-amber-500/50 transition-colors"
+							></textarea>
+						</div>
+
+						<button 
+							type="submit" 
+							class="w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:brightness-110 active:scale-[0.99] text-slate-950 font-['Chakra_Petch'] font-bold text-sm uppercase tracking-wider transition-all shadow-md flex items-center justify-center gap-2"
+						>
+							<Sparkle size={16} weight="fill" />
+							<span>Submit Message via Gmail</span>
+						</button>
+					</form>
+
+					<script>
+						const form = document.getElementById('contactForm');
+						form.addEventListener('submit', (e) => {
+							e.preventDefault();
+							const name = document.getElementById('name').value;
+							const topic = document.getElementById('topic').value;
+							const message = document.getElementById('message').value;
+
+							const subject = encodeURIComponent(`Dino Run Contact: ${topic} from ${name}`);
+							const body = encodeURIComponent(`Hi Dino Run Team,\n\nName: ${name}\nTopic: ${topic}\n\nMessage:\n${message}`);
+							const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=dinorunepochs@gmail.com&su=${subject}&body=${body}`;
+							
+							window.open(gmailUrl, '_blank');
+						});
+					</script>
+				</div>
+			</div>
+
+		</div>
+	</main>
+
+	<AudioPlayerWidget client:load />
+	<Footer client:visible />
 </Layout>
-
-<style>
-  .contact-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 24px;
-    margin-bottom: 30px;
-  }
-
-  @media (max-width: 768px) {
-    .contact-grid {
-      grid-template-columns: 1fr;
-    }
-  }
-</style>

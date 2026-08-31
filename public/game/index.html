@@ -107,30 +107,36 @@
   </div>
 
   <!-- Left Ad Banner -->
-  <div class="ad-banner left">
+  <div class="ad-banner left" id="ad-left">
     <!-- dino web -->
     <ins class="adsbygoogle"
-         style="display:block; width:160px; height:600px"
+         style="display:inline-block; width:160px; height:600px"
          data-ad-client="ca-pub-6461062896377292"
-         data-ad-slot="8999529758"
-         data-ad-format="auto"
-         data-full-width-responsive="true"></ins>
+         data-ad-slot="8999529758"></ins>
     <script>
-         (adsbygoogle = window.adsbygoogle || []).push({});
+      window.addEventListener('load', function() {
+        var el = document.getElementById('ad-left');
+        if (el && el.offsetWidth > 0 && window.innerWidth > 1100) {
+          try { (adsbygoogle = window.adsbygoogle || []).push({}); } catch(e) {}
+        }
+      });
     </script>
   </div>
 
   <!-- Right Ad Banner -->
-  <div class="ad-banner right">
+  <div class="ad-banner right" id="ad-right">
     <!-- dino web -->
     <ins class="adsbygoogle"
-         style="display:block; width:160px; height:600px"
+         style="display:inline-block; width:160px; height:600px"
          data-ad-client="ca-pub-6461062896377292"
-         data-ad-slot="8999529758"
-         data-ad-format="auto"
-         data-full-width-responsive="true"></ins>
+         data-ad-slot="8999529758"></ins>
     <script>
-         (adsbygoogle = window.adsbygoogle || []).push({});
+      window.addEventListener('load', function() {
+        var el = document.getElementById('ad-right');
+        if (el && el.offsetWidth > 0 && window.innerWidth > 1100) {
+          try { (adsbygoogle = window.adsbygoogle || []).push({}); } catch(e) {}
+        }
+      });
     </script>
   </div>
 

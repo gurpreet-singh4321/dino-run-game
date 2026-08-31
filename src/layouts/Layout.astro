@@ -1,322 +1,189 @@
 ---
-import SpeedInsights from '@vercel/speed-insights/astro';
-import Analytics from '@vercel/analytics/astro';
+import '../styles/global.css';
 
 interface Props {
 	title?: string;
 	description?: string;
-	keywords?: string;
-	ogImage?: string;
-	canonicalUrl?: string;
+	canonicalPath?: string;
+	ogType?: string;
+	articleData?: {
+		headline: string;
+		datePublished: string;
+		dateModified: string;
+		authorName: string;
+		description: string;
+	};
 }
 
 const { 
-	title = "Dino Run: Epochs | Play Free Online Endless Runner Game",
-	description = "Play Dino Run: Epochs online for free! Run across 7 unique prehistoric, volcanic, cyberpunk, and cosmos biomes in this high-speed 2D endless runner.",
-	keywords = "Dino Run, Dino Run Epochs, Dino Runner Game, Dinosaur Game, Free Online Games, Endless Runner, Play Dino Game, Retro Games, Browser Games",
-	ogImage = "/game/icons/Icon-512.png",
-	canonicalUrl = Astro.url.href
+	title = "Dino Run Epochs - Play Free 60FPS Infinite Dinosaur Runner Online",
+	description = "Play Dino Run Epochs online for free. The ultimate 60FPS evolution of the classic Chrome T-Rex runner with 6 procedural biomes, Rive vector models, dynamic speed physics, and zero install.",
+	canonicalPath = "",
+	ogType = "website",
+	articleData
 } = Astro.props;
+
+const siteRoot = "https://dinorunepochs.com";
+const canonicalUrl = canonicalPath ? `${siteRoot}${canonicalPath}` : siteRoot;
+
+const structuredDataOrg = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "Dino Run Epochs Studio",
+  "url": siteRoot,
+  "logo": `${siteRoot}/assets/app_icon.png`,
+  "sameAs": [
+    "https://github.com/mrprewsh",
+    "https://twitter.com/dinorunepochs"
+  ]
+};
+
+const structuredDataGame = {
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "Dino Run Epochs",
+  "url": siteRoot,
+  "description": description,
+  "genre": ["Arcade", "Endless Runner", "Action", "Platformer"],
+  "playMode": "SinglePlayer",
+  "gamePlatform": ["Web Browser", "Mobile Browser", "Desktop"],
+  "applicationCategory": "Game",
+  "operatingSystem": "Any (WebAssembly)",
+  "inLanguage": "en",
+  "author": {
+    "@type": "Organization",
+    "name": "Dino Run Epochs Studio"
+  },
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD",
+    "availability": "https://schema.org/InStock"
+  }
+};
+
+const structuredDataFaq = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What is Dino Run Epochs?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Dino Run Epochs is a modern, high-octane 60FPS evolution of the classic Chrome offline dinosaur game. Built with Flutter, Flame Engine, and WebAssembly, it features 6 procedural atmospheric eras (Desert, Monsoon, Forest, Ice Age, Volcano, and Cosmos), dynamic velocity physics, and customizable Rive vector bone skins."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How do Epoch Transitions work in Dino Run Epochs?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Every 4,500 score points (~3 to 4 minutes of continuous survival), the game triggers an atmospheric transition. Over a 3.5-second sine wave transition, weather fog sweeps in while sky and ground shaders dynamically interpolate to the next era."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How to play Dino Run Epochs on desktop and mobile?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "On Desktop, press the Spacebar or Up Arrow key to jump, and the Down Arrow key to duck. On Mobile devices, tap anywhere on the screen to jump."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Is Dino Run Epochs free to play?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes, Dino Run Epochs is 100% free and unblocked, requiring zero downloads or installation."
+      }
+    }
+  ]
+};
 ---
 
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="en" class="dark scroll-smooth">
 	<head>
 		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-		<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-		<meta http-equiv="Pragma" content="no-cache" />
-		<meta http-equiv="Expires" content="0" />
-		<link rel="icon" type="image/png" href="/game/favicon.png" />
-		<link rel="canonical" href={canonicalUrl} />
-		<meta name="generator" content={Astro.generator} />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
+		
+		<!-- Primary SEO Meta Tags -->
 		<title>{title}</title>
-		<meta name="keywords" content={keywords} />
-		<meta name="google-adsense-account" content="ca-pub-6461062896377292" />
-		<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6461062896377292" crossorigin="anonymous"></script>
+		<meta name="title" content={title} />
+		<meta name="description" content={description} />
+		<meta name="keywords" content="Dino Run Epochs, Chrome dinosaur game, T-Rex runner online, endless runner game, play dino runner unblocked, 60fps web dino game, Flutter Flame web game, prehistoric arcade game" />
+		<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+		<meta name="author" content="Dino Run Epochs" />
+		<link rel="canonical" href={canonicalUrl} />
 
-		<!-- OpenGraph / Facebook -->
-		<meta property="og:type" content="website" />
+		<!-- Open Graph / Facebook / Discord -->
+		<meta property="og:type" content={ogType} />
 		<meta property="og:url" content={canonicalUrl} />
 		<meta property="og:title" content={title} />
 		<meta property="og:description" content={description} />
-		<meta property="og:image" content={ogImage} />
+		<meta property="og:image" content="/assets/app_icon.png" />
+		<meta property="og:site_name" content="Dino Run Epochs" />
+		<meta property="og:locale" content="en_US" />
 
-		<!-- Twitter -->
-		<meta property="twitter:card" content="summary_large_image" />
-		<meta property="twitter:url" content={canonicalUrl} />
-		<meta property="twitter:title" content={title} />
-		<meta property="twitter:description" content={description} />
-		<meta property="twitter:image" content={ogImage} />
+		<!-- Twitter Meta Tags -->
+		<meta name="twitter:card" content="summary_large_image" />
+		<meta name="twitter:url" content={canonicalUrl} />
+		<meta name="twitter:title" content={title} />
+		<meta name="twitter:description" content={description} />
+		<meta name="twitter:image" content="/assets/app_icon.png" />
 
-		<!-- Google Fonts -->
-		<link rel="preconnect" href="https://fonts.googleapis.com">
-		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-		<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+		<!-- Mobile & App Icons -->
+		<link rel="icon" type="image/png" href="/assets/app_icon.png" />
+		<link rel="apple-touch-icon" href="/assets/app_icon.png" />
+		<meta name="theme-color" content="#07090e" />
 
-		<!-- Schema.org VideoGame & WebSite Structured Data -->
-		<script type="application/ld+json">
-		{
-			"@context": "https://schema.org",
-			"@graph": [
-				{
-					"@type": "WebSite",
-					"@id": "https://dino-run-epochs.vercel.app/#website",
-					"url": "https://dino-run-epochs.vercel.app/",
-					"name": "Dino Run: Epochs",
-					"description": "An epic 2D endless dinosaur runner across 7 time epochs built with Flutter, Flame Engine, and Astro JS.",
-					"publisher": {
-						"@type": "Organization",
-						"name": "Dino Run Studios"
-					}
+		<!-- Schema.org JSON-LD Structured Data -->
+		<script type="application/ld+json" set:html={JSON.stringify(structuredDataOrg)} />
+		<script type="application/ld+json" set:html={JSON.stringify(structuredDataGame)} />
+		<script type="application/ld+json" set:html={JSON.stringify(structuredDataFaq)} />
+		{articleData && (
+			<script type="application/ld+json" set:html={JSON.stringify({
+				"@context": "https://schema.org",
+				"@type": "TechArticle",
+				"headline": articleData.headline,
+				"description": articleData.description,
+				"url": canonicalUrl,
+				"image": `${siteRoot}/assets/app_icon.png`,
+				"datePublished": articleData.datePublished,
+				"dateModified": articleData.dateModified,
+				"author": {
+					"@type": "Person",
+					"name": articleData.authorName
 				},
-				{
-					"@type": "SoftwareApplication",
-					"name": "Dino Run: Epochs",
-					"operatingSystem": "Web, Android, iOS, Windows, macOS",
-					"applicationCategory": "GameApplication",
-					"genre": "Endless Runner",
-					"ratingValue": "4.9",
-					"ratingCount": "1420",
-					"offers": {
-						"@type": "Offer",
-						"price": "0",
-						"priceCurrency": "USD"
-					},
-					"description": "Play Dino Run: Epochs online for free! Run across 7 dynamic biomes from Jurassic to Cosmos Zero-G with instant 60 FPS gameplay."
-				}
-			]
-		}
+				"publisher": structuredDataOrg
+			})} />
+		)}
+
+		<!-- Vercel Speed Insights -->
+		<script is:inline>
+			window.si = window.si || function () { (window.siq = window.siq || []).push(arguments); };
 		</script>
+		<script defer src="/_vercel/speed-insights/script.js"></script>
+
+		<!-- Vercel Web Analytics -->
+		<script is:inline>
+			window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+		</script>
+		<script defer src="/_vercel/insights/script.js"></script>
+
+		<!-- Google AdSense -->
+		<meta name="google-adsense-account" content="ca-pub-6461062896377292" />
+		<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6461062896377292" crossorigin="anonymous"></script>
+
+		<meta name="generator" content={Astro.generator} />
 	</head>
-	<body>
-		<slot />
-		<SpeedInsights />
-		<Analytics />
+	<body class="bg-[#07090e] text-slate-100 min-h-[100dvh] font-['Outfit',sans-serif] selection:bg-amber-500/30 selection:text-amber-200 antialiased relative">
+		<!-- Ambient Grid Background -->
+		<div class="fixed inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none z-0" />
+		
+		<div class="relative z-10">
+			<slot />
+		</div>
 	</body>
 </html>
-
-<style is:global>
-	:root {
-		--bg-dark: #070A12;
-		--bg-surface: #0E1424;
-		--bg-card: rgba(18, 26, 46, 0.85);
-		--bg-card-hover: rgba(28, 40, 70, 0.95);
-		--border-card: rgba(255, 255, 255, 0.12);
-		--border-subtle: rgba(255, 255, 255, 0.06);
-		--accent-cyan: #00E5FF;
-		--accent-magenta: #E040FB;
-		--accent-gold: #FFD54F;
-		--accent-green: #00E676;
-		--accent-orange: #FF7043;
-		--text-main: #F1F5F9;
-		--text-muted: #94A3B8;
-		--text-dim: #64748B;
-		--font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
-		--font-mono: 'JetBrains Mono', monospace;
-		--radius-lg: 20px;
-		--radius-md: 14px;
-		--radius-sm: 8px;
-		--shadow-card: 0 12px 36px rgba(0, 0, 0, 0.4);
-		--shadow-glow: 0 0 25px rgba(0, 229, 255, 0.15);
-	}
-
-	* {
-		margin: 0;
-		padding: 0;
-		box-sizing: border-box;
-		scroll-behavior: smooth;
-	}
-
-	body {
-		background-color: var(--bg-dark);
-		color: var(--text-main);
-		font-family: var(--font-family);
-		line-height: 1.65;
-		overflow-x: hidden;
-		min-height: 100vh;
-		display: flex;
-		flex-direction: column;
-		background-image: 
-			radial-gradient(circle at 10% 10%, rgba(0, 229, 255, 0.07) 0%, transparent 45%),
-			radial-gradient(circle at 90% 60%, rgba(224, 64, 251, 0.07) 0%, transparent 45%),
-			radial-gradient(circle at 50% 90%, rgba(255, 213, 79, 0.04) 0%, transparent 40%);
-	}
-
-	main {
-		flex: 1;
-	}
-
-	.section-container {
-		width: 100%;
-		max-width: 1440px;
-		margin: 0 auto;
-		padding: 0 clamp(16px, 3.5vw, 40px);
-	}
-
-	.gradient-text {
-		background: linear-gradient(135deg, var(--accent-cyan), var(--accent-magenta), var(--accent-gold));
-		-webkit-background-clip: text;
-		-webkit-text-fill-color: transparent;
-	}
-
-	.gradient-text-cyan {
-		background: linear-gradient(135deg, var(--accent-cyan), #80D8FF);
-		-webkit-background-clip: text;
-		-webkit-text-fill-color: transparent;
-	}
-
-	.gradient-text-gold {
-		background: linear-gradient(135deg, var(--accent-gold), var(--accent-orange));
-		-webkit-background-clip: text;
-		-webkit-text-fill-color: transparent;
-	}
-
-	/* Article and Content Typography */
-	.content-page {
-		padding: 60px 0 100px;
-	}
-
-	.content-hero {
-		text-align: center;
-		margin-bottom: 50px;
-	}
-
-	.content-hero .badge {
-		display: inline-flex;
-		align-items: center;
-		gap: 6px;
-		font-size: 12px;
-		font-weight: 800;
-		letter-spacing: 1.5px;
-		text-transform: uppercase;
-		padding: 6px 14px;
-		border-radius: 30px;
-		background: rgba(0, 229, 255, 0.12);
-		color: var(--accent-cyan);
-		border: 1px solid rgba(0, 229, 255, 0.3);
-		margin-bottom: 16px;
-	}
-
-	.content-hero h1 {
-		font-size: clamp(32px, 5vw, 52px);
-		font-weight: 900;
-		line-height: 1.15;
-		margin-bottom: 16px;
-		letter-spacing: -0.5px;
-	}
-
-	.content-hero p {
-		font-size: clamp(16px, 2vw, 20px);
-		color: var(--text-muted);
-		max-width: 820px;
-		margin: 0 auto;
-	}
-
-	.content-body {
-		max-width: 960px;
-		margin: 0 auto;
-		font-size: 16.5px;
-		color: #CBD5E1;
-	}
-
-	.content-body h2 {
-		font-size: clamp(24px, 3vw, 32px);
-		font-weight: 800;
-		color: #FFFFFF;
-		margin: 48px 0 18px;
-		padding-bottom: 10px;
-		border-bottom: 1px solid var(--border-subtle);
-		display: flex;
-		align-items: center;
-		gap: 12px;
-	}
-
-	.content-body h3 {
-		font-size: clamp(19px, 2.4vw, 23px);
-		font-weight: 700;
-		color: #F8FAFC;
-		margin: 32px 0 12px;
-	}
-
-	.content-body p {
-		margin-bottom: 20px;
-		line-height: 1.75;
-	}
-
-	.content-body ul, .content-body ol {
-		margin: 0 0 24px 24px;
-		line-height: 1.75;
-	}
-
-	.content-body li {
-		margin-bottom: 10px;
-	}
-
-	.content-body strong {
-		color: #FFFFFF;
-		font-weight: 700;
-	}
-
-	.content-card {
-		background: var(--bg-card);
-		border: 1px solid var(--border-card);
-		border-radius: var(--radius-md);
-		padding: 32px;
-		margin: 28px 0;
-		box-shadow: var(--shadow-card);
-	}
-
-	.info-callout {
-		background: rgba(0, 229, 255, 0.08);
-		border-left: 4px solid var(--accent-cyan);
-		border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-		padding: 20px 24px;
-		margin: 28px 0;
-	}
-
-	.info-callout p {
-		margin-bottom: 0;
-		color: #E2E8F0;
-	}
-
-	.info-callout strong {
-		color: var(--accent-cyan);
-	}
-
-	.table-wrapper {
-		overflow-x: auto;
-		margin: 28px 0;
-		border-radius: var(--radius-md);
-		border: 1px solid var(--border-card);
-	}
-
-	table {
-		width: 100%;
-		border-collapse: collapse;
-		text-align: left;
-		font-size: 15px;
-	}
-
-	th, td {
-		padding: 16px 20px;
-		border-bottom: 1px solid var(--border-subtle);
-	}
-
-	th {
-		background: rgba(14, 20, 36, 0.95);
-		color: var(--accent-cyan);
-		font-weight: 800;
-		text-transform: uppercase;
-		font-size: 13px;
-		letter-spacing: 1px;
-	}
-
-	tr:last-child td {
-		border-bottom: none;
-	}
-
-	tr:hover td {
-		background: rgba(255, 255, 255, 0.02);
-	}
-</style>

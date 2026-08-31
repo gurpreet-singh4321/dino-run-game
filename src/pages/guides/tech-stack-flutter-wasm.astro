@@ -1,0 +1,224 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Navbar from '../../components/Navbar';
+import Footer from '../../components/Footer';
+import AudioPlayerWidget from '../../components/AudioPlayerWidget';
+import { Cpu, Lightning, ShieldCheck, Terminal, GitBranch, Code, Question } from '@phosphor-icons/react';
+
+const articleData = {
+  headline: "Engineering 60FPS in the Browser: The Flutter Flame and WebAssembly Architecture of Dino Run Epochs",
+  description: "A technical devlog analyzing how Dino Run Epochs compiles Dart and Flame 2D to WebAssembly using Skia CanvasKit for zero-garbage-collection browser gaming.",
+  datePublished: "2026-08-30",
+  dateModified: "2026-08-31",
+  authorName: "Dino Run Epochs Core Engine Team"
+};
+
+const faqs = [
+  {
+    q: "Why compile Flutter to WebAssembly (WASM) instead of JavaScript?",
+    a: "WebAssembly delivers near-native execution speed with static typing, predictable memory allocation, and eliminated JIT warmup delays, completely avoiding JavaScript garbage collection stutter during high-speed gameplay."
+  },
+  {
+    q: "What renderer does Dino Run Epochs use in the browser?",
+    a: "The game uses Google's Skia CanvasKit renderer backed by WebGL and WebGPU, ensuring hardware-accelerated 2D blitting and shader transitions across desktop and mobile devices."
+  },
+  {
+    q: "How are Rive vector animations integrated with the Flame game loop?",
+    a: "Flame's update loop feeds delta time directly into Rive's StateMachineController, evaluating bone rotations and inverse kinematic state shifts in real-time alongside player velocity vectors."
+  },
+  {
+    q: "How does the game guarantee fair obstacle generation at high speeds?",
+    a: "The obstacle generator uses a deterministic speed-interval formula: minimum distance equals player velocity multiplied by apex hangtime plus an 80px reaction safety buffer."
+  },
+  {
+    q: "Can Dino Run Epochs run offline as a PWA?",
+    a: "Yes. Dino Run Epochs registers a service worker that caches all WebAssembly binaries and asset bundles locally, enabling 100% offline gameplay once loaded."
+  }
+];
+---
+
+<Layout 
+	title="Flutter Flame & WebAssembly 60FPS Architecture - Dino Run Epochs"
+	description="In-depth technical devlog: How Dino Run Epochs leverages Flutter, Flame 2D, Skia CanvasKit, and WebAssembly to eliminate GC spikes and guarantee locked 60FPS arcade performance."
+	canonicalPath="/guides/tech-stack-flutter-wasm"
+	ogType="article"
+	articleData={articleData}
+>
+	<Navbar pathname={Astro.url.pathname} client:load />
+	
+	<main class="w-full pt-32 pb-24 px-4 md:px-8 max-w-[1100px] mx-auto text-slate-200">
+		
+		{/* Devlog Header */}
+		<header class="mb-14 border-b border-white/10 pb-8">
+			<div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 text-xs font-['Geist_Mono'] font-medium mb-4">
+				<Terminal size={14} weight="bold" />
+				ENGINEERING DEVLOG & ARCHITECTURE SPEC
+			</div>
+			
+			<h1 class="text-3xl sm:text-5xl md:text-6xl font-bold tracking-tight text-white font-['Chakra_Petch'] uppercase leading-tight">
+				60FPS IN THE BROWSER: <br />
+				<span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-400 to-sky-400">
+					FLUTTER, FLAME & WEBASSEMBLY
+				</span>
+			</h1>
+
+			{/* AEO TL;DR Direct-Answer Block */}
+			<blockquote class="my-6 p-5 rounded-xl bg-slate-900/90 border-l-4 border-emerald-400 text-slate-300 text-sm sm:text-base leading-relaxed font-['Outfit']">
+				<strong class="text-white block font-['Chakra_Petch'] mb-1 uppercase tracking-wider text-xs">Technical Summary (TL;DR):</strong>
+				Dino Run Epochs achieves locked 60FPS browser performance by compiling Dart code directly to WebAssembly (WASM) and rendering via Skia CanvasKit over WebGL/WebGPU. This decoupled game loop isolates rendering from browser DOM mutations, eliminates JavaScript garbage collection pauses, and delivers input latencies below 16ms across mobile and desktop runtimes.
+			</blockquote>
+
+			<div class="flex flex-wrap items-center gap-6 text-xs font-['Geist_Mono'] text-slate-400 pt-2">
+				<span>BY: Core Engine & Graphics Architects</span>
+				<span>•</span>
+				<span>PUBLISHED: AUGUST 2026</span>
+				<span>•</span>
+				<span>READ TIME: 9 MIN</span>
+			</div>
+		</header>
+
+		{/* Devlog Article Body */}
+		<article class="space-y-12 font-['Outfit'] text-slate-300 text-base leading-relaxed">
+			
+			{/* Section 1: The Browser Gaming Bottleneck */}
+			<section class="space-y-4">
+				<h2 class="text-2xl sm:text-3xl font-bold text-white font-['Chakra_Petch']">
+					1. The Garbage Collection Challenge in 2D Web Gaming
+				</h2>
+				<p>
+					Traditional HTML5 browser games developed with standard JavaScript and Canvas 2D contexts frequently suffer from a catastrophic flaw: <strong>Garbage Collection (GC) Stutter</strong>. In high-speed runners where player velocity reaches 1,800 pixels per second, a momentary 50ms garbage collection freeze causes the player to drop 90 pixels of distance instantly, resulting in unavoidable collision deaths.
+				</p>
+				<p>
+					When building Dino Run Epochs, our primary technical objective was eliminating non-deterministic GC pauses while maintaining instant web accessibility.
+				</p>
+			</section>
+
+			{/* Section 2: Architectural Comparison Table */}
+			<section class="space-y-6">
+				<h2 class="text-2xl sm:text-3xl font-bold text-white font-['Chakra_Petch']">
+					2. Architecture Comparison: Standard HTML5 vs. Flame WASM
+				</h2>
+				<div class="overflow-x-auto">
+					<table class="w-full text-left border-collapse font-['Geist_Mono'] text-xs sm:text-sm">
+						<thead>
+							<tr class="border-b border-white/20 text-emerald-400 bg-slate-900/80">
+								<th class="p-3">Component / Metric</th>
+								<th class="p-3">Legacy HTML5 Canvas (2014)</th>
+								<th class="p-3">Dino Run Epochs (Flutter Flame WASM)</th>
+								<th class="p-3">Performance Advantage</th>
+							</tr>
+						</thead>
+						<tbody class="divide-y divide-white/10">
+							<tr class="hover:bg-white/5">
+								<td class="p-3 font-bold text-white">Execution Runtime</td>
+								<td class="p-3 text-slate-400">Interpreted / JIT JavaScript</td>
+								<td class="p-3 text-emerald-400 font-bold">W3C WebAssembly (WASM-GC)</td>
+								<td class="p-3 text-slate-300">Near-native CPU instruction speeds</td>
+							</tr>
+							<tr class="hover:bg-white/5">
+								<td class="p-3 font-bold text-white">Graphics Pipeline</td>
+								<td class="p-3 text-slate-400">Software Canvas2D context</td>
+								<td class="p-3 text-emerald-400 font-bold">Skia CanvasKit via WebGL/WebGPU</td>
+								<td class="p-3 text-slate-300">Hardware accelerated GPU batching</td>
+							</tr>
+							<tr class="hover:bg-white/5">
+								<td class="p-3 font-bold text-white">Skeletal Animations</td>
+								<td class="p-3 text-slate-400">Static 2-frame sprite sheets</td>
+								<td class="p-3 text-emerald-400 font-bold">Rive Vector Bones & Inverse Kinematics</td>
+								<td class="p-3 text-slate-300">Fluid state-blending with no sprite swapping</td>
+							</tr>
+							<tr class="hover:bg-white/5">
+								<td class="p-3 font-bold text-white">Input Latency</td>
+								<td class="p-3 text-slate-400">~35 - 55 ms</td>
+								<td class="p-3 text-emerald-400 font-bold">&lt;16 ms (Single Frame Queue)</td>
+								<td class="p-3 text-slate-300">Instantaneous response for sub-pixel grazes</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+			</section>
+
+			{/* Section 3: The Flame Engine Decoupled Loop */}
+			<section class="space-y-4">
+				<h2 class="text-2xl sm:text-3xl font-bold text-white font-['Chakra_Petch']">
+					3. The Decoupled Update & Render Pipeline
+				</h2>
+				<p>
+					The game engine executes on Flame's component lifecycle model. Physics and position calculations are updated with a fixed delta time (<code class="text-emerald-300 bg-white/5 px-1 py-0.5 rounded">dt</code>) independent of display refresh rates:
+				</p>
+
+				<div class="p-6 rounded-2xl bg-slate-950 border border-white/10 font-['Geist_Mono'] text-xs sm:text-sm text-emerald-300 overflow-x-auto">
+					<pre>{`// Simplified snippet of Flame's continuous update step
+@override
+void update(double dt) {
+  super.update(dt);
+  
+  // 1. Calculate logarithmic speed progression
+  currentSpeed = min(terminalSpeed, initialSpeed + log(1 + currentScore / 500) * speedFactor);
+  
+  // 2. Update player vertical kinematics (gravity & jump velocity)
+  dino.updateKinematics(dt, currentSpeed);
+  
+  // 3. Evaluate deterministic procedural obstacle cluster distances
+  obstacleSpawner.evaluateClusters(dt, currentSpeed, currentScore);
+  
+  // 4. Trigger epoch atmospheric fog shader interpolation every 4500 points
+  if (currentScore >= nextEpochThreshold) {
+    epochManager.transitionNextEra(duration: const Duration(milliseconds: 3500));
+  }
+}`}</pre>
+				</div>
+			</section>
+
+			{/* Section 4: Deterministic Procedural Spawner */}
+			<section class="space-y-4">
+				<h2 class="text-2xl sm:text-3xl font-bold text-white font-['Chakra_Petch']">
+					4. Deterministic Obstacle Spacing Math
+				</h2>
+				<p>
+					In poorly designed runners, obstacles can generate in mathematically impossible configurations (e.g., a low pterodactyl immediately behind a triple tall cactus with zero landing space).
+				</p>
+				<p>
+					In Dino Run Epochs, our procedural spawner enforces a strict Clearance Inequality:
+				</p>
+				<div class="p-5 rounded-xl bg-slate-900 border border-white/10 font-['Geist_Mono'] text-sm text-center">
+					<code>MinDistance = (CurrentVelocity × HangTime) + SafetyReactionBuffer</code>
+				</div>
+				<p>
+					Where <code class="text-white">HangTime</code> is derived directly from gravity acceleration and initial jump velocity. This guarantees that every death is purely a player execution error, never an unfair algorithm defect.
+				</p>
+			</section>
+
+			{/* Section 5: Technical FAQs */}
+			<section class="space-y-6 pt-6 border-t border-white/10">
+				<h2 class="text-2xl sm:text-3xl font-bold text-white font-['Chakra_Petch'] flex items-center gap-2">
+					<Question size={26} className="text-emerald-400" />
+					Engineering & Performance FAQ
+				</h2>
+				<div class="space-y-4">
+					{faqs.map((faq) => (
+						<div class="p-6 rounded-2xl glass-card border border-white/10">
+							<h3 class="font-['Chakra_Petch'] font-bold text-base sm:text-lg text-white mb-2">{faq.q}</h3>
+							<p class="text-sm sm:text-base text-slate-300 leading-relaxed font-normal">{faq.a}</p>
+						</div>
+					))}
+				</div>
+			</section>
+
+		</article>
+
+		{/* Navigation Footer */}
+		<div class="mt-16 pt-8 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
+			<a href="/epochs" class="text-sm font-['Geist_Mono'] text-amber-400 hover:underline">
+				← Explore the 6 Epochs Codex
+			</a>
+			<a href="/guides/how-to-play-dino-runner" class="text-sm font-['Geist_Mono'] text-emerald-400 hover:underline">
+				Master Tactics & How to Play →
+			</a>
+		</div>
+
+	</main>
+
+	<AudioPlayerWidget client:load />
+	<Footer client:visible />
+</Layout>

@@ -1,0 +1,203 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Navbar from '../../components/Navbar';
+import Footer from '../../components/Footer';
+import AudioPlayerWidget from '../../components/AudioPlayerWidget';
+import { Sparkle, Trophy, GameController, Cpu, Clock, Lightning, Question } from '@phosphor-icons/react';
+
+const articleData = {
+  headline: "The History and Evolution of the Chrome Dinosaur Game (2014-2026)",
+  description: "Explore the origin story of Google Chrome's offline T-Rex easter egg, its cultural impact across a decade, and how modern WebAssembly and Flutter Flame took it to the next frontier.",
+  datePublished: "2026-08-30",
+  dateModified: "2026-08-31",
+  authorName: "Dino Run Epochs Historical Archives"
+};
+
+const faqs = [
+  {
+    q: "Who originally created the Chrome Dinosaur Game?",
+    a: "The game was created in September 2014 by Google UX designers Sebastien Gabriel, Alan Bettes, and engineer Edward Jung under the internal codename 'Project Bolan'."
+  },
+  {
+    q: "Why was a Tyrannosaurus Rex chosen as the protagonist?",
+    a: "The T-Rex was chosen as a humorous prehistoric metaphor for being stranded in the 'prehistoric ages' without an active internet connection."
+  },
+  {
+    q: "How many times was the original Chrome dino game played?",
+    a: "According to Google official statistics published in 2018, the game was played over 270 million times each month on desktop and mobile devices worldwide."
+  },
+  {
+    q: "What was Project Bolan named after?",
+    a: "Project Bolan was named after Marc Bolan, the iconic lead vocalist of the 1970s glam rock band T. Rex."
+  },
+  {
+    q: "How does Dino Run Epochs differ from the original 2014 game?",
+    a: "While the 2014 game relied on an HTML5 canvas 2D context with static monochrome pixel sprites, Dino Run Epochs uses Flutter Flame 2D compiled to WebAssembly with 6 procedural biomes, Rive vector bone physics, and dynamic audio."
+  }
+];
+---
+
+<Layout 
+	title="The History of the Chrome Dinosaur Game (2014-2026) - Dino Run Epochs"
+	description="The complete evolutionary history of the Chrome T-Rex runner: from its 2014 inception as Project Bolan to modern 60FPS WebAssembly arcade recreations."
+	canonicalPath="/guides/history-of-the-chrome-dinosaur-game"
+	ogType="article"
+	articleData={articleData}
+>
+	<Navbar pathname={Astro.url.pathname} client:load />
+	
+	<main class="w-full pt-32 pb-24 px-4 md:px-8 max-w-[1100px] mx-auto text-slate-200">
+		
+		{/* Header */}
+		<header class="mb-14 border-b border-white/10 pb-8">
+			<div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-purple-500/30 bg-purple-500/10 text-purple-300 text-xs font-['Geist_Mono'] font-medium mb-4">
+				<Clock size={14} weight="bold" />
+				GAMING HISTORY & CULTURE
+			</div>
+			
+			<h1 class="text-3xl sm:text-5xl md:text-6xl font-bold tracking-tight text-white font-['Chakra_Petch'] uppercase leading-tight">
+				THE HISTORY OF THE CHROME DINO: <br />
+				<span class="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-amber-400">
+					FROM 2014 EASTER EGG TO WASM ARCADE
+				</span>
+			</h1>
+
+			{/* AEO TL;DR Direct-Answer Block */}
+			<blockquote class="my-6 p-5 rounded-xl bg-slate-900/90 border-l-4 border-purple-400 text-slate-300 text-sm sm:text-base leading-relaxed font-['Outfit']">
+				<strong class="text-white block font-['Chakra_Petch'] mb-1 uppercase tracking-wider text-xs">Historical Summary (TL;DR):</strong>
+				The Chrome Dinosaur Game was introduced in September 2014 by Google designers Sebastien Gabriel and Alan Bettes alongside engineer Edward Jung under the code name "Project Bolan". Designed as a tongue-in-cheek nod to prehistoric connectivity, it grew into one of the most widely played games in human history (over 270 million monthly sessions) before evolving into modern 60FPS WebAssembly titles like Dino Run Epochs.
+			</blockquote>
+
+			<div class="flex flex-wrap items-center gap-6 text-xs font-['Geist_Mono'] text-slate-400 pt-2">
+				<span>BY: Retro Gaming Research Group</span>
+				<span>•</span>
+				<span>PUBLISHED: AUGUST 2026</span>
+				<span>•</span>
+				<span>READ TIME: 7 MIN</span>
+			</div>
+		</header>
+
+		{/* Article Body */}
+		<article class="space-y-12 font-['Outfit'] text-slate-300 text-base leading-relaxed">
+			
+			<section class="space-y-4">
+				<h2 class="text-2xl sm:text-3xl font-bold text-white font-['Chakra_Petch']">
+					1. The Inception of Project Bolan (September 2014)
+				</h2>
+				<p>
+					In the early days of modern web browsing, dropping your internet connection meant staring at a bleak HTTP error screen: <code class="text-amber-300 bg-white/5 px-1.5 py-0.5 rounded">ERR_INTERNET_DISCONNECTED</code>. In September 2014, Google Chrome designer Sebastien Gabriel proposed turning that dreaded connectivity dead-end into a moment of playful delight.
+				</p>
+				<p>
+					The conceptual pitch was simple: <em>"You have been thrown back into the prehistoric era, before Wi-Fi existed. What lives in the prehistoric era? A dinosaur."</em> The internal project was codenamed <strong>Project Bolan</strong>, a direct tribute to Marc Bolan, front-man of the legendary 1970s rock band T. Rex.
+				</p>
+			</section>
+
+			<section class="space-y-6">
+				<h2 class="text-2xl sm:text-3xl font-bold text-white font-['Chakra_Petch']">
+					2. The Evolution Timeline: 2014 Through 2026
+				</h2>
+				<div class="overflow-x-auto">
+					<table class="w-full text-left border-collapse font-['Geist_Mono'] text-xs sm:text-sm">
+						<thead>
+							<tr class="border-b border-white/20 text-purple-300 bg-slate-900/80">
+								<th class="p-3">Year / Phase</th>
+								<th class="p-3">Key Milestones & Features</th>
+								<th class="p-3">Underlying Tech</th>
+								<th class="p-3">Global Impact</th>
+							</tr>
+						</thead>
+						<tbody class="divide-y divide-white/10">
+							<tr class="hover:bg-white/5">
+								<td class="p-3 font-bold text-white">2014 (Launch)</td>
+								<td class="p-3">Monochrome T-Rex jumping over 16-pixel saguaro cacti</td>
+								<td class="p-3 text-slate-400">Vanilla JS Canvas 2D</td>
+								<td class="p-3 text-slate-300">Debuts on Chrome Canary & Android</td>
+							</tr>
+							<tr class="hover:bg-white/5">
+								<td class="p-3 font-bold text-white">2015</td>
+								<td class="p-3">Night Mode inverted colors and airborne Pterodactyls added</td>
+								<td class="p-3 text-slate-400">Sprite sheet animation</td>
+								<td class="p-3 text-slate-300">Introduces aerial ducking mechanics</td>
+							</tr>
+							<tr class="hover:bg-white/5">
+								<td class="p-3 font-bold text-white">2018</td>
+								<td class="p-3">Chrome 10-Year Anniversary party hats, balloons, and cake</td>
+								<td class="p-3 text-slate-400">Temporary asset overlays</td>
+								<td class="p-3 text-slate-300">Surpasses 270M monthly active sessions</td>
+							</tr>
+							<tr class="hover:bg-white/5">
+								<td class="p-3 font-bold text-white">2020-2024</td>
+								<td class="p-3">Tokyo Olympics torches, custom modding communities, speedrunning</td>
+								<td class="p-3 text-slate-400">Browser extension hacks</td>
+								<td class="p-3 text-slate-300">Becomes an esports speedrunning meme</td>
+							</tr>
+							<tr class="hover:bg-white/5">
+								<td class="p-3 font-bold text-amber-300">2026 (Epochs Era)</td>
+								<td class="p-3">6 procedural biomes, Rive vector bone rigs, 60FPS WebAssembly</td>
+								<td class="p-3 text-slate-400">Flutter Flame + CanvasKit</td>
+								<td class="p-3 text-slate-300">Console-grade browser arcade recreation</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+			</section>
+
+			<section class="space-y-4">
+				<h2 class="text-2xl sm:text-3xl font-bold text-white font-['Chakra_Petch']">
+					3. Why the Mechanics Resonated Globally
+				</h2>
+				<p>
+					The genius of the offline dinosaur runner lies in its ruthless simplicity:
+				</p>
+				<ul class="list-disc pl-6 space-y-2 text-slate-300">
+					<li><strong>Instant Ludic Feedback:</strong> No tutorials, dialogue trees, or loading screens. A single press of the spacebar initiates gameplay in under 16 milliseconds.</li>
+					<li><strong>Purity of Reflexes:</strong> Winning does not depend on pay-to-win upgrades or gear grinding. Survival is 100% determined by optical reaction speed and jump cadence.</li>
+					<li><strong>Universal Accessibility:</strong> Because it was baked directly into the Chromium source code, billions of school computers, enterprise terminals, and mobile devices had immediate access.</li>
+				</ul>
+			</section>
+
+			<section class="space-y-4">
+				<h2 class="text-2xl sm:text-3xl font-bold text-white font-['Chakra_Petch']">
+					4. Taking the Formula into 2026 with Dino Run Epochs
+				</h2>
+				<p>
+					Despite its universal acclaim, the original game lacked modern graphical dynamics. Its velocity curve plateaued quickly, the monochrome color palette caused visual fatigue, and collision hitboxes were rigid bounding rectangles.
+				</p>
+				<p>
+					Dino Run Epochs bridges the nostalgic purity of the 2014 original with state-of-the-art WebAssembly game engineering. By introducing procedural biome transitions (from Desert to Cosmic Singularity) and real-time bone-weighted skeletal rigs, players experience what feels like a full console runner directly inside their web browser.
+				</p>
+			</section>
+
+			{/* Section 5: FAQs */}
+			<section class="space-y-6 pt-6 border-t border-white/10">
+				<h2 class="text-2xl sm:text-3xl font-bold text-white font-['Chakra_Petch'] flex items-center gap-2">
+					<Question size={26} className="text-purple-400" />
+					Frequently Asked Questions
+				</h2>
+				<div class="space-y-4">
+					{faqs.map((faq) => (
+						<div class="p-6 rounded-2xl glass-card border border-white/10">
+							<h3 class="font-['Chakra_Petch'] font-bold text-base sm:text-lg text-white mb-2">{faq.q}</h3>
+							<p class="text-sm sm:text-base text-slate-300 leading-relaxed font-normal">{faq.a}</p>
+						</div>
+					))}
+				</div>
+			</section>
+
+		</article>
+
+		{/* Navigation Footer */}
+		<div class="mt-16 pt-8 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
+			<a href="/guides/how-to-play-dino-runner" class="text-sm font-['Geist_Mono'] text-amber-400 hover:underline">
+				← Tactics & How to Play Guide
+			</a>
+			<a href="/guides/tech-stack-flutter-wasm" class="text-sm font-['Geist_Mono'] text-sky-400 hover:underline">
+				Flutter Flame Architecture Devlog →
+			</a>
+		</div>
+
+	</main>
+
+	<AudioPlayerWidget client:load />
+	<Footer client:visible />
+</Layout>
