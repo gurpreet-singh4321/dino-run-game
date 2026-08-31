@@ -105,14 +105,16 @@ class Hud extends PositionComponent with HasGameReference<DinoGame> {
       _drawHeart(canvas, Offset(26.0 + i * 22.0, 52.0), 8.0, color);
     }
 
-    // 4. Biome Label (top-center)
-    final biomeName = game.biomeManager.effectiveBiome.name;
-    _biomePaint.render(
-      canvas,
-      biomeName,
-      Vector2(game.size.x / 2, 54),
-      anchor: Anchor.topCenter,
-    );
+    // 4. Biome Label (top-center, hidden in space mode)
+    if (game.state != GameState.spaceMode) {
+      final biomeName = game.biomeManager.effectiveBiome.name;
+      _biomePaint.render(
+        canvas,
+        biomeName,
+        Vector2(game.size.x / 2, 54),
+        anchor: Anchor.topCenter,
+      );
+    }
 
     // 5. Pause Button (top-center, plain bars)
     final cx = game.size.x / 2;

@@ -570,78 +570,268 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     _drawBiomeTransitionFog(canvas);
   }
 
-  /// Draw space mode visuals: twinkling stars, galaxies, speed lines
+  /// 🌌 Deep Space Cosmic Parallax Realm (Atmospheric Cosmos Mode)
   void _drawSpaceModeVisuals(Canvas canvas, double sp) {
     final w = size.x;
     final h = size.y;
 
-    // 1. Dense twinkling star field
-    for (final star in _stars) {
-      final twinkle = ((math.sin(star.brightness) + 1) / 2).clamp(0.0, 1.0);
-      final starAlpha = sp * (0.4 + twinkle * 0.6);
-      final starSize = 1.0 + twinkle * 1.5;
-      canvas.drawCircle(
-        Offset(star.x, star.y),
-        starSize,
-        Paint()..color = Colors.white.withValues(alpha: starAlpha),
-      );
-      // Subtle glow on brightest stars
-      if (twinkle > 0.7) {
-        canvas.drawCircle(
-          Offset(star.x, star.y),
-          starSize * 3,
-          Paint()
-            ..color = Colors.white.withValues(alpha: starAlpha * 0.15)
-            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
+    // 1. Deep Space Cosmic Parallax Image Layer (if loaded)
+    if (_cosmosBgImage != null) {
+      final img = _cosmosBgImage!;
+      final imgW = img.width.toDouble();
+      final imgH = img.height.toDouble();
+      final scale = h / imgH;
+      final tileW = imgW * scale;
+      final pShift = (_bgScrollOffset * 0.4) % tileW;
+
+      final srcRect = Rect.fromLTWH(0, 0, imgW, imgH);
+      final paint = Paint()..color = Colors.white.withValues(alpha: sp * 0.92);
+
+      double startX = -pShift;
+      while (startX < w + 50) {
+        canvas.drawImageRect(
+          img,
+          srcRect,
+          Rect.fromLTWH(startX, 0, tileW, h),
+          paint,
         );
+        startX += tileW;
       }
     }
 
-    // 2. Galaxies / Nebulae blobs (3 colorful, slowly drifting ellipses)
-    _drawSpaceGalaxy(canvas, sp,
-      cx: w * 0.25 + math.sin(_time * 0.1) * 20,
-      cy: h * 0.22 + math.cos(_time * 0.08) * 10,
-      rx: 110, ry: 55,
-      color1: const Color(0xFF7C4DFF), color2: const Color(0xFF448AFF),
-    );
-    _drawSpaceGalaxy(canvas, sp,
-      cx: w * 0.72 + math.cos(_time * 0.12) * 15,
-      cy: h * 0.38 + math.sin(_time * 0.09) * 12,
-      rx: 90, ry: 50,
-      color1: const Color(0xFFFF4081), color2: const Color(0xFFFF6E40),
-    );
-    _drawSpaceGalaxy(canvas, sp,
-      cx: w * 0.50 + math.sin(_time * 0.07) * 25,
-      cy: h * 0.65 + math.cos(_time * 0.11) * 8,
-      rx: 80, ry: 40,
-      color1: const Color(0xFF00E5FF), color2: const Color(0xFF76FF03),
-    );
+    // 2. Interstellar Nebulae Formations (Multi-spectral cosmic clouds)
+    _drawDeepSpaceNebulae(canvas, sp);
 
-    // 3. Speed lines / star streaks during launch and returning phases
+    // 3. Majestic Ringed Gas Giant (Saturn-like Planet on Horizon)
+    _drawDeepSpaceRingedPlanet(canvas, sp);
+
+    // 4. Distant Radiant Crescent Moon / Celestial Exoplanet
+    _drawDeepSpaceMoon(canvas, sp);
+
+    // 5. Multi-Layered Twinkling Starfield & Colored Giant Stars
+    _drawDeepSpaceStarfield(canvas, sp);
+
+    // 6. Dynamic Shooting Stars & Comets with glowing dust tails
+    _drawDeepSpaceComets(canvas, sp);
+
+    // 7. Swirling Cosmic Stardust & Micro-Ion Motes
+    _drawCosmosAtmosphere(canvas, w, h);
+
+    // 8. Warp Speed streaks during Launch and Returning
     final phase = game.spacePhase;
     if (phase == SpacePhase.launch || phase == SpacePhase.returning) {
       _drawSpeedLines(canvas, phase);
     }
   }
 
-  void _drawSpaceGalaxy(Canvas canvas, double sp, {
-    required double cx, required double cy,
-    required double rx, required double ry,
-    required Color color1, required Color color2,
-  }) {
-    final galaxyRect = Rect.fromCenter(center: Offset(cx, cy), width: rx * 2, height: ry * 2);
-    final galaxyShader = RadialGradient(
+  void _drawDeepSpaceNebulae(Canvas canvas, double sp) {
+    final w = size.x;
+    final h = size.y;
+
+    // Cyan & Electric Indigo Nebula
+    final n1Center = Offset(w * 0.28 + math.sin(_time * 0.08) * 20, h * 0.25 + math.cos(_time * 0.06) * 12);
+    final n1Rect = Rect.fromCircle(center: n1Center, radius: 180);
+    final n1Shader = RadialGradient(
       colors: [
-        color1.withValues(alpha: 0.3 * sp),
-        color2.withValues(alpha: 0.15 * sp),
+        const Color(0xFF00E5FF).withValues(alpha: 0.22 * sp),
+        const Color(0xFF7C4DFF).withValues(alpha: 0.12 * sp),
         Colors.transparent,
       ],
-      stops: const [0.0, 0.5, 1.0],
-    ).createShader(galaxyRect);
-    canvas.drawOval(galaxyRect, Paint()
-      ..shader = galaxyShader
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12),
-    );
+      stops: const [0.0, 0.45, 1.0],
+    ).createShader(n1Rect);
+    canvas.drawCircle(n1Center, 180, Paint()..shader = n1Shader);
+
+    // Magenta & Radiant Purple Nebula
+    final n2Center = Offset(w * 0.75 + math.cos(_time * 0.09) * 18, h * 0.40 + math.sin(_time * 0.07) * 10);
+    final n2Rect = Rect.fromCircle(center: n2Center, radius: 210);
+    final n2Shader = RadialGradient(
+      colors: [
+        const Color(0xFFFF4081).withValues(alpha: 0.20 * sp),
+        const Color(0xFF9C27B0).withValues(alpha: 0.10 * sp),
+        Colors.transparent,
+      ],
+      stops: const [0.0, 0.50, 1.0],
+    ).createShader(n2Rect);
+    canvas.drawCircle(n2Center, 210, Paint()..shader = n2Shader);
+  }
+
+  void _drawDeepSpaceRingedPlanet(Canvas canvas, double sp) {
+    final planetCenter = Offset(size.x * 0.84, size.y * 0.22 + math.sin(_time * 0.1) * 6);
+    canvas.save();
+    canvas.translate(planetCenter.dx, planetCenter.dy);
+    canvas.rotate(-math.pi / 7);
+
+    // 1. Atmosphere Celestial Aura
+    final auraRect = Rect.fromCircle(center: Offset.zero, radius: 46);
+    final auraShader = RadialGradient(
+      colors: [
+        const Color(0xFF4DEEEA).withValues(alpha: 0.35 * sp),
+        const Color(0xFF00B0FF).withValues(alpha: 0.12 * sp),
+        Colors.transparent,
+      ],
+      stops: const [0.0, 0.65, 1.0],
+    ).createShader(auraRect);
+    canvas.drawCircle(Offset.zero, 46, Paint()..shader = auraShader);
+
+    // 2. Planet Sphere Body with 3D Spherical Light
+    final bodyRect = Rect.fromCircle(center: Offset.zero, radius: 32);
+    final bodyShader = RadialGradient(
+      center: const Alignment(-0.45, -0.45),
+      colors: [
+        const Color(0xFF80DEEA).withValues(alpha: sp),
+        const Color(0xFF00838F).withValues(alpha: sp),
+        const Color(0xFF004D40).withValues(alpha: sp),
+        const Color(0xFF001518).withValues(alpha: sp),
+      ],
+      stops: const [0.0, 0.45, 0.80, 1.0],
+    ).createShader(bodyRect);
+    canvas.drawCircle(Offset.zero, 32, Paint()..shader = bodyShader);
+
+    // 3. Multi-Band 3D Planetary Rings
+    final ringOuterPaint = Paint()
+      ..color = const Color(0xFF80DEEA).withValues(alpha: 0.55 * sp)
+      ..style = ui.PaintingStyle.stroke
+      ..strokeWidth = 4.5;
+    canvas.drawOval(const Rect.fromLTWH(-68, -13, 136, 26), ringOuterPaint);
+
+    final ringInnerPaint = Paint()
+      ..color = const Color(0xFFFFD54F).withValues(alpha: 0.35 * sp)
+      ..style = ui.PaintingStyle.stroke
+      ..strokeWidth = 2.0;
+    canvas.drawOval(const Rect.fromLTWH(-56, -10, 112, 20), ringInnerPaint);
+
+    canvas.restore();
+  }
+
+  void _drawDeepSpaceMoon(Canvas canvas, double sp) {
+    final moonCenter = Offset(size.x * 0.16, size.y * 0.28 + math.cos(_time * 0.12) * 5);
+    final moonRect = Rect.fromCircle(center: moonCenter, radius: 22);
+
+    // Celestial Soft Moon Glow
+    final glowShader = RadialGradient(
+      colors: [
+        const Color(0xFFE1BEE7).withValues(alpha: 0.30 * sp),
+        Colors.transparent,
+      ],
+      stops: const [0.0, 1.0],
+    ).createShader(Rect.fromCircle(center: moonCenter, radius: 36));
+    canvas.drawCircle(moonCenter, 36, Paint()..shader = glowShader);
+
+    // Moon Crescent Body
+    final moonShader = RadialGradient(
+      center: const Alignment(-0.4, -0.4),
+      colors: [
+        const Color(0xFFF3E5F5).withValues(alpha: sp),
+        const Color(0xFFBA68C8).withValues(alpha: sp),
+        const Color(0xFF4A148C).withValues(alpha: sp),
+      ],
+      stops: const [0.0, 0.55, 1.0],
+    ).createShader(moonRect);
+    canvas.drawCircle(moonCenter, 22, Paint()..shader = moonShader);
+
+    // Surface Crater Accents
+    final craterPaint = Paint()..color = const Color(0xFF38006B).withValues(alpha: 0.40 * sp);
+    canvas.drawCircle(Offset(moonCenter.dx + 4, moonCenter.dy - 3), 4.0, craterPaint);
+    canvas.drawCircle(Offset(moonCenter.dx - 6, moonCenter.dy + 5), 3.0, craterPaint);
+    canvas.drawCircle(Offset(moonCenter.dx + 6, moonCenter.dy + 6), 2.5, craterPaint);
+  }
+
+  void _drawDeepSpaceStarfield(Canvas canvas, double sp) {
+    final w = size.x;
+    final h = size.y;
+
+    // 1. Far Twinkling Micro Stars
+    for (final star in _stars) {
+      final twinkle = ((math.sin(star.brightness + _time * 2.5) + 1) / 2).clamp(0.0, 1.0);
+      final starAlpha = sp * (0.35 + twinkle * 0.65);
+      final starSize = 1.0 + twinkle * 1.6;
+      canvas.drawCircle(
+        Offset(star.x, star.y),
+        starSize,
+        Paint()..color = Colors.white.withValues(alpha: starAlpha),
+      );
+    }
+
+    // 2. Giant Colored Celestial Stars with 4-point Diamond Diffraction Spikes
+    final giantStarPositions = [
+      Offset(w * 0.12, h * 0.15),
+      Offset(w * 0.45, h * 0.18),
+      Offset(w * 0.62, h * 0.55),
+      Offset(w * 0.88, h * 0.68),
+      Offset(w * 0.35, h * 0.72),
+    ];
+    final giantStarColors = [
+      const Color(0xFF00E5FF), // Cyan
+      const Color(0xFFFFD54F), // Gold
+      const Color(0xFFFF4081), // Magenta
+      const Color(0xFF76FF03), // Emerald
+      const Color(0xFF7C4DFF), // Violet
+    ];
+
+    for (int i = 0; i < giantStarPositions.length; i++) {
+      final pos = giantStarPositions[i];
+      final color = giantStarColors[i];
+      final pulse = 0.85 + 0.15 * math.sin(_time * 3.0 + i * 1.7);
+
+      // Star core
+      canvas.drawCircle(pos, 3.2 * pulse, Paint()..color = Colors.white.withValues(alpha: sp));
+      // Color halo
+      canvas.drawCircle(
+        pos,
+        8.0 * pulse,
+        Paint()..color = color.withValues(alpha: 0.35 * sp)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
+      );
+      // 4-Point Diamond Cross Spikes
+      final spikePaint = Paint()
+        ..color = color.withValues(alpha: 0.60 * sp)
+        ..strokeWidth = 1.2
+        ..strokeCap = StrokeCap.round;
+      final spikeLen = 11.0 * pulse;
+      canvas.drawLine(Offset(pos.dx - spikeLen, pos.dy), Offset(pos.dx + spikeLen, pos.dy), spikePaint);
+      canvas.drawLine(Offset(pos.dx, pos.dy - spikeLen), Offset(pos.dx, pos.dy + spikeLen), spikePaint);
+    }
+  }
+
+  void _drawDeepSpaceComets(Canvas canvas, double sp) {
+    // Dynamic periodic comet streak
+    final cometCycle = (_time * 0.35) % 1.0;
+    if (cometCycle < 0.45) {
+      final t = cometCycle / 0.45;
+      final startX = size.x * 0.95 - t * (size.x * 0.75);
+      final startY = size.y * 0.05 + t * (size.y * 0.45);
+      final head = Offset(startX, startY);
+      final tail = Offset(startX + 85, startY - 45);
+
+      final cometAlpha = (math.sin(t * math.pi) * sp).clamp(0.0, 1.0);
+
+      // Comet Tail Gradient
+      final tailShader = LinearGradient(
+        colors: [
+          const Color(0xFF00E5FF).withValues(alpha: 0.85 * cometAlpha),
+          const Color(0xFF7C4DFF).withValues(alpha: 0.40 * cometAlpha),
+          Colors.transparent,
+        ],
+      ).createShader(Rect.fromPoints(head, tail));
+
+      canvas.drawLine(
+        head,
+        tail,
+        Paint()
+          ..shader = tailShader
+          ..strokeWidth = 2.8
+          ..strokeCap = StrokeCap.round,
+      );
+
+      // Comet Glowing Head
+      canvas.drawCircle(head, 3.5, Paint()..color = Colors.white.withValues(alpha: cometAlpha));
+      canvas.drawCircle(
+        head,
+        7.0,
+        Paint()
+          ..color = const Color(0xFF80D8FF).withValues(alpha: 0.45 * cometAlpha)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
+      );
+    }
   }
 
   void _drawSpeedLines(Canvas canvas, SpacePhase phase) {

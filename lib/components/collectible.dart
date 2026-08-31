@@ -61,8 +61,9 @@ class Collectible extends PositionComponent with CollisionCallbacks, HasGameRefe
       }
     }
 
-    // Magnet attraction (Enhanced by Magnet Booster upgrade)
-    if (game.player.magnetTimer > 0) {
+    // Magnet attraction (Only pulls coins/doubleCoins, never power-ups!)
+    final isCoin = collectType == CollectibleType.coin || collectType == CollectibleType.doubleCoin;
+    if (game.player.magnetTimer > 0 && isCoin) {
       final magnetLvl = game.coinManager.magnetLevel;
       final pullRadius = 160.0 + (magnetLvl * 30.0);
       final pullSpeed = 320.0 + (magnetLvl * 40.0);
