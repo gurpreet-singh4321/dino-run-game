@@ -588,8 +588,7 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
       Paint()
         ..color = const Color(0xFFFFFFFF)
         ..strokeWidth = 2.5
-        ..style = PaintingStyle.stroke
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.5),
+        ..style = PaintingStyle.stroke,
     );
 
     // 3. Leaping Fire Spark Particles
@@ -619,9 +618,7 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
     }
 
     // 4. Billowing Rising Smoke Plumes from Spouts
-    final smokePaint = Paint()
-      ..color = const Color(0xFF37474F).withValues(alpha: 0.35)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
+    final smokePaint = Paint()..color = const Color(0xFF37474F).withValues(alpha: 0.35);
 
     for (int s = 0; s < 6; s += 2) {
       final cx = pitLeft + pitWidth * sproutOffsets[s];
@@ -633,10 +630,9 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
       final sCycle = (_time * 1.8 + s * 0.4) % 1.4;
       final sProg = sCycle / 1.4;
       final sX = cx + math.sin(_time * 3.0 + s) * (4.0 + sProg * 12.0);
-      final sY = topY - 8.0 - sProg * 35.0;
-      final sR = 5.0 + sProg * 12.0;
-      final sAlpha = (1.0 - sProg) * 0.35;
-      canvas.drawCircle(Offset(sX, sY), sR, smokePaint..color = const Color(0xFF37474F).withValues(alpha: sAlpha));
+      final sY = topY - 10 - sProg * 35.0;
+      final sR = 5.0 + sProg * 9.0;
+      canvas.drawCircle(Offset(sX, sY), sR, smokePaint);
     }
   }
 }

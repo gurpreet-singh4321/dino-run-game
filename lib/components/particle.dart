@@ -125,14 +125,17 @@ class ParticlePool extends PositionComponent {
     }
   }
 
+  static final _paint = Paint();
+
   @override
   void render(Canvas canvas) {
     for (final p in _particles) {
       final alpha = (p.life / p.maxLife).clamp(0.0, 1.0);
+      _paint.color = p.color.withValues(alpha: alpha);
       canvas.drawCircle(
         Offset(p.x, p.y),
         p.radius * alpha,
-        Paint()..color = p.color.withValues(alpha: alpha),
+        _paint,
       );
     }
   }

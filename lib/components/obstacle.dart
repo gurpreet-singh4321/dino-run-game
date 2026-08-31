@@ -917,8 +917,7 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
           ..color = Colors.white.withValues(alpha: 0.9)
           ..strokeWidth = 2.2
           ..style = PaintingStyle.stroke
-          ..strokeCap = StrokeCap.round
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.5),
+          ..strokeCap = StrokeCap.round,
       );
 
       // 4. Leaping Fire Sparks & Fiery Globules leaping into the air
@@ -938,9 +937,7 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
       }
 
       // 5. Billowing Rising Smoke Plumes from Flame Apex
-      final smokePaint = Paint()
-        ..color = const Color(0xFF37474F).withValues(alpha: 0.35)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
+      final smokePaint = Paint()..color = const Color(0xFF37474F).withValues(alpha: 0.35);
 
       for (int s = 0; s < 3; s++) {
         final sCycle = (age * 1.8 + s * 0.4 + v) % 1.4;

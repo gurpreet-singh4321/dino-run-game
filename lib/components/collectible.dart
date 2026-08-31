@@ -205,9 +205,7 @@ class Collectible extends PositionComponent with CollisionCallbacks, HasGameRefe
     canvas.drawCircle(
       center,
       19,
-      Paint()
-        ..color = const Color(0xFFFFEA00).withValues(alpha: 0.35)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
+      Paint()..color = const Color(0xFFFFEA00).withValues(alpha: 0.25),
     );
 
     canvas.save();
@@ -224,9 +222,7 @@ class Collectible extends PositionComponent with CollisionCallbacks, HasGameRefe
     canvas.drawCircle(
       center,
       23,
-      Paint()
-        ..color = const Color(0xFFFFEA00).withValues(alpha: 0.5)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10),
+      Paint()..color = const Color(0xFFFFEA00).withValues(alpha: 0.35),
     );
 
     // 1. Back Coin (Offset top-left)
@@ -252,9 +248,7 @@ class Collectible extends PositionComponent with CollisionCallbacks, HasGameRefe
     canvas.drawCircle(
       Offset(cx, cy),
       auraRadius + 5,
-      Paint()
-        ..color = const Color(0xFF00E5FF).withValues(alpha: 0.40)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
+      Paint()..color = const Color(0xFF00E5FF).withValues(alpha: 0.30),
     );
 
     // 2. Circular Cyan/Blue Powerup Container Badge
@@ -269,32 +263,33 @@ class Collectible extends PositionComponent with CollisionCallbacks, HasGameRefe
       ..moveTo(cx - 5, cy + 8)
       ..quadraticBezierTo(cx, cy + 17 + math.sin(_floatOffset * 10) * 3, cx + 5, cy + 8)
       ..close();
-    final flameGradient = const LinearGradient(
-      begin: Alignment.topCenter,
-      end: Alignment.bottomCenter,
-      colors: [Color(0xFFFFEA00), Color(0xFFFF3D00)],
-    );
-    canvas.drawPath(flamePath, Paint()..shader = flameGradient.createShader(Rect.fromLTWH(cx - 5, cy + 8, 10, 10)));
+    canvas.drawPath(flamePath, Paint()..color = const Color(0xFFFF9100));
+    canvas.drawCircle(Offset(cx, cy + 10), 3.0, Paint()..color = const Color(0xFFFFFF00));
 
-    // 4. Sleek Metallic Rocket Fuselage
+    // 4. Sleek Metallic Rocket Body
     final rocketPath = Path()
-      ..moveTo(cx, cy - 13) // Rocket Nose Cone
-      ..cubicTo(cx + 8, cy - 5, cx + 7, cy + 6, cx + 6, cy + 8) // Right Body
-      ..lineTo(cx - 6, cy + 8) // Bottom Thruster Base
-      ..cubicTo(cx - 7, cy + 6, cx - 8, cy - 5, cx, cy - 13) // Left Body
+      ..moveTo(cx, cy - 14)
+      ..cubicTo(cx + 9, cy - 8, cx + 8, cy + 8, cx + 6, cy + 10)
+      ..lineTo(cx - 6, cy + 10)
+      ..cubicTo(cx - 8, cy + 8, cx - 9, cy - 8, cx, cy - 14)
       ..close();
-    canvas.drawPath(rocketPath, Paint()..color = Colors.white);
 
-    // Red Nose Cone Tip
+    final rocketGradient = const LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [Color(0xFFFFFFFF), Color(0xFFCFD8DC), Color(0xFF78909C)],
+    );
+    canvas.drawPath(rocketPath, Paint()..shader = rocketGradient.createShader(Rect.fromLTWH(cx - 9, cy - 14, 18, 24)));
+
+    // Rocket Nose Cone (Red)
     final nosePath = Path()
-      ..moveTo(cx, cy - 13)
-      ..quadraticBezierTo(cx + 4, cy - 7, cx + 5, cy - 5)
+      ..moveTo(cx, cy - 14)
+      ..lineTo(cx + 5, cy - 5)
       ..lineTo(cx - 5, cy - 5)
-      ..quadraticBezierTo(cx - 4, cy - 7, cx, cy - 13)
       ..close();
     canvas.drawPath(nosePath, Paint()..color = const Color(0xFFFF1744));
 
-    // Rocket Side Fins
+    // Rocket Wings / Fins (Left & Right)
     canvas.drawPath(
       Path()..moveTo(cx - 5, cy + 3)..lineTo(cx - 10, cy + 9)..lineTo(cx - 5, cy + 8)..close(),
       Paint()..color = const Color(0xFFFF1744),
@@ -318,9 +313,7 @@ class Collectible extends PositionComponent with CollisionCallbacks, HasGameRefe
     canvas.drawCircle(
       Offset(cx, cy),
       22,
-      Paint()
-        ..color = const Color(0xFF29B6F6).withValues(alpha: 0.35)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
+      Paint()..color = const Color(0xFF29B6F6).withValues(alpha: 0.30),
     );
 
     // 2. Shield Body Path
@@ -373,9 +366,7 @@ class Collectible extends PositionComponent with CollisionCallbacks, HasGameRefe
     canvas.drawCircle(
       Offset(cx, cy),
       22,
-      Paint()
-        ..color = const Color(0xFFAB47BC).withValues(alpha: 0.35)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
+      Paint()..color = const Color(0xFFAB47BC).withValues(alpha: 0.30),
     );
 
     // 2. Circular Purple Container Badge
@@ -433,9 +424,7 @@ class Collectible extends PositionComponent with CollisionCallbacks, HasGameRefe
     canvas.drawCircle(
       Offset(cx, cy),
       glowRadius,
-      Paint()
-        ..color = const Color(0xFFFF4081).withValues(alpha: 0.45)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
+      Paint()..color = const Color(0xFFFF4081).withValues(alpha: 0.35),
     );
 
     // 2. Purple Badge
@@ -474,9 +463,7 @@ class Collectible extends PositionComponent with CollisionCallbacks, HasGameRefe
     canvas.drawCircle(
       Offset(cx, cy),
       auraRadius,
-      Paint()
-        ..color = const Color(0xFFFFD700).withValues(alpha: 0.40 * pulse)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10),
+      Paint()..color = const Color(0xFFFFD700).withValues(alpha: 0.35 * pulse),
     );
 
     // 2. Dinosaur Egg Shell Body (Ovoid Shape)
@@ -530,8 +517,7 @@ class Collectible extends PositionComponent with CollisionCallbacks, HasGameRefe
         ..color = Colors.white
         ..strokeWidth = 1.6
         ..style = PaintingStyle.stroke
-        ..strokeCap = StrokeCap.round
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.0),
+        ..strokeCap = StrokeCap.round,
     );
 
     // 5. Sparkle Starlets Orbiting the Egg

@@ -117,9 +117,7 @@ class RollingBall extends PositionComponent with CollisionCallbacks, HasGameRefe
   /// Render rolling ice ball with frozen ice cracks & glistening frost
   void _renderIceBall(Canvas canvas, double r) {
     // Outer ice glow
-    final glowPaint = Paint()
-      ..color = const Color(0xFF4DEEEA).withValues(alpha: 0.4)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
+    final glowPaint = Paint()..color = const Color(0xFF4DEEEA).withValues(alpha: 0.3);
     canvas.drawCircle(Offset.zero, r + 2, glowPaint);
 
     // Ice body gradient

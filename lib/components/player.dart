@@ -516,8 +516,7 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
         ..color = Colors.white.withValues(alpha: 0.85)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 3.2
-        ..strokeCap = StrokeCap.round
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.5),
+        ..strokeCap = StrokeCap.round,
     );
 
     // Secondary smaller bottom-right reflection dot
@@ -549,8 +548,7 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
       Paint()
         ..color = const Color(0xFF00E5FF).withValues(alpha: 0.15)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 4.0
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5),
+        ..strokeWidth = 4.0,
     );
 
     // 2. Back Arc Ring Gradient (Behind Dino)
@@ -618,8 +616,7 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
       Paint()
         ..color = const Color(0xFF00E5FF).withValues(alpha: 0.22)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 4.0
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5),
+        ..strokeWidth = 4.0,
     );
 
     // 2. Front Arc Ring Gradient (In front of Dino's belly)

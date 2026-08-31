@@ -1776,7 +1776,7 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       final pShift = _bgScrollOffset % tileW;
 
       final srcRect = Rect.fromLTWH(0, 0, imgW, imgH);
-      final paint = Paint()..filterQuality = FilterQuality.high;
+      final paint = Paint()..filterQuality = FilterQuality.low;
 
       // Draw seamlessly repeating tiles
       double startX = -pShift;
@@ -1804,7 +1804,7 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       final pShift = _bgScrollOffset % tileW;
 
       final srcRect = Rect.fromLTWH(0, 0, imgW, imgH);
-      final paint = Paint()..filterQuality = FilterQuality.high;
+      final paint = Paint()..filterQuality = FilterQuality.low;
 
       // Draw seamlessly repeating tiles
       double startX = -pShift;
@@ -1830,7 +1830,7 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       final pShift = _bgScrollOffset % tileW;
 
       final srcRect = Rect.fromLTWH(0, 0, imgW, imgH);
-      final paint = Paint()..filterQuality = FilterQuality.high;
+      final paint = Paint()..filterQuality = FilterQuality.low;
 
       // Draw seamlessly repeating tiles
       double startX = -pShift;
@@ -1856,7 +1856,7 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       final pShift = _bgScrollOffset % tileW;
 
       final srcRect = Rect.fromLTWH(0, 0, imgW, imgH);
-      final paint = Paint()..filterQuality = FilterQuality.high;
+      final paint = Paint()..filterQuality = FilterQuality.low;
 
       double startX = -pShift;
       while (startX < size.x + 50) {
@@ -1881,7 +1881,7 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       final pShift = _bgScrollOffset % tileW;
 
       final srcRect = Rect.fromLTWH(0, 0, imgW, imgH);
-      final paint = Paint()..filterQuality = FilterQuality.high;
+      final paint = Paint()..filterQuality = FilterQuality.low;
 
       double startX = -pShift;
       while (startX < size.x + 50) {
@@ -1906,7 +1906,7 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       final pShift = _bgScrollOffset % tileW;
 
       final srcRect = Rect.fromLTWH(0, 0, imgW, imgH);
-      final paint = Paint()..filterQuality = FilterQuality.high;
+      final paint = Paint()..filterQuality = FilterQuality.low;
 
       double startX = -pShift;
       while (startX < size.x + 50) {
@@ -2547,16 +2547,21 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     canvas.restore();
   }
 
+  static final _rainSporePaint = Paint()..color = const Color(0xFF00E5FF).withValues(alpha: 0.45);
+  static final _forestSporeYellow = Paint()..color = const Color(0xFFFFF59D).withValues(alpha: 0.55);
+  static final _forestSporeGreen = Paint()..color = const Color(0xFFA5D6A7).withValues(alpha: 0.45);
+  static final _iceFrostPaint = Paint()..color = const Color(0xFFE0F7FA).withValues(alpha: 0.6);
+  static final _volcanoEmberPaint = Paint()..color = const Color(0xFFFF9100).withValues(alpha: 0.75);
+  static final _volcanoCoreEmber = Paint()..color = const Color(0xFFFFF59D);
+  static final _cosmosCyanDust = Paint()..color = const Color(0xFF00E5FF).withValues(alpha: 0.6);
+  static final _cosmosVioletDust = Paint()..color = const Color(0xFFE040FB).withValues(alpha: 0.5);
+
   void _drawRainAtmosphere(Canvas canvas, double w, double yGround) {
     // Soft bioluminescent floating spores & mist
-    final sporePaint = Paint()
-      ..color = const Color(0xFF00E5FF).withValues(alpha: 0.45)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
-
     for (int i = 0; i < 15; i++) {
       final sx = ((i * 73 + _time * 15) % w);
       final sy = yGround - 30 - math.sin(_time * 1.5 + i) * 20;
-      canvas.drawCircle(Offset(sx, sy), 1.5, sporePaint);
+      canvas.drawCircle(Offset(sx, sy), 1.5, _rainSporePaint);
     }
   }
 
@@ -2567,19 +2572,11 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     }
 
     // 2. Floating golden pollen and emerald spores drifting through the prehistoric canopy
-    final sporePaint = Paint()
-      ..color = const Color(0xFFFFF59D).withValues(alpha: 0.55)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
-
-    final greenSporePaint = Paint()
-      ..color = const Color(0xFFA5D6A7).withValues(alpha: 0.45)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
-
     for (int i = 0; i < 22; i++) {
       final sx = ((i * 67 + _time * (12 + (i % 5) * 3)) % w);
       final sy = yGround - 40 - math.sin(_time * 1.6 + i * 0.8) * 35 - (i * 12) % (size.y * 0.5);
       final r = 1.2 + (i % 3) * 0.8;
-      final paint = (i % 2 == 0) ? sporePaint : greenSporePaint;
+      final paint = (i % 2 == 0) ? _forestSporeYellow : _forestSporeGreen;
       canvas.drawCircle(Offset(sx, sy), r, paint);
     }
 
@@ -2653,47 +2650,31 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
 
   void _drawIceAtmosphere(Canvas canvas, double w, double yGround) {
     // Swirling ice crystalline diamond dust and frosty mist
-    final frostPaint = Paint()
-      ..color = const Color(0xFFE0F7FA).withValues(alpha: 0.6)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
-
     for (int i = 0; i < 25; i++) {
       final sx = ((i * 59 + _time * 24) % w);
       final sy = yGround - 30 - math.sin(_time * 2.0 + i) * 35 - (i * 14) % (size.y * 0.6);
-      canvas.drawCircle(Offset(sx, sy), 1.2 + (i % 3) * 0.6, frostPaint);
+      canvas.drawCircle(Offset(sx, sy), 1.2 + (i % 3) * 0.6, _iceFrostPaint);
     }
   }
 
   void _drawVolcanoAtmosphere(Canvas canvas, double w, double yGround) {
     // Rising fiery magma embers and glowing sparks
-    final emberPaint = Paint()
-      ..color = const Color(0xFFFF9100).withValues(alpha: 0.75)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
-    final coreEmber = Paint()..color = const Color(0xFFFFF59D);
-
     for (int i = 0; i < 28; i++) {
       final ex = ((i * 63 - _time * 28) % w);
       final ey = yGround - 20 - ((_time * 65 + i * 28) % (size.y * 0.75));
       final er = 1.0 + (i % 3) * 0.8;
-      canvas.drawCircle(Offset(ex, ey), er, emberPaint);
-      canvas.drawCircle(Offset(ex, ey), er * 0.5, coreEmber);
+      canvas.drawCircle(Offset(ex, ey), er, _volcanoEmberPaint);
+      canvas.drawCircle(Offset(ex, ey), er * 0.5, _volcanoCoreEmber);
     }
   }
 
   void _drawCosmosAtmosphere(Canvas canvas, double w, double yGround) {
     // Floating cosmic stardust and starlight energy motes
-    final stardustPaint = Paint()
-      ..color = const Color(0xFF00E5FF).withValues(alpha: 0.6)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
-    final violetDustPaint = Paint()
-      ..color = const Color(0xFFE040FB).withValues(alpha: 0.5)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
-
     for (int i = 0; i < 24; i++) {
       final cx = ((i * 71 + _time * 18) % w);
       final cy = yGround - 50 - math.sin(_time * 1.8 + i) * 40 - (i * 16) % (size.y * 0.65);
       final cr = 1.2 + (i % 3) * 0.7;
-      final paint = (i % 2 == 0) ? stardustPaint : violetDustPaint;
+      final paint = (i % 2 == 0) ? _cosmosCyanDust : _cosmosVioletDust;
       canvas.drawCircle(Offset(cx, cy), cr, paint);
     }
   }

@@ -60,9 +60,7 @@ class Meteor extends PositionComponent with CollisionCallbacks, HasGameReference
       canvas.drawCircle(
         Offset(trailPos.x, trailPos.y),
         size.x * 0.15 * (i / trail.length),
-        Paint()
-          ..color = GameColors.meteorFire.withValues(alpha: alpha)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2),
+        Paint()..color = GameColors.meteorFire.withValues(alpha: alpha),
       );
     }
 
@@ -95,9 +93,7 @@ class Meteor extends PositionComponent with CollisionCallbacks, HasGameReference
     canvas.drawCircle(
       Offset.zero,
       size.x * 0.45,
-      Paint()
-        ..color = GameColors.meteorGlow.withValues(alpha: 0.3)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
+      Paint()..color = GameColors.meteorGlow.withValues(alpha: 0.3),
     );
 
     canvas.restore();
