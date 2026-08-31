@@ -11,6 +11,57 @@ class ParticlePool extends PositionComponent {
     _emit(pos, 6, GameColors.groundTop[0], 0.4, 30, 15);
   }
 
+  void emitDesertFootstepDust(Vector2 pos) {
+    final rng = math.Random();
+    for (int i = 0; i < 3; i++) {
+      _particles.add(_Particle(
+        x: pos.x - 4 + (rng.nextDouble() - 0.5) * 6,
+        y: pos.y - 2 + (rng.nextDouble() - 0.5) * 4,
+        vx: -60 - rng.nextDouble() * 50,
+        vy: -15 - rng.nextDouble() * 25,
+        life: 0.35,
+        maxLife: 0.35,
+        color: (i % 2 == 0) ? const Color(0xFFFBE49B) : const Color(0xFFE5A038),
+        radius: 2.0 + rng.nextDouble() * 2.5,
+      ));
+    }
+  }
+
+  void emitDesertLandingImpact(Vector2 pos) {
+    final rng = math.Random();
+    for (int i = 0; i < 16; i++) {
+      final angle = math.pi + (rng.nextDouble() - 0.5) * (math.pi * 0.9);
+      final speed = 50 + rng.nextDouble() * 110;
+      final isQuartz = rng.nextDouble() > 0.7;
+      _particles.add(_Particle(
+        x: pos.x + (rng.nextDouble() - 0.5) * 20,
+        y: pos.y - 2,
+        vx: math.cos(angle) * speed - 30,
+        vy: -20 - rng.nextDouble() * 60,
+        life: 0.55,
+        maxLife: 0.55,
+        color: isQuartz ? Colors.white : (i % 2 == 0 ? const Color(0xFFFFD54F) : const Color(0xFFD7CCC8)),
+        radius: 2.2 + rng.nextDouble() * 3.0,
+      ));
+    }
+  }
+
+  void emitDesertNearMiss(Vector2 pos) {
+    final rng = math.Random();
+    for (int i = 0; i < 12; i++) {
+      _particles.add(_Particle(
+        x: pos.x + (rng.nextDouble() - 0.5) * 16,
+        y: pos.y + (rng.nextDouble() - 0.5) * 25,
+        vx: -80 - rng.nextDouble() * 100,
+        vy: (rng.nextDouble() - 0.5) * 90,
+        life: 0.45,
+        maxLife: 0.45,
+        color: (i % 2 == 0) ? const Color(0xFFFFD700) : const Color(0xFFFFF9C4),
+        radius: 1.8 + rng.nextDouble() * 2.8,
+      ));
+    }
+  }
+
   void emitShieldBreak(Vector2 pos) {
     _emit(pos, 12, GameColors.shieldAura, 0.6, 60, 25);
   }

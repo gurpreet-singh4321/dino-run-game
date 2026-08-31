@@ -40,7 +40,9 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
   // Animation
   int _animFrame = 0;
   double _animTimer = 0;
-  static const double _animSpeed = 0.1; // 100ms per frame
+  double _totalElapsed = 0;
+  double _footstepTimer = 0;
+  static const double _animSpeed = 0.12; // 100ms per frame
 
   // Skin system
   late CharacterSkin skin;
@@ -106,6 +108,7 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
   @override
   void update(double dt) {
     super.update(dt);
+    _totalElapsed += dt;
     
     if (isDead) {
       deathTimer += dt;
@@ -164,18 +167,32 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
       if (!overGap) {
         // Normal ground landing
         position.y = groundY;
+        final footPos = Vector2(position.x + (size.x * scale.x) * 0.45, position.y + size.y * scale.y);
+        final currentBiome = game.biomeManager.effectiveBiome.name;
+
         if (!isOnGround) {
-          game.particlePool.emitJumpDust(Vector2(position.x + (size.x * scale.x) / 2, position.y + size.y * scale.y));
+          if (currentBiome == 'DESERT') {
+            game.particlePool.emitDesertLandingImpact(footPos);
+            game.triggerShake(duration: 0.1, intensity: 1.5);
+          } else {
+            game.particlePool.emitJumpDust(footPos);
+          }
         }
         velocityY = 0;
         isOnGround = true;
         jumpsLeft = 2;
 
-        // Emit water splash droplets under feet when running in rain/storm
-        final currentBiome = game.biomeManager.current.name;
-        if (currentBiome == 'RAIN' || currentBiome == 'STORM') {
+        // Continuous biome footstep particles
+        if (currentBiome == 'DESERT') {
+          _footstepTimer += dt;
+          if (_footstepTimer >= 0.08) {
+            _footstepTimer = 0;
+            final stepPos = Vector2(position.x + (size.x * scale.x) * 0.35, position.y + size.y * scale.y);
+            game.particlePool.emitDesertFootstepDust(stepPos);
+          }
+        } else if (currentBiome == 'RAIN' || currentBiome == 'STORM') {
           if (math.Random().nextDouble() < 0.45) {
-            game.particlePool.emitWaterSplash(Vector2(position.x + (size.x * scale.x) * 0.4, position.y + size.y * scale.y));
+            game.particlePool.emitWaterSplash(footPos);
           }
         }
       } else {
@@ -424,6 +441,8 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
 
     final drawSize = Size(size.x, size.y);
 
+
+
     // 1. Draw BACK ARC of 3D Magnet Ring (Behind Dino's body)
     if (magnetTimer > 0) {
       _renderHulaHoopMagnetBack(canvas, drawSize);
@@ -455,10 +474,10 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
 
   /// 🫧 Cute Iridescent Soap Bubble Shield centered on Dino
   void _renderSoapBubbleShield(Canvas canvas, Size drawSize) {
-    final center = Offset(drawSize.width / 2, drawSize.height / 2);
-    final baseRadius = math.max(drawSize.width, drawSize.height) * 0.72;
-    // Organic liquid bubble wobble
-    final wobble = math.sin(_animTimer * 6.0) * 2.5;
+    final center = Offset(drawSize.width * 0.50, drawSize.height * 0.52);
+    final baseRadius = math.max(drawSize.width, drawSize.height) * 0.68;
+    // Smooth organic liquid bubble wobble
+    final wobble = math.sin(_totalElapsed * 4.0) * 2.0;
     final bubbleRadius = baseRadius + wobble;
 
     final bubbleRect = Rect.fromCircle(center: center, radius: bubbleRadius);
@@ -467,11 +486,11 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
     final bubbleFillShader = RadialGradient(
       center: const Alignment(-0.35, -0.35),
       radius: 0.95,
-      colors: [
-        const Color(0x45E0F7FA), // Translucent cyan center
-        const Color(0x2580DEEA),
-        const Color(0x35F8BBD0), // Soft pink/magenta refraction
-        const Color(0x5500E5FF), // Glowing rim edge
+      colors: const [
+        Color(0x45E0F7FA), // Translucent cyan center
+        Color(0x2580DEEA),
+        Color(0x35F8BBD0), // Soft pink/magenta refraction
+        Color(0x5500E5FF), // Glowing rim edge
       ],
       stops: const [0.0, 0.45, 0.78, 1.0],
     ).createShader(bubbleRect);
@@ -481,8 +500,8 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
     // 2. Iridescent Rainbow Rim Stroke
     final rimShader = SweepGradient(
       center: Alignment.center,
-      startAngle: _animTimer * 2.0,
-      endAngle: _animTimer * 2.0 + math.pi * 2,
+      startAngle: _totalElapsed * 1.5,
+      endAngle: _totalElapsed * 1.5 + math.pi * 2,
       colors: const [
         Color(0xFF00E5FF), // Cyan
         Color(0xFFFF4081), // Magenta
@@ -529,15 +548,15 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
 
   /// 🧲 3D Hula Hoop Magnet Ring - BACK ARC (Drawn behind Dino's body)
   void _renderHulaHoopMagnetBack(Canvas canvas, Size drawSize) {
-    final center = Offset(drawSize.width * 0.44, drawSize.height * 0.54);
-    final rx = drawSize.width * 0.56;
-    final ry = 11.0;
+    // Perfectly centered at Dino's waist/torso
+    final center = Offset(drawSize.width * 0.50, drawSize.height * 0.62);
+    final rx = drawSize.width * 0.58;
+    final ry = 14.0;
 
-    // Super slow, smooth, relaxing spin (1.0 rad/s)
-    final hoopAngle = _animTimer * 1.0;
+    // Smooth continuous 360-degree rotation
+    final hoopAngle = _totalElapsed * 2.8;
     canvas.save();
     canvas.translate(center.dx, center.dy);
-    canvas.rotate(-0.06); // 3D tilt
 
     final hoopRect = Rect.fromCenter(center: Offset.zero, width: rx * 2, height: ry * 2);
 
@@ -546,7 +565,7 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
     canvas.drawPath(
       backHaloPath,
       Paint()
-        ..color = const Color(0xFF00E5FF).withValues(alpha: 0.15)
+        ..color = const Color(0xFF00E5FF).withValues(alpha: 0.18)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 4.0,
     );
@@ -556,11 +575,11 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
       center: Alignment.center,
       startAngle: hoopAngle,
       endAngle: hoopAngle + math.pi * 2,
-      colors: [
-        const Color(0xFF00E5FF).withValues(alpha: 0.45),
-        const Color(0xFFE040FB).withValues(alpha: 0.45),
-        const Color(0xFFFFFF8D).withValues(alpha: 0.45),
-        const Color(0xFF00E5FF).withValues(alpha: 0.45),
+      colors: const [
+        Color(0x8000E5FF),
+        Color(0x80E040FB),
+        Color(0x80FFFF8D),
+        Color(0x8000E5FF),
       ],
     ).createShader(hoopRect);
 
@@ -581,13 +600,13 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
       if (oy < 0) { // Behind Dino
         canvas.drawCircle(
           Offset(ox, oy),
-          1.8,
-          Paint()..color = Colors.white.withValues(alpha: 0.40),
+          2.0,
+          Paint()..color = Colors.white.withValues(alpha: 0.50),
         );
         canvas.drawCircle(
           Offset(ox, oy),
-          3.2,
-          Paint()..color = const Color(0xFF00E5FF).withValues(alpha: 0.25),
+          3.6,
+          Paint()..color = const Color(0xFF00E5FF).withValues(alpha: 0.30),
         );
       }
     }
@@ -597,15 +616,15 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
 
   /// 🧲 3D Hula Hoop Magnet Ring - FRONT ARC (Drawn in front of Dino's body)
   void _renderHulaHoopMagnetFront(Canvas canvas, Size drawSize) {
-    final center = Offset(drawSize.width * 0.44, drawSize.height * 0.54);
-    final rx = drawSize.width * 0.56;
-    final ry = 11.0;
+    // Perfectly centered at Dino's waist/torso
+    final center = Offset(drawSize.width * 0.50, drawSize.height * 0.62);
+    final rx = drawSize.width * 0.58;
+    final ry = 14.0;
 
-    // Super slow, smooth, relaxing spin (1.0 rad/s)
-    final hoopAngle = _animTimer * 1.0;
+    // Smooth continuous 360-degree rotation
+    final hoopAngle = _totalElapsed * 2.8;
     canvas.save();
     canvas.translate(center.dx, center.dy);
-    canvas.rotate(-0.06); // 3D tilt
 
     final hoopRect = Rect.fromCenter(center: Offset.zero, width: rx * 2, height: ry * 2);
 
@@ -614,9 +633,9 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
     canvas.drawPath(
       frontArcPath,
       Paint()
-        ..color = const Color(0xFF00E5FF).withValues(alpha: 0.22)
+        ..color = const Color(0xFF00E5FF).withValues(alpha: 0.25)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 4.0,
+        ..strokeWidth = 4.5,
     );
 
     // 2. Front Arc Ring Gradient (In front of Dino's belly)
@@ -624,11 +643,11 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
       center: Alignment.center,
       startAngle: hoopAngle,
       endAngle: hoopAngle + math.pi * 2,
-      colors: [
-        const Color(0xFF00E5FF).withValues(alpha: 0.60),
-        const Color(0xFFE040FB).withValues(alpha: 0.60),
-        const Color(0xFFFFFF8D).withValues(alpha: 0.60),
-        const Color(0xFF00E5FF).withValues(alpha: 0.60),
+      colors: const [
+        Color(0xCC00E5FF),
+        Color(0xCCE040FB),
+        Color(0xCCFFFF8D),
+        Color(0xCC00E5FF),
       ],
     ).createShader(hoopRect);
 
@@ -637,7 +656,7 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
       Paint()
         ..shader = ringShader
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.6,
+        ..strokeWidth = 2.8,
     );
 
     // 3. Front Orbiting Sparkle Nodes (oy >= 0)
@@ -649,13 +668,13 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
       if (oy >= 0) { // In front of Dino
         canvas.drawCircle(
           Offset(ox, oy),
-          2.6,
-          Paint()..color = Colors.white.withValues(alpha: 0.85),
+          3.0,
+          Paint()..color = Colors.white,
         );
         canvas.drawCircle(
           Offset(ox, oy),
-          4.5,
-          Paint()..color = const Color(0xFF00E5FF).withValues(alpha: 0.45),
+          5.5,
+          Paint()..color = const Color(0xFF00E5FF).withValues(alpha: 0.55),
         );
       }
     }

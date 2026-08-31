@@ -16,7 +16,7 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
   final List<_AshParticle> _ashParticles = [];
   final List<_ForestSpore> _forestSpores = [];
   final List<_RollingBush> _rollingBushes = [];
-  final List<_DesertSparkle> _desertSparkles = [];
+  final List<_DesertSandDust> _desertSandDust = [];
   final List<_Pterodactyl> _pterodactyls = [];
 
   final math.Random _rng = math.Random();
@@ -190,16 +190,21 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       ));
     }
 
-    // Spawn desert golden air sparkles
-    for (int i = 0; i < 40; i++) {
-      _desertSparkles.add(_DesertSparkle(
+    // Spawn desert airborne micro sand dust
+    for (int i = 0; i < 45; i++) {
+      _desertSandDust.add(_DesertSandDust(
         x: _rng.nextDouble() * size.x,
-        y: 30 + _rng.nextDouble() * (size.y * 0.7),
-        radius: 1.0 + _rng.nextDouble() * 2.2,
-        floatSpeedX: -12 - _rng.nextDouble() * 20,
-        floatSpeedY: -6 + _rng.nextDouble() * 12,
+        y: 35 + _rng.nextDouble() * (size.y * 0.72),
+        radius: 0.8 + _rng.nextDouble() * 1.8,
+        speedX: 100 + _rng.nextDouble() * 120,
+        waveAmp: 2.0 + _rng.nextDouble() * 4.0,
         phase: _rng.nextDouble() * math.pi * 2,
-        alpha: 0.35 + _rng.nextDouble() * 0.55,
+        alpha: 0.20 + _rng.nextDouble() * 0.35,
+        color: (i % 3 == 0)
+            ? const Color(0xFFFFF9C4)
+            : (i % 2 == 0)
+                ? const Color(0xFFFFE082)
+                : const Color(0xFFEAA63F),
       ));
     }
   }
@@ -322,7 +327,7 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       }
     }
 
-    // Rolling bushes & desert sparkles update
+    // Rolling bushes & sand dust update
     if (currentBiome == 'DESERT') {
       for (final rb in _rollingBushes) {
         rb.x -= rb.speed * dt;
@@ -331,12 +336,11 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
           rb.x = size.x + 60;
         }
       }
-      for (final sp in _desertSparkles) {
-        sp.x += sp.floatSpeedX * dt;
-        sp.y += sp.floatSpeedY * dt + math.sin(_time * 1.5 + sp.phase) * 6 * dt;
-        if (sp.x < -20) {
-          sp.x = size.x + 20;
-          sp.y = 30 + _rng.nextDouble() * (size.y * 0.7);
+      for (final dust in _desertSandDust) {
+        dust.x -= (dust.speedX + game.speedManager.currentSpeed * 0.10) * dt;
+        if (dust.x < -10) {
+          dust.x = size.x + 10 + _rng.nextDouble() * 40;
+          dust.y = 40 + _rng.nextDouble() * (size.y * 0.72);
         }
       }
     }
@@ -549,8 +553,9 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
         }
       }
 
-      // Rolling green bushes for DESERT
+      // Atmospheric wind & rolling bushes for DESERT
       if (currentBiome == 'DESERT') {
+        _drawDesertWind(canvas);
         for (final rb in _rollingBushes) {
           _drawRollingBush(canvas, rb);
         }
@@ -874,6 +879,15 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     canvas.restore();
   }
 
+  /// 🏜️ Airborne Ambient Desert Dust Specks drifting in the breeze (Organic particles, no lines)
+  void _drawDesertWind(Canvas canvas) {
+    for (final dust in _desertSandDust) {
+      final curY = dust.y + math.sin(_time * 2.2 + dust.phase) * dust.waveAmp;
+      final dustPaint = Paint()..color = dust.color.withValues(alpha: dust.alpha);
+      canvas.drawCircle(Offset(dust.x, curY), dust.radius, dustPaint);
+    }
+  }
+
   /// Render a 3D Sandstone Pyramid with lit/shadow faces, stone block ridges, and golden capstone
   void _draw3DPyramid(
     Canvas canvas, {
@@ -1040,8 +1054,7 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
 
       final srcRect = Rect.fromLTWH(0, 0, imgW, imgH);
       final dstRect = Rect.fromLTWH(0, 0, renderW, size.y);
-      canvas.drawImageRect(img, srcRect, dstRect, Paint()..filterQuality = FilterQuality.high);
-      _drawDesertAtmosphere(canvas, renderW, yGround);
+      canvas.drawImageRect(img, srcRect, dstRect, Paint()..filterQuality = FilterQuality.low);
       return;
     }
 
@@ -1179,9 +1192,6 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
         ..strokeWidth = 1.8
         ..style = ui.PaintingStyle.stroke,
     );
-
-    // 7. Ambient Atmosphere: Floating golden dust particles & heat sparkles
-    _drawDesertAtmosphere(canvas, w, yGround);
   }
 
   void _drawDesertSphinx(Canvas canvas, Offset pos, double scale) {
@@ -1736,39 +1746,7 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     canvas.restore();
   }
 
-  void _drawDesertAtmosphere(Canvas canvas, double w, double yGround) {
-    final sparkleGlowPaint = Paint()
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
-    for (final sp in _desertSparkles) {
-      final twinkle = ((math.sin(_time * 3.0 + sp.phase) + 1) / 2).clamp(0.0, 1.0);
-      final alpha = sp.alpha * (0.3 + twinkle * 0.7);
-      
-      sparkleGlowPaint.color = const Color(0xFFFFD54F).withValues(alpha: alpha * 0.4);
-      canvas.drawCircle(Offset(sp.x, sp.y), sp.radius * 2.2, sparkleGlowPaint);
 
-      final starPaint = Paint()..color = Colors.white.withValues(alpha: alpha);
-      canvas.drawCircle(Offset(sp.x, sp.y), sp.radius * 0.8, starPaint);
-      if (twinkle > 0.6) {
-        final crossLen = sp.radius * 2.5;
-        canvas.drawLine(Offset(sp.x - crossLen, sp.y), Offset(sp.x + crossLen, sp.y), starPaint..strokeWidth = 0.8);
-        canvas.drawLine(Offset(sp.x, sp.y - crossLen), Offset(sp.x, sp.y + crossLen), starPaint..strokeWidth = 0.8);
-      }
-    }
-
-    final windPaint = Paint()
-      ..color = const Color(0xFFFFF9C4).withValues(alpha: 0.18)
-      ..strokeWidth = 1.5
-      ..style = ui.PaintingStyle.stroke;
-
-    for (int wIdx = 0; wIdx < 3; wIdx++) {
-      final windX = ((_time * 160 + wIdx * 260) % (w + 300)) - 150;
-      final windY = yGround - 110 + math.sin(_time * 1.8 + wIdx) * 16;
-      final wPath = Path()
-        ..moveTo(windX, windY)
-        ..quadraticBezierTo(windX + 50, windY - 8, windX + 110, windY + 4);
-      canvas.drawPath(wPath, windPaint);
-    }
-  }
 
   /// Draw Northern Lights (Aurora Borealis) wave ribbon across the sky in ICE biome
   void _drawAuroraBorealis(Canvas canvas) {
@@ -1795,6 +1773,92 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     ).createShader(auroraRect);
 
     canvas.drawPath(auroraPath, Paint()..shader = auroraShader);
+  }
+
+  /// 🐪 Distant Wandering Camel Caravan, Solar Flare, and Heat Mirage Haze
+  void _drawDesertAtmosphereImmersion(Canvas canvas, double yGround) {
+    // 1. Sun Solar Corona & Anamorphic Lens Flare
+    final sunCenter = Offset(size.x * 0.72, size.y * 0.22);
+    final sunPulse = 1.0 + math.sin(_time * 1.5) * 0.06;
+
+    final sunCoronaShader = RadialGradient(
+      colors: const [
+        Color(0x70FFF9C4), // Golden white core
+        Color(0x35FFE082), // Warm amber halo
+        Color(0x15FFB300), // Soft orange rim
+        Colors.transparent,
+      ],
+      stops: const [0.0, 0.35, 0.7, 1.0],
+    ).createShader(Rect.fromCircle(center: sunCenter, radius: 120 * sunPulse));
+    canvas.drawCircle(sunCenter, 120 * sunPulse, Paint()..shader = sunCoronaShader);
+
+    // 2. Distant Wandering Camel Caravan on Horizon
+    _drawCamelCaravan(canvas, yGround);
+
+    // 3. Atmospheric Heat Mirage Shimmer above Horizon
+    final heatWavePaint = Paint()
+      ..color = const Color(0x18FFE082)
+      ..strokeWidth = 1.8
+      ..style = ui.PaintingStyle.stroke;
+    for (int hw = 0; hw < 2; hw++) {
+      final hwPath = Path();
+      final baseY = yGround - 18 + hw * 8;
+      hwPath.moveTo(0, baseY);
+      for (double x = 0; x <= size.x; x += 25) {
+        final wy = baseY + math.sin(_time * 4.0 + x * 0.04 + hw * 1.5) * 2.0;
+        hwPath.lineTo(x, wy);
+      }
+      canvas.drawPath(hwPath, heatWavePaint);
+    }
+  }
+
+  void _drawCamelCaravan(Canvas canvas, double yGround) {
+    final caravanX = ((size.x * 1.6 - _bgScrollOffset * 0.5) % (size.x + 350)) - 150;
+    final caravanY = yGround - 24;
+    final camelPaint = Paint()..color = const Color(0xAA42240C); // Warm silhouette
+    final ropePaint = Paint()
+      ..color = const Color(0x6642240C)
+      ..strokeWidth = 0.8
+      ..style = ui.PaintingStyle.stroke;
+
+    for (int c = 0; c < 3; c++) {
+      final cx = caravanX + c * 38.0;
+      final cy = caravanY + math.sin(_time * 3.0 + c) * 0.8;
+      final legWalk = math.sin(_time * 4.5 + c * 1.2) * 2.5;
+
+      // Body & Hump
+      canvas.drawOval(Rect.fromCenter(center: Offset(cx, cy), width: 18, height: 10), camelPaint);
+      canvas.drawCircle(Offset(cx - 2, cy - 6), 5.0, camelPaint); // Hump
+
+      // Neck & Head
+      final neckPath = Path()
+        ..moveTo(cx + 6, cy)
+        ..quadraticBezierTo(cx + 12, cy - 8, cx + 10, cy - 14)
+        ..lineTo(cx + 14, cy - 13)
+        ..lineTo(cx + 8, cy + 2)
+        ..close();
+      canvas.drawPath(neckPath, camelPaint);
+      canvas.drawOval(Rect.fromCenter(center: Offset(cx + 12, cy - 14), width: 6, height: 4), camelPaint);
+
+      // Tail
+      canvas.drawLine(Offset(cx - 8, cy), Offset(cx - 12, cy + 5), camelPaint..strokeWidth = 1.0);
+
+      // 4 Walking Legs
+      canvas.drawLine(Offset(cx - 5, cy + 4), Offset(cx - 6 + legWalk, cy + 13), camelPaint..strokeWidth = 1.4);
+      canvas.drawLine(Offset(cx - 2, cy + 4), Offset(cx - 3 - legWalk, cy + 13), camelPaint..strokeWidth = 1.4);
+      canvas.drawLine(Offset(cx + 3, cy + 4), Offset(cx + 2 - legWalk, cy + 13), camelPaint..strokeWidth = 1.4);
+      canvas.drawLine(Offset(cx + 6, cy + 4), Offset(cx + 7 + legWalk, cy + 13), camelPaint..strokeWidth = 1.4);
+
+      // Lead rope connecting to next camel
+      if (c < 2) {
+        final nextX = cx + 38.0;
+        final nextY = caravanY + math.sin(_time * 3.0 + (c + 1)) * 0.8;
+        final ropePath = Path()
+          ..moveTo(cx - 6, cy - 2)
+          ..quadraticBezierTo((cx + nextX) / 2, cy + 6, nextX + 10, nextY - 10);
+        canvas.drawPath(ropePath, ropePaint);
+      }
+    }
   }
 
   /// Draw multi-layer detailed parallax background silhouettes for all 6 biomes
@@ -1824,8 +1888,8 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
         startX += tileW;
       }
 
-      // Dynamic floating golden dust particles
-      _drawDesertAtmosphere(canvas, size.x, yGround);
+      // Draw atmospheric immersion (sun corona, camels, mirage)
+      _drawDesertAtmosphereImmersion(canvas, yGround);
       return;
     }
 
@@ -2819,15 +2883,17 @@ class _RollingBush {
   _RollingBush({required this.x, required this.speed, required this.radius});
 }
 
-class _DesertSparkle {
-  double x, y, radius, floatSpeedX, floatSpeedY, phase, alpha;
-  _DesertSparkle({
+class _DesertSandDust {
+  double x, y, radius, speedX, waveAmp, phase, alpha;
+  Color color;
+  _DesertSandDust({
     required this.x,
     required this.y,
     required this.radius,
-    required this.floatSpeedX,
-    required this.floatSpeedY,
+    required this.speedX,
+    required this.waveAmp,
     required this.phase,
     required this.alpha,
+    required this.color,
   });
 }

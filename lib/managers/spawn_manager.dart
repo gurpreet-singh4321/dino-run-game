@@ -160,14 +160,56 @@ class SpawnManager extends Component with HasGameReference<DinoGame> {
   }
 
   void _spawnObstacle() {
-    final types = [
-      ObstacleType.cactusSmall,
-      ObstacleType.cactusTall,
-      ObstacleType.rock,
-      ObstacleType.bush,
-      ObstacleType.pillar,
-      ObstacleType.lavaPit,
-    ];
+    final currentBiome = game.biomeManager.effectiveBiome.name;
+    final List<ObstacleType> types = [];
+
+    switch (currentBiome) {
+      case 'DESERT':
+        types.addAll([
+          ObstacleType.cactusSmall,
+          ObstacleType.cactusTall,
+          ObstacleType.rock,
+          ObstacleType.bush,
+          ObstacleType.pillar,
+        ]);
+        break;
+      case 'VOLCANO':
+        types.addAll([
+          ObstacleType.lavaPit,
+          ObstacleType.rock,
+          ObstacleType.pillar,
+        ]);
+        break;
+      case 'ICE':
+        types.addAll([
+          ObstacleType.rock,
+          ObstacleType.pillar,
+        ]);
+        break;
+      case 'FOREST':
+      case 'RAIN':
+        types.addAll([
+          ObstacleType.bush,
+          ObstacleType.rock,
+          ObstacleType.pillar,
+        ]);
+        break;
+      case 'SPACE':
+        types.addAll([
+          ObstacleType.pillar,
+          ObstacleType.rock,
+        ]);
+        break;
+      default:
+        types.addAll([
+          ObstacleType.cactusSmall,
+          ObstacleType.cactusTall,
+          ObstacleType.rock,
+          ObstacleType.bush,
+          ObstacleType.pillar,
+        ]);
+    }
+
     if (game.score > 250) {
       types.add(ObstacleType.pipePair);
     }
