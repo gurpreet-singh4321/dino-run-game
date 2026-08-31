@@ -184,13 +184,35 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
     canvas.save();
     canvas.clipPath(groundPath);
 
+    final currentBiome = game.biomeManager.effectiveBiome.name;
+    final detailAlpha = (game.biomeManager.isTransitioning
+            ? (game.biomeManager.progress - 0.5).abs() * 2.0
+            : 1.0)
+        .clamp(0.0, 1.0);
+
     // Ground fill gradient
     final rect = Rect.fromLTWH(0, y, w, groundHeight);
-    final gradient = LinearGradient(
-      begin: Alignment.topCenter,
-      end: Alignment.bottomCenter,
-      colors: [topColor, bottomColor],
-    );
+    final Gradient gradient;
+    if (currentBiome == 'DESERT') {
+      gradient = const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        stops: [0.0, 0.16, 0.42, 0.72, 1.0],
+        colors: [
+          Color(0xFFFBE49B), // Sunlit golden sand crest sheen
+          Color(0xFFECAE52), // Warm vibrant wind-swept sand
+          Color(0xFFCF852B), // Amber dune shadow layer
+          Color(0xFFA3571A), // Ancient desert sandstone
+          Color(0xFF6A330C), // Deep subterranean desert rock
+        ],
+      );
+    } else {
+      gradient = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [topColor, bottomColor],
+      );
+    }
     canvas.drawRect(rect, Paint()..shader = gradient.createShader(rect));
 
     // Surface top highlight line
@@ -198,18 +220,128 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
       Offset(0, y),
       Offset(w, y),
       Paint()
-        ..color = topColor.withValues(alpha: 0.9)
+        ..color = (currentBiome == 'DESERT' ? const Color(0xFFFFF1A8) : topColor).withValues(alpha: 0.9)
         ..strokeWidth = 2.5,
     );
 
-    final currentBiome = game.biomeManager.effectiveBiome.name;
-    final detailAlpha = (game.biomeManager.isTransitioning
-            ? (game.biomeManager.progress - 0.5).abs() * 2.0
-            : 1.0)
-        .clamp(0.0, 1.0);
-
     // Biome-specific ground surface details
-    if (currentBiome == 'FOREST' && detailAlpha > 0.05) {
+    if (currentBiome == 'DESERT' && detailAlpha > 0.05) {
+      // 🏜️ 1. Multi-layered Wind-blown Sand Dune Surface & Ripples (Aeolian Ripple Marks)
+      final sandHighlightPaint = Paint()
+        ..color = const Color(0xFFFFF1A8).withValues(alpha: 0.85 * detailAlpha)
+        ..strokeWidth = 2.0
+        ..strokeCap = StrokeCap.round;
+      final sandMidWavePaint = Paint()
+        ..color = const Color(0xFFE5A038).withValues(alpha: 0.70 * detailAlpha)
+        ..strokeWidth = 2.2
+        ..strokeCap = StrokeCap.round;
+      final sandShadowWavePaint = Paint()
+        ..color = const Color(0xFF9E5719).withValues(alpha: 0.65 * detailAlpha)
+        ..strokeWidth = 2.4
+        ..strokeCap = StrokeCap.round;
+      final sandDeepStrataPaint = Paint()
+        ..color = const Color(0xFF6B3308).withValues(alpha: 0.50 * detailAlpha)
+        ..strokeWidth = 3.0;
+
+      // Soft Top Golden Dune Crest Rim
+      final duneCrestPaint = Paint()
+        ..color = const Color(0xFFFFECB3).withValues(alpha: 0.95 * detailAlpha)
+        ..strokeWidth = 3.2;
+      canvas.drawLine(Offset(0, y + 1), Offset(w, y + 1), duneCrestPaint);
+
+      // Layer 1: Fine Upper Sand Ripples (Wavelength ~28px)
+      const r1W = 28.0;
+      final r1Path = Path();
+      for (double rx = -(_scrollOffset % r1W) - r1W; rx < w + r1W; rx += r1W) {
+        final startX = rx;
+        final midX = rx + r1W * 0.5;
+        final endX = rx + r1W;
+        r1Path.moveTo(startX, y + 5);
+        r1Path.quadraticBezierTo(midX, y + 8, endX, y + 5);
+      }
+      canvas.drawPath(r1Path, sandHighlightPaint..style = PaintingStyle.stroke);
+
+      // Layer 2: Mid Dune Sand Contours (Wavelength ~54px)
+      const r2W = 54.0;
+      final r2LightPath = Path();
+      final r2DarkPath = Path();
+      for (double rx = -((_scrollOffset * 1.0) % r2W) - r2W; rx < w + r2W; rx += r2W) {
+        // Dune ripple crest
+        r2LightPath.moveTo(rx, y + 15);
+        r2LightPath.quadraticBezierTo(rx + 22, y + 20, rx + 44, y + 14);
+        // Dune ripple lee shadow
+        r2DarkPath.moveTo(rx + 2, y + 17);
+        r2DarkPath.quadraticBezierTo(rx + 24, y + 22, rx + 46, y + 16);
+      }
+      canvas.drawPath(r2DarkPath, sandShadowWavePaint..style = PaintingStyle.stroke);
+      canvas.drawPath(r2LightPath, sandMidWavePaint..style = PaintingStyle.stroke);
+
+      // Layer 3: Lower Dune Sedimentary Strata Wavebands (Wavelength ~90px)
+      const r3W = 90.0;
+      final r3Path = Path();
+      for (double rx = -((_scrollOffset * 1.0) % r3W) - r3W; rx < w + r3W; rx += r3W) {
+        r3Path.moveTo(rx, y + 32);
+        r3Path.cubicTo(rx + 25, y + 36, rx + 65, y + 28, rx + r3W, y + 33);
+      }
+      canvas.drawPath(r3Path, sandDeepStrataPaint..style = PaintingStyle.stroke);
+
+      // Layer 4: Deep Bedrock Desert Sandstone Layer
+      final r4Path = Path();
+      for (double rx = -((_scrollOffset * 1.0) % 130.0) - 130.0; rx < w + 130.0; rx += 130.0) {
+        r4Path.moveTo(rx, y + 50);
+        r4Path.quadraticBezierTo(rx + 65, y + 56, rx + 130, y + 49);
+      }
+      canvas.drawPath(r4Path, sandDeepStrataPaint..style = PaintingStyle.stroke);
+
+      // ✨ 2. Shimmering Sand Grains & Golden Quartz Flecks
+      final quartzSparklePaint = Paint()..color = const Color(0xFFFFFDE7).withValues(alpha: 0.90 * detailAlpha);
+      final goldSandPaint = Paint()..color = const Color(0xFFFFE082).withValues(alpha: 0.75 * detailAlpha);
+      final amberSandPaint = Paint()..color = const Color(0xFFFFA000).withValues(alpha: 0.60 * detailAlpha);
+      final darkSandGrainPaint = Paint()..color = const Color(0xFF795548).withValues(alpha: 0.50 * detailAlpha);
+
+      for (int i = 0; i < 32; i++) {
+        final seedX = i * 59.3;
+        final gx = (seedX - _scrollOffset) % (w + 40.0) - 20.0;
+        final gy = y + 3.0 + ((i * 13.7) % (groundHeight - 12.0));
+        final grainRadius = 0.8 + ((i % 5) * 0.35);
+
+        final paint = (i % 4 == 0)
+            ? quartzSparklePaint
+            : (i % 3 == 0)
+                ? goldSandPaint
+                : (i % 2 == 0)
+                    ? amberSandPaint
+                    : darkSandGrainPaint;
+        canvas.drawCircle(Offset(gx, gy), grainRadius, paint);
+      }
+
+      // 🦖 3. Easter Eggs: Ancient Dinosaur Footprints & Smooth Polished Desert Agates in Sand
+      final sandTrackPaint = Paint()
+        ..color = const Color(0xFF7A4515).withValues(alpha: 0.50 * detailAlpha)
+        ..strokeWidth = 2.0
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round;
+      final sandTrackFill = Paint()..color = const Color(0xFF6B3308).withValues(alpha: 0.35 * detailAlpha);
+      final agateStonePaint = Paint()..color = const Color(0xFFD7CCC8).withValues(alpha: 0.85 * detailAlpha);
+      final agateHighlightPaint = Paint()..color = Colors.white.withValues(alpha: 0.90 * detailAlpha);
+
+      const trackPeriod = 210.0;
+      for (double fx = -(_scrollOffset % trackPeriod) + 50; fx < w + trackPeriod; fx += trackPeriod) {
+        // Prehistoric 3-toed theropod dinosaur footprint impressed in soft sand
+        canvas.drawLine(Offset(fx, y + 17), Offset(fx - 5, y + 9), sandTrackPaint);
+        canvas.drawLine(Offset(fx, y + 17), Offset(fx, y + 7), sandTrackPaint);
+        canvas.drawLine(Offset(fx, y + 17), Offset(fx + 5, y + 9), sandTrackPaint);
+        canvas.drawCircle(Offset(fx, y + 18), 2.4, sandTrackFill);
+
+        // Sun-polished desert jasper / agate pebble
+        canvas.drawOval(Rect.fromCenter(center: Offset(fx + 65, y + 26), width: 8, height: 5), agateStonePaint);
+        canvas.drawCircle(Offset(fx + 63, y + 25), 1.2, agateHighlightPaint);
+
+        // Small wind-blown desert dry twig/fossil fragment
+        canvas.drawLine(Offset(fx + 120, y + 12), Offset(fx + 128, y + 9), sandTrackPaint..strokeWidth = 1.2);
+        canvas.drawLine(Offset(fx + 128, y + 9), Offset(fx + 134, y + 13), sandTrackPaint..strokeWidth = 1.0);
+      }
+    } else if (currentBiome == 'FOREST' && detailAlpha > 0.05) {
       // 1. Grass tufts along ground surface
       final grassPaint = Paint()
         ..color = const Color(0xFF2E7D32).withValues(alpha: detailAlpha)
@@ -320,23 +452,15 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
 
     canvas.clipRect(Rect.fromLTWH(0, y, w, groundHeight));
 
-    final dashPaint = Paint()
-      ..color = Colors.black.withValues(alpha: 0.15)
-      ..strokeWidth = 2;
-
-    for (double x = -(_scrollOffset % 64.0); x < w + 64; x += 64) {
-      canvas.drawLine(Offset(x + 10, y + 15), Offset(x + 30, y + 15), dashPaint);
-      canvas.drawLine(Offset(x + 40, y + 30), Offset(x + 55, y + 30), dashPaint);
-      canvas.drawLine(Offset(x + 5, y + 45), Offset(x + 25, y + 45), dashPaint);
-    }
-
-    // Small pebbles (deterministic scrolling positions)
-    final pebblePaint = Paint()..color = bottomColor.withValues(alpha: 0.3);
-    for (int i = 0; i < 12; i++) {
-      final seedX = (i * 127.0);
-      final px = (seedX - _scrollOffset) % (w + 40.0) - 20.0;
-      final py = y + 14 + (i * 3.7) % (groundHeight - 24);
-      canvas.drawCircle(Offset(px, py), 2.0, pebblePaint);
+    // Fallback small pebbles (deterministic scrolling positions)
+    if (currentBiome != 'DESERT' && currentBiome != 'RAIN' && currentBiome != 'STORM') {
+      final pebblePaint = Paint()..color = bottomColor.withValues(alpha: 0.3);
+      for (int i = 0; i < 12; i++) {
+        final seedX = (i * 127.0);
+        final px = (seedX - _scrollOffset) % (w + 40.0) - 20.0;
+        final py = y + 14 + (i * 3.7) % (groundHeight - 24);
+        canvas.drawCircle(Offset(px, py), 2.0, pebblePaint);
+      }
     }
 
     canvas.restore();

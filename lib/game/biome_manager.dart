@@ -18,8 +18,8 @@ class BiomeManager extends Component with HasGameReference<DinoGame> {
       name: 'DESERT',
       skyTop: Color(0xFF184988),
       skyBottom: Color(0xFFEAA63F),
-      groundTop: Color(0xFFD2B48C),
-      groundBottom: Color(0xFFA0855C),
+      groundTop: Color(0xFFE5B25D),
+      groundBottom: Color(0xFF7A4515),
     ),
     Biome(
       name: 'RAIN',

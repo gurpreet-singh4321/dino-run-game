@@ -44,14 +44,14 @@ class GameColors {
 
   // Ground per biome
   static const List<Color> groundTop = [
-    Color(0xFFD2B48C), // desert
+    Color(0xFFE5B25D), // desert - warm golden sand
     Color(0xFF4CAF50), // forest
     Color(0xFFE0F7FA), // ice
     Color(0xFF3E2723), // volcano
     Color(0xFF311B92), // cosmos
   ];
   static const List<Color> groundBottom = [
-    Color(0xFFA0855C), // desert
+    Color(0xFF7A4515), // desert - deep sandstone earth
     Color(0xFF2E7D32), // forest
     Color(0xFFB3E5FC), // ice
     Color(0xFF1B0000), // volcano
