@@ -783,59 +783,93 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     canvas.restore();
   }
 
-  /// Draw rolling light dusty-green / dry sage tumbleweed in Desert background
+  /// Draw organic fluffy rolling desert sagebrush / tumbleweed with smooth edge fade
   void _drawRollingBush(Canvas canvas, _RollingBush rb) {
+    // Smooth fade near edges to prevent any popping near the left corner / dino
+    double edgeAlpha = 1.0;
+    if (rb.x < 180.0) {
+      edgeAlpha = (rb.x / 180.0).clamp(0.0, 1.0);
+    } else if (rb.x > size.x - 100.0) {
+      edgeAlpha = ((size.x - rb.x) / 100.0).clamp(0.0, 1.0);
+    }
+    if (edgeAlpha <= 0.01) return;
+
     final yGround = size.y - 120 + _spaceSlideOffset;
     final r = rb.radius;
 
-    // 1. Static Ground Shadow (drawn BEFORE canvas.rotate so it doesn't spin!)
-    final shadowPaint = Paint()..color = Colors.black.withValues(alpha: 0.18);
+    // 1. Static Ground Shadow with edgeAlpha
+    final shadowPaint = Paint()..color = Colors.black.withValues(alpha: 0.16 * edgeAlpha);
     canvas.drawOval(
-      Rect.fromCenter(center: Offset(rb.x, yGround - 2), width: r * 2.2, height: r * 0.45),
+      Rect.fromCenter(center: Offset(rb.x, yGround - 1), width: r * 2.4, height: r * 0.45),
       shadowPaint,
     );
 
-    // 2. Rolling Bush Body (Round sphere with internal branch & foliage details)
+    // 2. Rolling Bush Body
     canvas.save();
     canvas.translate(rb.x, yGround - r);
     canvas.rotate(rb.rotation);
 
-    // Base dark khaki green foliage background (#5A6B46) - Clean round sphere
-    final basePaint = Paint()..color = const Color(0xFF5A6B46);
-    canvas.drawCircle(Offset.zero, r, basePaint);
-
-    // Main dry sage-green foliage (#7F8F63)
-    final mainPaint = Paint()..color = const Color(0xFF7F8F63);
-    canvas.drawCircle(Offset.zero, r * 0.92, mainPaint);
-
-    // Soft dusty-sage highlight layer (#9AA87E)
-    final hlPaint = Paint()..color = const Color(0xFF9AA87E);
-    canvas.drawCircle(const Offset(-1.5, -2.0), r * 0.72, hlPaint);
-
-    // Top bright highlight (#B5C49A)
-    final topHlPaint = Paint()..color = const Color(0xFFB5C49A);
-    canvas.drawCircle(const Offset(-2.5, -3.0), r * 0.45, topHlPaint);
-
-    // Dark outer foliage rim (#4C5A3A)
-    final rimPaint = Paint()
-      ..color = const Color(0xFF4C5A3A).withValues(alpha: 0.5)
-      ..style = ui.PaintingStyle.stroke
-      ..strokeWidth = 1.8;
-    canvas.drawCircle(Offset.zero, r * 0.95, rimPaint);
-
-    // Symmetric skeletal dry branches inside round tumbleweed
+    // Warm desert sagebrush palette
+    final shadowFoliagePaint = Paint()..color = const Color(0xFF4E5830).withValues(alpha: edgeAlpha);
+    final midFoliagePaint = Paint()..color = const Color(0xFF76834E).withValues(alpha: edgeAlpha);
+    final lightFoliagePaint = Paint()..color = const Color(0xFF9EAC6F).withValues(alpha: edgeAlpha);
+    final sunlitFoliagePaint = Paint()..color = const Color(0xFFC7D493).withValues(alpha: edgeAlpha);
     final twigPaint = Paint()
-      ..color = const Color(0xFF4A3C2A)
+      ..color = const Color(0xFF4A3418).withValues(alpha: 0.85 * edgeAlpha)
       ..strokeWidth = 1.6
       ..strokeCap = StrokeCap.round;
-    for (int i = 0; i < 6; i++) {
-      final a = (i / 6) * math.pi * 2;
+
+    // 2a. Internal organic branching dry twigs
+    for (int i = 0; i < 7; i++) {
+      final angle = (i / 7) * math.pi * 2 + (i % 2 == 0 ? 0.1 : -0.15);
+      final len = r * (0.65 + (i % 3) * 0.1);
+      final tx = math.cos(angle) * len;
+      final ty = math.sin(angle) * len;
+      canvas.drawLine(Offset.zero, Offset(tx, ty), twigPaint);
+
+      // Secondary fork
+      final forkAngle = angle + (i % 2 == 0 ? 0.35 : -0.35);
       canvas.drawLine(
-        Offset.zero,
-        Offset(math.cos(a) * r * 0.70, math.sin(a) * r * 0.70),
-        twigPaint,
+        Offset(tx * 0.55, ty * 0.55),
+        Offset(tx * 0.55 + math.cos(forkAngle) * r * 0.32, ty * 0.55 + math.sin(forkAngle) * r * 0.32),
+        twigPaint..strokeWidth = 1.1,
       );
     }
+
+    // 2b. Base shadow foliage puffs (7 organic lobes)
+    for (int i = 0; i < 7; i++) {
+      final angle = (i / 7) * math.pi * 2;
+      final dist = r * 0.52;
+      final puffR = r * 0.44;
+      canvas.drawCircle(Offset(math.cos(angle) * dist, math.sin(angle) * dist), puffR, shadowFoliagePaint);
+    }
+
+    // 2c. Mid-layer sage foliage puffs (8 offset lobes)
+    for (int i = 0; i < 8; i++) {
+      final angle = (i / 8) * math.pi * 2 + 0.38;
+      final dist = r * 0.42;
+      final puffR = r * 0.38;
+      canvas.drawCircle(Offset(math.cos(angle) * dist, math.sin(angle) * dist), puffR, midFoliagePaint);
+    }
+
+    // 2d. Light top foliage clusters (5 central-offset lobes)
+    for (int i = 0; i < 5; i++) {
+      final angle = (i / 5) * math.pi * 2 + 0.2;
+      final dist = r * 0.28;
+      final puffR = r * 0.32;
+      canvas.drawCircle(Offset(math.cos(angle) * dist - 1.5, math.sin(angle) * dist - 1.5), puffR, lightFoliagePaint);
+    }
+
+    // 2e. Sunlit golden top highlights
+    for (int i = 0; i < 4; i++) {
+      final angle = (i / 4) * math.pi * 2 - 0.4;
+      final dist = r * 0.18;
+      final puffR = r * 0.22;
+      canvas.drawCircle(Offset(math.cos(angle) * dist - 2.0, math.sin(angle) * dist - 2.5), puffR, sunlitFoliagePaint);
+    }
+
+    // 2f. Center dense core puff
+    canvas.drawCircle(const Offset(-1.0, -1.0), r * 0.28, lightFoliagePaint);
 
     canvas.restore();
   }

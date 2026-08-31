@@ -315,31 +315,20 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
         canvas.drawCircle(Offset(gx, gy), grainRadius, paint);
       }
 
-      // 🦖 3. Easter Eggs: Ancient Dinosaur Footprints & Smooth Polished Desert Agates in Sand
-      final sandTrackPaint = Paint()
-        ..color = const Color(0xFF7A4515).withValues(alpha: 0.50 * detailAlpha)
-        ..strokeWidth = 2.0
-        ..style = PaintingStyle.stroke
-        ..strokeCap = StrokeCap.round;
-      final sandTrackFill = Paint()..color = const Color(0xFF6B3308).withValues(alpha: 0.35 * detailAlpha);
+      // 🏜️ 3. Sun-polished Desert Jasper & Agate Pebbles in Sand (Deterministic, smooth)
       final agateStonePaint = Paint()..color = const Color(0xFFD7CCC8).withValues(alpha: 0.85 * detailAlpha);
       final agateHighlightPaint = Paint()..color = Colors.white.withValues(alpha: 0.90 * detailAlpha);
+      final amberPebblePaint = Paint()..color = const Color(0xFFFFB300).withValues(alpha: 0.75 * detailAlpha);
 
-      const trackPeriod = 210.0;
-      for (double fx = -(_scrollOffset % trackPeriod) + 50; fx < w + trackPeriod; fx += trackPeriod) {
-        // Prehistoric 3-toed theropod dinosaur footprint impressed in soft sand
-        canvas.drawLine(Offset(fx, y + 17), Offset(fx - 5, y + 9), sandTrackPaint);
-        canvas.drawLine(Offset(fx, y + 17), Offset(fx, y + 7), sandTrackPaint);
-        canvas.drawLine(Offset(fx, y + 17), Offset(fx + 5, y + 9), sandTrackPaint);
-        canvas.drawCircle(Offset(fx, y + 18), 2.4, sandTrackFill);
+      const pebblePeriod = 180.0;
+      for (double fx = -(_scrollOffset % pebblePeriod) + 40; fx < w + pebblePeriod; fx += pebblePeriod) {
+        // Smooth desert agate pebble
+        canvas.drawOval(Rect.fromCenter(center: Offset(fx + 35, y + 22), width: 7, height: 4.5), agateStonePaint);
+        canvas.drawCircle(Offset(fx + 33.5, y + 21), 1.0, agateHighlightPaint);
 
-        // Sun-polished desert jasper / agate pebble
-        canvas.drawOval(Rect.fromCenter(center: Offset(fx + 65, y + 26), width: 8, height: 5), agateStonePaint);
-        canvas.drawCircle(Offset(fx + 63, y + 25), 1.2, agateHighlightPaint);
-
-        // Small wind-blown desert dry twig/fossil fragment
-        canvas.drawLine(Offset(fx + 120, y + 12), Offset(fx + 128, y + 9), sandTrackPaint..strokeWidth = 1.2);
-        canvas.drawLine(Offset(fx + 128, y + 9), Offset(fx + 134, y + 13), sandTrackPaint..strokeWidth = 1.0);
+        // Golden amber fleck
+        canvas.drawOval(Rect.fromCenter(center: Offset(fx + 120, y + 32), width: 5.5, height: 3.5), amberPebblePaint);
+        canvas.drawCircle(Offset(fx + 119, y + 31), 0.8, agateHighlightPaint);
       }
     } else if (currentBiome == 'FOREST' && detailAlpha > 0.05) {
       // 1. Grass tufts along ground surface
