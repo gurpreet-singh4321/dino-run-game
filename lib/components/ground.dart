@@ -68,16 +68,28 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
       _gaps.removeWhere((g) => g.isRemoved);
     }
     
-    // Space mode: ground slides down off screen
+    // Space mode: ground slides down off screen & rises back on return
     if (game.state == GameState.spaceMode) {
-      _spaceSlideOffset += 450 * dt;
-      if (_spaceSlideOffset > groundHeight + 200) {
-        _spaceSlideOffset = groundHeight + 200;
+      if (game.spacePhase == SpacePhase.returning) {
+        final returnProgress = (1.0 - (game.spacePhaseTimer / DinoGame.spaceReturnDuration)).clamp(0.0, 1.0);
+        if (returnProgress >= 0.58) {
+          // Path rises smoothly and heroically into place!
+          final groundT = ((returnProgress - 0.58) / 0.26).clamp(0.0, 1.0);
+          final curvedT = Curves.easeOutBack.transform(groundT);
+          _spaceSlideOffset = (1.0 - curvedT).clamp(0.0, 1.0) * (groundHeight + 200);
+        } else {
+          _spaceSlideOffset = groundHeight + 200;
+        }
+      } else {
+        _spaceSlideOffset += 450 * dt;
+        if (_spaceSlideOffset > groundHeight + 200) {
+          _spaceSlideOffset = groundHeight + 200;
+        }
       }
     } else {
-      // Smoothly return ground when exiting space mode
+      // Ensure ground is at baseline when playing
       if (_spaceSlideOffset > 0) {
-        _spaceSlideOffset -= 350 * dt;
+        _spaceSlideOffset -= 450 * dt;
         if (_spaceSlideOffset < 0) _spaceSlideOffset = 0;
       }
     }
@@ -206,6 +218,19 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
           Color(0xFF6A330C), // Deep subterranean desert rock
         ],
       );
+    } else if (currentBiome == 'COSMOS') {
+      gradient = const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        stops: [0.0, 0.14, 0.42, 0.75, 1.0],
+        colors: [
+          Color(0xFF2C1A57), // Surface twilight purple-indigo
+          Color(0xFF1E113E), // Rich obsidian lunar crust
+          Color(0xFF140B2C), // Deep space bedrock
+          Color(0xFF0C061D), // Subterranean cosmic rock
+          Color(0xFF060310), // Void abyss
+        ],
+      );
     } else {
       gradient = LinearGradient(
         begin: Alignment.topCenter,
@@ -216,11 +241,16 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
     canvas.drawRect(rect, Paint()..shader = gradient.createShader(rect));
 
     // Surface top highlight line
+    final topHighlightColor = currentBiome == 'DESERT'
+        ? const Color(0xFFFFF1A8)
+        : (currentBiome == 'COSMOS'
+            ? const Color(0xFF4DEEEA)
+            : topColor);
     canvas.drawLine(
       Offset(0, y),
       Offset(w, y),
       Paint()
-        ..color = (currentBiome == 'DESERT' ? const Color(0xFFFFF1A8) : topColor).withValues(alpha: 0.9)
+        ..color = topHighlightColor.withValues(alpha: 0.9)
         ..strokeWidth = 2.5,
     );
 
@@ -437,12 +467,104 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
           canvas.drawCircle(Offset(px + 24 + 3, y - sH), 1.0, puddlePaint);
         }
       }
+    } else if (currentBiome == 'COSMOS' && detailAlpha > 0.05) {
+      // 🌌 1. Bioluminescent Neon Cyan & Magenta Energy Currents
+      final cyanEnergyPaint = Paint()
+        ..color = const Color(0xFF00E5FF).withValues(alpha: 0.75 * detailAlpha)
+        ..strokeWidth = 2.0
+        ..strokeCap = StrokeCap.round;
+      final purpleVeinPaint = Paint()
+        ..color = const Color(0xFFE040FB).withValues(alpha: 0.60 * detailAlpha)
+        ..strokeWidth = 1.6
+        ..strokeCap = StrokeCap.round;
+      final deepObsidianPaint = Paint()
+        ..color = const Color(0xFF4A148C).withValues(alpha: 0.50 * detailAlpha)
+        ..strokeWidth = 2.4;
+
+      // Glowing pulsating surface energy rim
+      final pulse = 0.85 + math.sin(_time * 3.5) * 0.15;
+      final surfaceRimPaint = Paint()
+        ..color = const Color(0xFF80DEEA).withValues(alpha: 0.95 * pulse * detailAlpha)
+        ..strokeWidth = 3.0;
+      canvas.drawLine(Offset(0, y + 1), Offset(w, y + 1), surfaceRimPaint);
+
+      // Layer 1: Subterranean Cyan Energy Wave Currents (Wavelength ~45px)
+      const eW = 45.0;
+      final ePath = Path();
+      for (double ex = -(_scrollOffset % eW) - eW; ex < w + eW; ex += eW) {
+        ePath.moveTo(ex, y + 8);
+        ePath.quadraticBezierTo(ex + 18, y + 14, ex + 36, y + 9);
+      }
+      canvas.drawPath(ePath, cyanEnergyPaint..style = PaintingStyle.stroke);
+
+      // Layer 2: Deeper Purple/Magenta Cosmic Energy Strata (Wavelength ~75px)
+      const pW = 75.0;
+      final pPath = Path();
+      for (double px = -((_scrollOffset * 1.0) % pW) - pW; px < w + pW; px += pW) {
+        pPath.moveTo(px, y + 24);
+        pPath.cubicTo(px + 20, y + 29, px + 50, y + 19, px + pW, y + 25);
+      }
+      canvas.drawPath(pPath, purpleVeinPaint..style = PaintingStyle.stroke);
+
+      // Layer 3: Deep Obsidian Bedrock Faults (Wavelength ~110px)
+      const bW = 110.0;
+      final bPath = Path();
+      for (double bx = -((_scrollOffset * 1.0) % bW) - bW; bx < w + bW; bx += bW) {
+        bPath.moveTo(bx, y + 42);
+        bPath.cubicTo(bx + 30, y + 46, bx + 70, y + 38, bx + bW, y + 43);
+      }
+      canvas.drawPath(bPath, deepObsidianPaint..style = PaintingStyle.stroke);
+
+      // 🌌 2. Embedded Bioluminescent Cyan Crystal Shards (Deterministic scrolling)
+      const crystalSpacing = 135.0;
+      int crystalIdx = 0;
+      for (double cx = -(_scrollOffset % crystalSpacing); cx < w + crystalSpacing; cx += crystalSpacing) {
+        crystalIdx++;
+        final shardH = 7.0 + (crystalIdx % 4) * 2.5;
+        final cPath = Path()
+          ..moveTo(cx + 8, y + 1)
+          ..lineTo(cx + 12, y - shardH)
+          ..lineTo(cx + 16, y + 1)
+          ..close();
+
+        final crystalShader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            const Color(0xFFE0F7FA).withValues(alpha: detailAlpha),
+            const Color(0xFF00E5FF).withValues(alpha: 0.85 * detailAlpha),
+            const Color(0xFF006064).withValues(alpha: 0.70 * detailAlpha),
+          ],
+        ).createShader(Rect.fromLTWH(cx + 8, y - shardH, 8, shardH + 1));
+
+        canvas.drawPath(cPath, Paint()..shader = crystalShader);
+
+        // Crystal apex glint
+        canvas.drawCircle(
+          Offset(cx + 12, y - shardH),
+          1.2,
+          Paint()..color = Colors.white.withValues(alpha: 0.9 * detailAlpha),
+        );
+      }
+
+      // 🌌 3. Sparkling Stardust & Ion Quartz Motes in the Bedrock
+      final motePaintCyan = Paint()..color = const Color(0xFF80DEEA).withValues(alpha: 0.85 * detailAlpha);
+      final motePaintMagenta = Paint()..color = const Color(0xFFFF80AB).withValues(alpha: 0.75 * detailAlpha);
+
+      for (int i = 0; i < 24; i++) {
+        final seedX = (i * 97.0);
+        final px = (seedX - _scrollOffset) % (w + 40.0) - 20.0;
+        final py = y + 10.0 + (i * 5.3) % (groundHeight - 16.0);
+        final isCyan = (i % 2 == 0);
+        final r = (i % 3 == 0) ? 1.6 : 1.1;
+        canvas.drawCircle(Offset(px, py), r, isCyan ? motePaintCyan : motePaintMagenta);
+      }
     }
 
     canvas.clipRect(Rect.fromLTWH(0, y, w, groundHeight));
 
     // Fallback small pebbles (deterministic scrolling positions)
-    if (currentBiome != 'DESERT' && currentBiome != 'RAIN' && currentBiome != 'STORM') {
+    if (currentBiome != 'DESERT' && currentBiome != 'RAIN' && currentBiome != 'STORM' && currentBiome != 'COSMOS') {
       final pebblePaint = Paint()..color = bottomColor.withValues(alpha: 0.3);
       for (int i = 0; i < 12; i++) {
         final seedX = (i * 127.0);

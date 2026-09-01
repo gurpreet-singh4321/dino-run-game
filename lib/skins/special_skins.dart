@@ -34,7 +34,7 @@ class CyberNeonDinoSkin extends CharacterSkin {
 
   @override
   void renderSpace(Canvas canvas, Size size, int animFrame) {
-    _renderCyberDino(canvas, size, animFrame, isJumping: true, isSpace: true);
+    _renderCyberDino(canvas, size, 0, isJumping: true, isSpace: true);
   }
 
   void _renderCyberDino(Canvas canvas, Size size, int frame, {bool isJumping = false, bool isSpace = false}) {
@@ -129,7 +129,7 @@ class GoldenEmperorSkin extends CharacterSkin {
 
   @override
   void renderSpace(Canvas canvas, Size size, int animFrame) {
-    _renderGoldDino(canvas, size, animFrame, isJumping: true);
+    _renderGoldDino(canvas, size, 0, isJumping: true);
   }
 
   void _renderGoldDino(Canvas canvas, Size size, int frame, {bool isJumping = false}) {
@@ -238,7 +238,7 @@ class AstronautDinoSkin extends CharacterSkin {
 
   @override
   void renderSpace(Canvas canvas, Size size, int animFrame) {
-    _renderAstroDino(canvas, size, animFrame, isJumping: true);
+    _renderAstroDino(canvas, size, 0, isJumping: true);
   }
 
   void _renderAstroDino(Canvas canvas, Size size, int frame, {bool isJumping = false}) {
@@ -334,7 +334,7 @@ class MagmaDragonSkin extends CharacterSkin {
 
   @override
   void renderSpace(Canvas canvas, Size size, int animFrame) {
-    _renderMagmaDino(canvas, size, animFrame, isJumping: true);
+    _renderMagmaDino(canvas, size, 0, isJumping: true);
   }
 
   void _renderMagmaDino(Canvas canvas, Size size, int frame, {bool isJumping = false}) {

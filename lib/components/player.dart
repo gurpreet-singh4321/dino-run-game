@@ -123,11 +123,15 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
 
     skin.update(dt);
 
-    // Animation timer
-    _animTimer += dt;
-    if (_animTimer >= _animSpeed) {
-      _animTimer -= _animSpeed;
-      _animFrame = (_animFrame + 1) % 4;
+    // Animation timer (Freeze animation cycles in space mode and mid-air!)
+    if (game.state == GameState.playing && isOnGround) {
+      _animTimer += dt;
+      if (_animTimer >= _animSpeed) {
+        _animTimer -= _animSpeed;
+        _animFrame = (_animFrame + 1) % 4;
+      }
+    } else {
+      _animFrame = 0; // Frozen aerodynamic gliding/flight pose
     }
 
     if (game.state == GameState.playing) {
@@ -272,20 +276,39 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
       targetX = targetX.clamp(20.0, game.size.x - size.x * scale.x - 20.0);
       position.x += (targetX - position.x) * 10 * dt;
     } else if (phase == SpacePhase.returning) {
-      // Controlled, gentle descent back to ground — Dino stays 100% visible
+      // Cinematic Re-entry Descent & Touchdown
       isThrusting = false;
-      final groundY = game.ground.groundY - size.y * scale.y;
-      velocityY = 240.0;
-      position.y += velocityY * dt;
+      movingLeft = false;
+      movingRight = false;
+      
+      final returnProgress = (1.0 - (game.spacePhaseTimer / DinoGame.spaceReturnDuration)).clamp(0.0, 1.0);
 
-      // Drift smoothly back to left running position
-      position.x += (80 - position.x) * 3 * dt;
-      targetX = position.x;
-
-      // Clamp to ground line on landing
-      if (position.y >= groundY) {
-        position.y = groundY;
+      if (returnProgress < 0.36) {
+        // 1. Plunge down rapidly off the bottom of the screen!
+        velocityY += 1800 * dt;
+        position.y += velocityY * dt;
+        position.x += (80 - position.x) * 4 * dt;
+        targetX = position.x;
+      } else if (returnProgress < 0.72) {
+        // 2. Off-screen waiting while BG reveals from center to top & path rises
+        position.y = -250;
+        position.x = 80;
+        targetX = 80;
         velocityY = 0;
+      } else {
+        // 3. Drop in heroically from top sky onto the ground path!
+        final dropT = ((returnProgress - 0.72) / 0.28).clamp(0.0, 1.0);
+        final groundY = game.ground.groundY - size.y * scale.y;
+        final easeDrop = Curves.easeInCubic.transform(dropT);
+        position.y = -120.0 + easeDrop * (groundY - (-120.0));
+        position.x = 80;
+        targetX = 80;
+        velocityY = 400.0;
+
+        if (dropT >= 0.98) {
+          position.y = groundY;
+          velocityY = 0;
+        }
       }
     }
   }

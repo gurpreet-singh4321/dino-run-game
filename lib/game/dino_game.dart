@@ -54,7 +54,7 @@ class DinoGame extends FlameGame with HasCollisionDetection, TapCallbacks, PanDe
   double spaceTimer = 0;
   static const double spaceLaunchDuration = 2.0;
   static const double spaceCoinDuration = 10.0;
-  static const double spaceReturnDuration = 2.5;
+  static const double spaceReturnDuration = 2.8;
   SpacePhase spacePhase = SpacePhase.none;
   double spacePhaseTimer = 0;
   /// 0→1 for darkening sky during launch, 1→0 for lightening during return
@@ -244,7 +244,7 @@ class DinoGame extends FlameGame with HasCollisionDetection, TapCallbacks, PanDe
     particlePool.emitGravityLaunch(player.position);
   }
 
-  /// Called when returning phase ends — snap back to playing
+  /// Called when returning phase ends — snap back to playing with heroic landing impact!
   void _finishExitSpaceMode() {
     state = GameState.playing;
     spacePhase = SpacePhase.none;
@@ -255,6 +255,17 @@ class DinoGame extends FlameGame with HasCollisionDetection, TapCallbacks, PanDe
     spawnManager.resumeGroundSpawning();
     final shieldLvl = coinManager.shieldLevel;
     player.invincibleTimer = 3.0 + (shieldLvl * 0.5);
+
+    // Hero touchdown effects on path
+    final footPos = Vector2(player.position.x + (player.size.x * player.scale.x) * 0.45, player.position.y + player.size.y * player.scale.y);
+    final currentBiome = biomeManager.effectiveBiome.name;
+    if (currentBiome == 'DESERT') {
+      particlePool.emitDesertLandingImpact(footPos);
+    } else {
+      particlePool.emitJumpDust(footPos);
+    }
+    triggerShake(duration: 0.25, intensity: 5.0);
+    HapticFeedback.heavyImpact();
   }
 
   void startGame({int? startingStage}) {

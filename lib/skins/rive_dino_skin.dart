@@ -121,6 +121,6 @@ class RiveDinoSkin extends CharacterSkin {
 
   @override
   void renderSpace(Canvas canvas, Size size, int animFrame) {
-    renderRunning(canvas, size, animFrame);
+    renderJumping(canvas, size, false);
   }
 }

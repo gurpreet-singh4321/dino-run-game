@@ -361,17 +361,9 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     }
   }
 
-  @override
-  void render(Canvas canvas) {
-    final skyTop = game.biomeManager.interpolatedSkyTop;
-    final skyBottom = game.biomeManager.interpolatedSkyBottom;
-    final sp = game.spaceTransitionProgress; // 0 = normal, 1 = full space
-    final currentBiome = game.biomeManager.effectiveBiome.name;
-
-    // Sky gradient (multi-stop deep twilight to golden horizon for Desert, or standard transition)
-    final Gradient gradient;
-    if (currentBiome == 'DESERT' && sp <= 0.01) {
-      gradient = const LinearGradient(
+  Gradient _getGroundGradient(String currentBiome, Color skyTop, Color skyBottom) {
+    if (currentBiome == 'DESERT') {
+      return const LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [
@@ -383,241 +375,320 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
         ],
         stops: [0.0, 0.22, 0.45, 0.72, 1.0],
       );
-    } else {
-      final topColor = sp > 0
-          ? Color.lerp(skyTop, const Color(0xFF050510), sp)!
-          : skyTop;
-      final bottomColor = sp > 0
-          ? Color.lerp(skyBottom, const Color(0xFF0A0A25), sp)!
-          : skyBottom;
+    }
+    return LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [skyTop, skyBottom],
+    );
+  }
+
+  @override
+  void render(Canvas canvas) {
+    final skyTop = game.biomeManager.interpolatedSkyTop;
+    final skyBottom = game.biomeManager.interpolatedSkyBottom;
+    final sp = game.spaceTransitionProgress; // 0 = normal, 1 = full space
+    final currentBiome = game.biomeManager.effectiveBiome.name;
+    final rect = Rect.fromLTWH(0, 0, size.x, size.y);
+
+    final isReturning = (game.state == GameState.spaceMode && game.spacePhase == SpacePhase.returning);
+
+    if (isReturning) {
+      final returnProgress = (1.0 - (game.spacePhaseTimer / DinoGame.spaceReturnDuration)).clamp(0.0, 1.0);
+
+      // 1. Draw Space Cosmic Background as base layer
+      final spaceGradient = const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [Color(0xFF050510), Color(0xFF0A0A25)],
+      );
+      canvas.drawRect(rect, Paint()..shader = spaceGradient.createShader(rect));
+      _drawSpaceModeVisuals(canvas, 1.0);
+
+      // 2. Cinematic Center-to-Top Biome Reveal
+      if (returnProgress >= 0.28) {
+        final revealT = ((returnProgress - 0.28) / 0.54).clamp(0.0, 1.0);
+        final easeT = Curves.easeOutCubic.transform(revealT);
+
+        if (easeT >= 0.99) {
+          // Fully revealed ground biome
+          final groundGrad = _getGroundGradient(currentBiome, skyTop, skyBottom);
+          canvas.drawRect(rect, Paint()..shader = groundGrad.createShader(rect));
+          _drawBiomeElements(canvas, currentBiome, skyTop, skyBottom, rect, 1.0);
+        } else {
+          // Expanding aperture from Center expanding upwards to Top!
+          final cx = size.x * 0.5;
+          final cy = size.y * 0.48;
+
+          final rx = size.x * (0.04 + easeT * 1.3);
+          final ryTop = size.y * (0.02 + easeT * 1.55);
+          final ryBottom = size.y * (0.02 + easeT * 0.85);
+
+          final revealPath = Path()
+            ..addOval(Rect.fromLTRB(cx - rx, cy - ryTop, cx + rx, cy + ryBottom));
+
+          canvas.save();
+          canvas.clipPath(revealPath);
+
+          // Draw ground sky gradient inside aperture
+          final groundGrad = _getGroundGradient(currentBiome, skyTop, skyBottom);
+          canvas.drawRect(rect, Paint()..shader = groundGrad.createShader(rect));
+
+          // Draw full biome visual layers inside aperture
+          _drawBiomeElements(canvas, currentBiome, skyTop, skyBottom, rect, 1.0);
+          canvas.restore();
+
+          // Luminous Atmospheric Re-entry shockwave glow rim around aperture
+          final rimAlpha = (1.0 - easeT * 0.7).clamp(0.0, 1.0);
+          final glowPaint = Paint()
+            ..color = const Color(0xFF40C4FF).withValues(alpha: rimAlpha * 0.85)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 10.0 * (1.0 - easeT * 0.5)
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12);
+          canvas.drawPath(revealPath, glowPaint);
+
+          final coreBorder = Paint()
+            ..color = const Color(0xFFFFF9C4).withValues(alpha: rimAlpha)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 3.0 * (1.0 - easeT * 0.5);
+          canvas.drawPath(revealPath, coreBorder);
+
+          // Atmospheric center flash rays on initial expansion
+          if (revealT < 0.45) {
+            final flashAlpha = (1.0 - (revealT / 0.45)).clamp(0.0, 1.0);
+            final flashPaint = Paint()
+              ..color = const Color(0xFFFFE082).withValues(alpha: flashAlpha * 0.6)
+              ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 24);
+            canvas.drawCircle(Offset(cx, cy), 50.0 + revealT * 200.0, flashPaint);
+          }
+        }
+      }
+      return;
+    }
+
+    // Normal or Launch Space transition
+    final Gradient gradient;
+    if (sp > 0) {
+      final topColor = Color.lerp(skyTop, const Color(0xFF050510), sp)!;
+      final bottomColor = Color.lerp(skyBottom, const Color(0xFF0A0A25), sp)!;
       gradient = LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [topColor, bottomColor],
       );
+    } else {
+      gradient = _getGroundGradient(currentBiome, skyTop, skyBottom);
     }
-    final rect = Rect.fromLTWH(0, 0, size.x, size.y);
+
     canvas.drawRect(rect, Paint()..shader = gradient.createShader(rect));
 
     final biomeAlpha = (1.0 - sp).clamp(0.0, 1.0); // fade biome elements out
 
-    // --- SPACE MODE VISUALS (drawn when transitioning or fully in space) ---
+    // --- SPACE MODE VISUALS ---
     if (sp > 0.01) {
       _drawSpaceModeVisuals(canvas, sp);
     }
 
-    // --- BIOME ELEMENTS (fade out during space transition) ---
+    // --- BIOME ELEMENTS ---
     if (biomeAlpha > 0.01) {
-      if (biomeAlpha < 0.99) {
-        canvas.saveLayer(rect, Paint()..color = Colors.white.withValues(alpha: biomeAlpha));
-      }
-
-      // Cosmic space nebulae & ringed planet (procedural fallback only)
-      if (currentBiome == 'COSMOS' && _cosmosBgImage == null) {
-        _drawSpaceNebulae(canvas);
-        _drawRingedPlanet(canvas);
-      }
-
-      // Northern Lights for ICE land (procedural fallback only)
-      if (currentBiome == 'ICE' && _iceBgImage == null) {
-        _drawAuroraBorealis(canvas);
-      }
-
-      // God rays for Forest (procedural fallback only)
-      if (currentBiome == 'FOREST' && _forestBgImage == null) {
-        _drawGodRays(canvas);
-      }
-
-      // Detailed multi-layer parallax environments
-      _drawParallaxBackground(canvas, currentBiome);
-
-      // Stars (visible in space/night procedural fallbacks)
-      final skyBrightness = skyTop.computeLuminance();
-      if (skyBrightness < 0.35 && currentBiome != 'DESERT' && _cosmosBgImage == null && _iceBgImage == null) {
-        for (final star in _stars) {
-          final alpha = ((math.sin(star.brightness) + 1) / 2 * (1 - skyBrightness)).clamp(0.0, 1.0);
-          canvas.drawCircle(
-            Offset(star.x, star.y),
-            1.5,
-            Paint()..color = Colors.white.withValues(alpha: alpha),
-          );
-        }
-      }
-
-      // Sun (Procedural fallback only)
-      if (currentBiome == 'DESERT' && _desertBgImage == null) {
-        _drawSun(canvas, size.x, skyBrightness);
-      }
-
-      // Clouds (Procedural fallback only)
-      if (_desertBgImage == null && _rainBgImage == null && _forestBgImage == null && _iceBgImage == null && _volcanoBgImage == null && _cosmosBgImage == null) {
-        final cloudAlpha = skyBrightness > 0.2 ? 0.75 : 0.2;
-        for (final cloud in _clouds) {
-          _drawCloud(canvas, cloud, cloudAlpha);
-        }
-      }
-
-      // Rain & Lightning Bolt
-      if (game.biomeManager.isRaining && _rainDrops.isNotEmpty) {
-        final stormCeiling = Rect.fromLTWH(0, 0, size.x, 110);
-        canvas.drawRect(
-          stormCeiling,
-          Paint()
-            ..shader = LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                const Color(0xFF1F2833).withValues(alpha: 0.85),
-                const Color(0xFF1F2833).withValues(alpha: 0.0),
-              ],
-            ).createShader(stormCeiling),
-        );
-
-        final rainPaintNear = Paint()
-          ..color = const Color(0xAAFFFFFF)
-          ..strokeWidth = 2.0
-          ..strokeCap = StrokeCap.round;
-
-        final rainPaintFar = Paint()
-          ..color = const Color(0x44FFFFFF)
-          ..strokeWidth = 1.2
-          ..strokeCap = StrokeCap.round;
-          
-        for (int i = 0; i < _rainDrops.length; i++) {
-          final drop = _rainDrops[i];
-          final p = (i % 2 == 0) ? rainPaintNear : rainPaintFar;
-          canvas.drawLine(
-            Offset(drop.x, drop.y),
-            Offset(drop.x - drop.length * 0.35, drop.y + drop.length),
-            p,
-          );
-        }
-
-        if (_lightningFlashAlpha > 0.05) {
-          canvas.drawRect(
-            rect,
-            Paint()..color = const Color(0xFFE0F7FA).withValues(alpha: _lightningFlashAlpha * 0.35),
-          );
-
-          if (_lightningBoltPoints.length > 1) {
-            final boltPath = Path()..moveTo(_lightningBoltPoints[0].dx, _lightningBoltPoints[0].dy);
-            for (int i = 1; i < _lightningBoltPoints.length; i++) {
-              boltPath.lineTo(_lightningBoltPoints[i].dx, _lightningBoltPoints[i].dy);
-            }
-
-            final boltGlow = Paint()
-              ..color = const Color(0xFF4DEEEA).withValues(alpha: _lightningFlashAlpha)
-              ..strokeWidth = 6.0
-              ..style = ui.PaintingStyle.stroke
-              ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
-            canvas.drawPath(boltPath, boltGlow);
-
-            final boltCore = Paint()
-              ..color = Colors.white.withValues(alpha: _lightningFlashAlpha)
-              ..strokeWidth = 2.5
-              ..style = ui.PaintingStyle.stroke;
-            canvas.drawPath(boltPath, boltCore);
-          }
-        }
-      }
-
-      // Snowflakes for ICE Age
-      if (currentBiome == 'ICE') {
-        final sfPaint = Paint()..color = Colors.white.withValues(alpha: 0.85);
-        for (final sf in _snowFlakes) {
-          canvas.drawCircle(Offset(sf.x, sf.y), sf.radius, sfPaint);
-        }
-      }
-
-      // Volcanic ash embers for VOLCANO
-      if (currentBiome == 'VOLCANO') {
-        final ashOrange = Paint()..color = const Color(0xFFFF5722).withValues(alpha: 0.7);
-        final ashYellow = Paint()..color = const Color(0xFFFFEB3B).withValues(alpha: 0.8);
-        for (int i = 0; i < _ashParticles.length; i++) {
-          final ash = _ashParticles[i];
-          canvas.drawCircle(
-            Offset(ash.x, ash.y),
-            ash.radius,
-            (i % 2 == 0) ? ashOrange : ashYellow,
-          );
-        }
-      }
-
-      // Forest pollen spores for FOREST
-      if (currentBiome == 'FOREST') {
-        final sporePaint = Paint()
-          ..color = const Color(0xFFC8E6C9).withValues(alpha: 0.5)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
-        for (final spore in _forestSpores) {
-          canvas.drawCircle(Offset(spore.x, spore.y), spore.radius, sporePaint);
-        }
-      }
-
-      // Atmospheric wind & rolling bushes for DESERT
-      if (currentBiome == 'DESERT') {
-        _drawDesertWind(canvas);
-        for (final rb in _rollingBushes) {
-          _drawRollingBush(canvas, rb);
-        }
-      }
-
-      if (biomeAlpha < 0.99) {
-        canvas.restore(); // for saveLayer
-      }
+      _drawBiomeElements(canvas, currentBiome, skyTop, skyBottom, rect, biomeAlpha);
     }
 
     // Sweeping Cloud & Fog Layer during world change
     _drawBiomeTransitionFog(canvas);
   }
 
-  /// 🌌 Deep Space Cosmic Parallax Realm (Atmospheric Cosmos Mode)
+  void _drawBiomeElements(Canvas canvas, String currentBiome, Color skyTop, Color skyBottom, Rect rect, double alpha) {
+    if (alpha < 0.99) {
+      canvas.saveLayer(rect, Paint()..color = Colors.white.withValues(alpha: alpha));
+    }
+
+    // Cosmic space nebulae & ringed planet (procedural fallback only)
+    if (currentBiome == 'COSMOS' && _cosmosBgImage == null) {
+      _drawSpaceNebulae(canvas);
+      _drawRingedPlanet(canvas);
+    }
+
+    // Northern Lights for ICE land (procedural fallback only)
+    if (currentBiome == 'ICE' && _iceBgImage == null) {
+      _drawAuroraBorealis(canvas);
+    }
+
+    // God rays for Forest (procedural fallback only)
+    if (currentBiome == 'FOREST' && _forestBgImage == null) {
+      _drawGodRays(canvas);
+    }
+
+    // Detailed multi-layer parallax environments
+    _drawParallaxBackground(canvas, currentBiome);
+
+    // Stars (visible in space/night procedural fallbacks)
+    final skyBrightness = skyTop.computeLuminance();
+    if (skyBrightness < 0.35 && currentBiome != 'DESERT' && _cosmosBgImage == null && _iceBgImage == null) {
+      for (final star in _stars) {
+        final starAlpha = ((math.sin(star.brightness) + 1) / 2 * (1 - skyBrightness)).clamp(0.0, 1.0);
+        canvas.drawCircle(
+          Offset(star.x, star.y),
+          1.5,
+          Paint()..color = Colors.white.withValues(alpha: starAlpha),
+        );
+      }
+    }
+
+    // Sun (Procedural fallback only)
+    if (currentBiome == 'DESERT' && _desertBgImage == null) {
+      _drawSun(canvas, size.x, skyBrightness);
+    }
+
+    // Clouds (Procedural fallback only)
+    if (_desertBgImage == null && _rainBgImage == null && _forestBgImage == null && _iceBgImage == null && _volcanoBgImage == null && _cosmosBgImage == null) {
+      final cloudAlpha = skyBrightness > 0.2 ? 0.75 : 0.2;
+      for (final cloud in _clouds) {
+        _drawCloud(canvas, cloud, cloudAlpha);
+      }
+    }
+
+    // Rain & Lightning Bolt
+    if (game.biomeManager.isRaining && _rainDrops.isNotEmpty) {
+      final stormCeiling = Rect.fromLTWH(0, 0, size.x, 110);
+      canvas.drawRect(
+        stormCeiling,
+        Paint()
+          ..shader = LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              const Color(0xFF1F2833).withValues(alpha: 0.85),
+              const Color(0xFF1F2833).withValues(alpha: 0.0),
+            ],
+          ).createShader(stormCeiling),
+      );
+
+      final rainPaintNear = Paint()
+        ..color = const Color(0xAAFFFFFF)
+        ..strokeWidth = 2.0
+        ..strokeCap = StrokeCap.round;
+
+      final rainPaintFar = Paint()
+        ..color = const Color(0x44FFFFFF)
+        ..strokeWidth = 1.2
+        ..strokeCap = StrokeCap.round;
+        
+      for (int i = 0; i < _rainDrops.length; i++) {
+        final drop = _rainDrops[i];
+        final p = (i % 2 == 0) ? rainPaintNear : rainPaintFar;
+        canvas.drawLine(
+          Offset(drop.x, drop.y),
+          Offset(drop.x - drop.length * 0.35, drop.y + drop.length),
+          p,
+        );
+      }
+
+      if (_lightningFlashAlpha > 0.05) {
+        canvas.drawRect(
+          rect,
+          Paint()..color = const Color(0xFFE0F7FA).withValues(alpha: _lightningFlashAlpha * 0.35),
+        );
+
+        if (_lightningBoltPoints.length > 1) {
+          final boltPath = Path()..moveTo(_lightningBoltPoints[0].dx, _lightningBoltPoints[0].dy);
+          for (int i = 1; i < _lightningBoltPoints.length; i++) {
+            boltPath.lineTo(_lightningBoltPoints[i].dx, _lightningBoltPoints[i].dy);
+          }
+
+          final boltGlow = Paint()
+            ..color = const Color(0xFF4DEEEA).withValues(alpha: _lightningFlashAlpha)
+            ..strokeWidth = 6.0
+            ..style = ui.PaintingStyle.stroke
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
+          canvas.drawPath(boltPath, boltGlow);
+
+          final boltCore = Paint()
+            ..color = Colors.white.withValues(alpha: _lightningFlashAlpha)
+            ..strokeWidth = 2.5
+            ..style = ui.PaintingStyle.stroke;
+          canvas.drawPath(boltPath, boltCore);
+        }
+      }
+    }
+
+    // Snowflakes for ICE Age
+    if (currentBiome == 'ICE') {
+      final sfPaint = Paint()..color = Colors.white.withValues(alpha: 0.85);
+      for (final sf in _snowFlakes) {
+        canvas.drawCircle(Offset(sf.x, sf.y), sf.radius, sfPaint);
+      }
+    }
+
+    // Volcanic ash embers for VOLCANO
+    if (currentBiome == 'VOLCANO') {
+      final ashOrange = Paint()..color = const Color(0xFFFF5722).withValues(alpha: 0.7);
+      final ashYellow = Paint()..color = const Color(0xFFFFEB3B).withValues(alpha: 0.8);
+      for (int i = 0; i < _ashParticles.length; i++) {
+        final ash = _ashParticles[i];
+        canvas.drawCircle(
+          Offset(ash.x, ash.y),
+          ash.radius,
+          (i % 2 == 0) ? ashOrange : ashYellow,
+        );
+      }
+    }
+
+    // Forest pollen spores for FOREST
+    if (currentBiome == 'FOREST') {
+      final sporePaint = Paint()
+        ..color = const Color(0xFFC8E6C9).withValues(alpha: 0.5)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
+      for (final spore in _forestSpores) {
+        canvas.drawCircle(Offset(spore.x, spore.y), spore.radius, sporePaint);
+      }
+    }
+
+    // Atmospheric wind & rolling bushes for DESERT
+    if (currentBiome == 'DESERT') {
+      _drawDesertWind(canvas);
+      for (final rb in _rollingBushes) {
+        _drawRollingBush(canvas, rb);
+      }
+    }
+
+    if (alpha < 0.99) {
+      canvas.restore(); // for saveLayer
+    }
+  }
+
+  /// 🌌 Deep Space Low-Earth Orbit Parallax Realm
   void _drawSpaceModeVisuals(Canvas canvas, double sp) {
     final w = size.x;
     final h = size.y;
 
-    // 1. Deep Space Cosmic Parallax Image Layer (if loaded)
-    if (_cosmosBgImage != null) {
-      final img = _cosmosBgImage!;
-      final imgW = img.width.toDouble();
-      final imgH = img.height.toDouble();
-      final scale = h / imgH;
-      final tileW = imgW * scale;
-      final pShift = (_bgScrollOffset * 0.4) % tileW;
-
-      final srcRect = Rect.fromLTWH(0, 0, imgW, imgH);
-      final paint = Paint()..color = Colors.white.withValues(alpha: sp * 0.92);
-
-      double startX = -pShift;
-      while (startX < w + 50) {
-        canvas.drawImageRect(
-          img,
-          srcRect,
-          Rect.fromLTWH(startX, 0, tileW, h),
-          paint,
-        );
-        startX += tileW;
-      }
+    // 1. Deep Space Low-Earth Orbit Image Layer (3-panel continuous panoramic Earth orbit)
+    final spaceImg = _cosmosBgImage;
+    if (spaceImg != null) {
+      _drawTiledParallaxImage(
+        canvas,
+        spaceImg,
+        mirrorTiling: false,
+        scrollSpeed: 0.35,
+        alpha: sp,
+        targetHeight: h,
+      );
+    } else {
+      _drawDeepSpaceNebulae(canvas, sp);
+      _drawDeepSpaceRingedPlanet(canvas, sp);
+      _drawDeepSpaceMoon(canvas, sp);
     }
 
-    // 2. Interstellar Nebulae Formations (Multi-spectral cosmic clouds)
-    _drawDeepSpaceNebulae(canvas, sp);
-
-    // 3. Majestic Ringed Gas Giant (Saturn-like Planet on Horizon)
-    _drawDeepSpaceRingedPlanet(canvas, sp);
-
-    // 4. Distant Radiant Crescent Moon / Celestial Exoplanet
-    _drawDeepSpaceMoon(canvas, sp);
-
-    // 5. Multi-Layered Twinkling Starfield & Colored Giant Stars
+    // 2. Multi-Layered Twinkling Starfield & Colored Giant Stars with 4-point diamond diffraction spikes
     _drawDeepSpaceStarfield(canvas, sp);
 
-    // 6. Dynamic Shooting Stars & Comets with glowing dust tails
+    // 3. Dynamic Shooting Stars & Comets with glowing dust tails
     _drawDeepSpaceComets(canvas, sp);
 
-    // 7. Swirling Cosmic Stardust & Micro-Ion Motes
+    // 4. Swirling Cosmic Stardust & Micro-Ion Motes
     _drawCosmosAtmosphere(canvas, w, h);
 
-    // 8. Warp Speed streaks during Launch and Returning
+    // 5. Warp Speed streaks during Launch and Returning
     final phase = game.spacePhase;
     if (phase == SpacePhase.launch || phase == SpacePhase.returning) {
       _drawSpeedLines(canvas, phase);
@@ -2051,161 +2122,94 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     }
   }
 
+  /// Draw seamlessly repeating parallax image tiles with optional mirror ping-pong tiling for zero seams
+  void _drawTiledParallaxImage(
+    Canvas canvas,
+    ui.Image img, {
+    bool mirrorTiling = true,
+    double scrollSpeed = 1.0,
+    double alpha = 1.0,
+    double targetHeight = 0,
+  }) {
+    final imgW = img.width.toDouble();
+    final imgH = img.height.toDouble();
+    final h = targetHeight > 0 ? targetHeight : size.y;
+    final scale = h / imgH;
+    final tileW = imgW * scale;
+
+    final scroll = _bgScrollOffset * scrollSpeed;
+
+    final srcRect = Rect.fromLTWH(0, 0, imgW, imgH);
+    final paint = Paint()
+      ..filterQuality = FilterQuality.low
+      ..color = Colors.white.withValues(alpha: alpha);
+
+    final baseIndex = (scroll / tileW).floor();
+    double startX = -(scroll % tileW);
+
+    int i = 0;
+    while (startX < size.x + 50) {
+      final isMirrored = mirrorTiling && ((baseIndex + i).abs() % 2 == 1);
+      if (isMirrored) {
+        canvas.save();
+        canvas.translate(startX + tileW, 0);
+        canvas.scale(-1.0, 1.0);
+        canvas.drawImageRect(
+          img,
+          srcRect,
+          Rect.fromLTWH(0, 0, tileW, h),
+          paint,
+        );
+        canvas.restore();
+      } else {
+        canvas.drawImageRect(
+          img,
+          srcRect,
+          Rect.fromLTWH(startX, 0, tileW, h),
+          paint,
+        );
+      }
+      startX += tileW;
+      i++;
+    }
+  }
+
   /// Draw multi-layer detailed parallax background silhouettes for all 6 biomes
   void _drawParallaxBackground(Canvas canvas, String biome) {
     final yGround = size.y - 120 + _spaceSlideOffset;
 
     if (_desertBgImage != null && biome == 'DESERT') {
-      final img = _desertBgImage!;
-      final imgW = img.width.toDouble();
-      final imgH = img.height.toDouble();
-      final scale = size.y / imgH;
-      final tileW = imgW * scale;
-      final pShift = _bgScrollOffset % tileW;
-
-      final srcRect = Rect.fromLTWH(0, 0, imgW, imgH);
-      final paint = Paint()..filterQuality = FilterQuality.low;
-
-      // Draw seamlessly repeating tiles
-      double startX = -pShift;
-      while (startX < size.x + 50) {
-        canvas.drawImageRect(
-          img,
-          srcRect,
-          Rect.fromLTWH(startX, 0, tileW, size.y),
-          paint,
-        );
-        startX += tileW;
-      }
-
-      // Draw atmospheric immersion (sun corona, camels, mirage)
+      _drawTiledParallaxImage(canvas, _desertBgImage!, mirrorTiling: true);
       _drawDesertAtmosphereImmersion(canvas, yGround);
       return;
     }
 
     if (_rainBgImage != null && biome == 'RAIN') {
-      final img = _rainBgImage!;
-      final imgW = img.width.toDouble();
-      final imgH = img.height.toDouble();
-      final scale = size.y / imgH;
-      final tileW = imgW * scale;
-      final pShift = _bgScrollOffset % tileW;
-
-      final srcRect = Rect.fromLTWH(0, 0, imgW, imgH);
-      final paint = Paint()..filterQuality = FilterQuality.low;
-
-      // Draw seamlessly repeating tiles
-      double startX = -pShift;
-      while (startX < size.x + 50) {
-        canvas.drawImageRect(
-          img,
-          srcRect,
-          Rect.fromLTWH(startX, 0, tileW, size.y),
-          paint,
-        );
-        startX += tileW;
-      }
+      _drawTiledParallaxImage(canvas, _rainBgImage!, mirrorTiling: true);
       _drawRainAtmosphere(canvas, size.x, yGround);
       return;
     }
 
     if (_forestBgImage != null && biome == 'FOREST') {
-      final img = _forestBgImage!;
-      final imgW = img.width.toDouble();
-      final imgH = img.height.toDouble();
-      final scale = size.y / imgH;
-      final tileW = imgW * scale;
-      final pShift = _bgScrollOffset % tileW;
-
-      final srcRect = Rect.fromLTWH(0, 0, imgW, imgH);
-      final paint = Paint()..filterQuality = FilterQuality.low;
-
-      // Draw seamlessly repeating tiles
-      double startX = -pShift;
-      while (startX < size.x + 50) {
-        canvas.drawImageRect(
-          img,
-          srcRect,
-          Rect.fromLTWH(startX, 0, tileW, size.y),
-          paint,
-        );
-        startX += tileW;
-      }
+      _drawTiledParallaxImage(canvas, _forestBgImage!, mirrorTiling: true);
       _drawForestAtmosphere(canvas, size.x, yGround);
       return;
     }
 
     if (_iceBgImage != null && biome == 'ICE') {
-      final img = _iceBgImage!;
-      final imgW = img.width.toDouble();
-      final imgH = img.height.toDouble();
-      final scale = size.y / imgH;
-      final tileW = imgW * scale;
-      final pShift = _bgScrollOffset % tileW;
-
-      final srcRect = Rect.fromLTWH(0, 0, imgW, imgH);
-      final paint = Paint()..filterQuality = FilterQuality.low;
-
-      double startX = -pShift;
-      while (startX < size.x + 50) {
-        canvas.drawImageRect(
-          img,
-          srcRect,
-          Rect.fromLTWH(startX, 0, tileW, size.y),
-          paint,
-        );
-        startX += tileW;
-      }
+      _drawTiledParallaxImage(canvas, _iceBgImage!, mirrorTiling: true);
       _drawIceAtmosphere(canvas, size.x, yGround);
       return;
     }
 
     if (_volcanoBgImage != null && biome == 'VOLCANO') {
-      final img = _volcanoBgImage!;
-      final imgW = img.width.toDouble();
-      final imgH = img.height.toDouble();
-      final scale = size.y / imgH;
-      final tileW = imgW * scale;
-      final pShift = _bgScrollOffset % tileW;
-
-      final srcRect = Rect.fromLTWH(0, 0, imgW, imgH);
-      final paint = Paint()..filterQuality = FilterQuality.low;
-
-      double startX = -pShift;
-      while (startX < size.x + 50) {
-        canvas.drawImageRect(
-          img,
-          srcRect,
-          Rect.fromLTWH(startX, 0, tileW, size.y),
-          paint,
-        );
-        startX += tileW;
-      }
+      _drawTiledParallaxImage(canvas, _volcanoBgImage!, mirrorTiling: true);
       _drawVolcanoAtmosphere(canvas, size.x, yGround);
       return;
     }
 
     if (_cosmosBgImage != null && biome == 'COSMOS') {
-      final img = _cosmosBgImage!;
-      final imgW = img.width.toDouble();
-      final imgH = img.height.toDouble();
-      final scale = size.y / imgH;
-      final tileW = imgW * scale;
-      final pShift = _bgScrollOffset % tileW;
-
-      final srcRect = Rect.fromLTWH(0, 0, imgW, imgH);
-      final paint = Paint()..filterQuality = FilterQuality.low;
-
-      double startX = -pShift;
-      while (startX < size.x + 50) {
-        canvas.drawImageRect(
-          img,
-          srcRect,
-          Rect.fromLTWH(startX, 0, tileW, size.y),
-          paint,
-        );
-        startX += tileW;
-      }
+      _drawTiledParallaxImage(canvas, _cosmosBgImage!, mirrorTiling: false);
       _drawCosmosAtmosphere(canvas, size.x, yGround);
       return;
     }
