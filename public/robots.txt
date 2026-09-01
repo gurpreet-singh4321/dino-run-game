@@ -1,4 +1,0 @@
-User-agent: *
-Allow: /
-
-Sitemap: https://dino-run-epochs.vercel.app/sitemap-index.xml

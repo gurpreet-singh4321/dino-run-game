@@ -678,85 +678,167 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
     final pitWidth = gap.width;
     final pitHeight = groundHeight + 30.0;
 
-    // 1. Molten Magma Reservoir Pit Fill
-    final poolRect = Rect.fromLTWH(leftX, y + 16, pitWidth, pitHeight - 14);
-    final magmaShader = LinearGradient(
+    // 1. Dark Basalt Rock Pit Rim & Charred Edges
+    final basaltPaint = Paint()..color = const Color(0xFF1B1B1B);
+    final heatEdgePaint = Paint()
+      ..color = const Color(0xFFFF5722).withValues(alpha: 0.85)
+      ..strokeWidth = 2.0;
+
+    // Left cliff edge
+    canvas.drawRect(Rect.fromLTWH(leftX - 3.0, y, 4.0, pitHeight), basaltPaint);
+    canvas.drawLine(Offset(leftX, y), Offset(leftX, y + pitHeight), heatEdgePaint);
+
+    // Right cliff edge
+    canvas.drawRect(Rect.fromLTWH(rightX - 1.0, y, 4.0, pitHeight), basaltPaint);
+    canvas.drawLine(Offset(rightX, y), Offset(rightX, y + pitHeight), heatEdgePaint);
+
+    // 2. Deep Molten Magma Reservoir Bed Fill (Bottom to Top Incandescent Basin)
+    final poolRect = Rect.fromLTWH(leftX, y + 4.0, pitWidth, pitHeight - 4.0);
+    final magmaShader = const LinearGradient(
       begin: Alignment.topCenter,
       end: Alignment.bottomCenter,
-      colors: const [
-        Color(0xFFFFFF8D), // White-hot molten gold surface
-        Color(0xFFFF9800), // Blazing solar orange
-        Color(0xFFD84315), // Fiery red magma layer
+      colors: [
+        Color(0xFFFFF9C4), // White-hot molten yellow-white surface
+        Color(0xFFFFD600), // Intense solar gold
+        Color(0xFFFF6D00), // Blazing orange magma
+        Color(0xFFC62828), // Deep volcanic crimson
         Color(0xFF1B0000), // Deep basalt chamber base
       ],
-      stops: const [0.0, 0.22, 0.60, 1.0],
+      stops: [0.0, 0.15, 0.45, 0.78, 1.0],
     ).createShader(poolRect);
     canvas.drawRect(poolRect, Paint()..shader = magmaShader);
 
-    // 2. Animated Licking Fire Tongues across the entire Lava Surface
-    final tongueCount = math.max(6, (pitWidth / 12).floor());
-    final fireTonguePath = Path();
-    fireTonguePath.moveTo(leftX, y + 18);
+    // 3. Layer 1: Ambient Fire Flame Sheath (Soft Outer Heat Aura)
+    final tongueCount = math.max(6, (pitWidth / 14).floor());
+    final ambientFlamePath = Path()..moveTo(leftX, y + 10.0);
 
     for (int t = 0; t <= tongueCount; t++) {
       final tx = leftX + (pitWidth * (t / tongueCount));
-      final flamePhase = _time * 12.0 + t * 1.8;
-      final flameHeight = 8.0 + math.sin(flamePhase).abs() * 12.0 + math.cos(flamePhase * 0.7) * 4.0;
-      final tipX = tx + math.sin(flamePhase * 0.9) * 3.0;
-      final tipY = (y + 16) - flameHeight;
+      final phase = _time * 9.0 + t * 2.1;
+      final fHeight = 10.0 + math.sin(phase).abs() * 14.0 + math.cos(phase * 0.8) * 6.0;
+      final tipX = tx + math.sin(phase * 0.7) * 4.0;
+      final tipY = y - fHeight;
 
       if (t == 0) {
-        fireTonguePath.lineTo(tx, y + 16);
+        ambientFlamePath.lineTo(tx, y + 6.0);
       } else {
         final prevX = leftX + (pitWidth * ((t - 1) / tongueCount));
-        fireTonguePath.cubicTo(
-          prevX + (tx - prevX) * 0.4, y + 16,
-          tipX - 2, tipY + 4,
+        ambientFlamePath.cubicTo(
+          prevX + (tx - prevX) * 0.35, y + 4.0,
+          tipX - 4.0, tipY + fHeight * 0.35,
           tipX, tipY,
         );
-        fireTonguePath.cubicTo(
-          tipX + 2, tipY + 4,
-          tx - (tx - prevX) * 0.4, y + 16,
-          tx, y + 16,
+        ambientFlamePath.cubicTo(
+          tipX + 4.0, tipY + fHeight * 0.35,
+          tx - (tx - prevX) * 0.35, y + 4.0,
+          tx, y + 6.0,
         );
       }
     }
-    fireTonguePath.lineTo(rightX, y + pitHeight);
-    fireTonguePath.lineTo(leftX, y + pitHeight);
-    fireTonguePath.close();
+    ambientFlamePath.lineTo(rightX, y + pitHeight);
+    ambientFlamePath.lineTo(leftX, y + pitHeight);
+    ambientFlamePath.close();
 
-    final fireShader = LinearGradient(
+    final ambientShader = const LinearGradient(
       begin: Alignment.topCenter,
       end: Alignment.bottomCenter,
-      colors: const [
-        Color(0xFFFFFFFF), // White flame tip
-        Color(0xFFFFFF8D), // Yellow fire
-        Color(0xFFFF6D00), // Blazing orange
-        Color(0xFFD50000), // Crimson flame base
+      colors: [
+        Color(0x00FF3D00),
+        Color(0x99FF5722),
+        Color(0xDDF44336),
+        Color(0xFFFF6D00),
       ],
-      stops: const [0.0, 0.25, 0.65, 1.0],
-    ).createShader(Rect.fromLTWH(leftX, y - 10, pitWidth, pitHeight + 20));
-    canvas.drawPath(fireTonguePath, Paint()..shader = fireShader);
+      stops: [0.0, 0.35, 0.70, 1.0],
+    ).createShader(Rect.fromLTWH(leftX, y - 25.0, pitWidth, pitHeight + 25.0));
 
-    // 3. Glowing Fire Vein Line along surface
-    final veinPaint = Paint()
-      ..color = const Color(0xFFFFF59D).withValues(alpha: 0.9)
-      ..strokeWidth = 2.0
-      ..style = PaintingStyle.stroke;
-    
-    final veinPath = Path();
-    veinPath.moveTo(leftX, y + 16);
+    canvas.drawPath(
+      ambientFlamePath,
+      Paint()
+        ..shader = ambientShader
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3.0),
+    );
+
+    // 4. Layer 2: Organic Fluid Fire Flame Tongues 🔥 (Rising from the Bottom-Up)
+    final mainFlamePath = Path()..moveTo(leftX, y + 8.0);
+
     for (int t = 0; t <= tongueCount; t++) {
       final tx = leftX + (pitWidth * (t / tongueCount));
-      final flamePhase = _time * 12.0 + t * 1.8;
-      final flameHeight = 4.0 + math.sin(flamePhase).abs() * 5.0;
-      veinPath.lineTo(tx, (y + 16) - flameHeight);
-    }
-    canvas.drawPath(veinPath, veinPaint);
+      final phase = _time * 11.0 + t * 1.9;
+      final fHeight = 7.0 + math.sin(phase).abs() * 12.0 + math.cos(phase * 1.1) * 4.0;
+      final tipX = tx + math.sin(phase * 0.85) * 3.0;
+      final tipY = y - fHeight;
 
-    // 4. Popping Lava Bubbles & Fire Sparks
+      if (t == 0) {
+        mainFlamePath.lineTo(tx, y + 4.0);
+      } else {
+        final prevX = leftX + (pitWidth * ((t - 1) / tongueCount));
+        mainFlamePath.cubicTo(
+          prevX + (tx - prevX) * 0.3, y + 4.0,
+          tipX - 3.0, tipY + fHeight * 0.3,
+          tipX, tipY,
+        );
+        mainFlamePath.cubicTo(
+          tipX + 3.0, tipY + fHeight * 0.3,
+          tx - (tx - prevX) * 0.3, y + 4.0,
+          tx, y + 4.0,
+        );
+      }
+    }
+    mainFlamePath.lineTo(rightX, y + pitHeight);
+    mainFlamePath.lineTo(leftX, y + pitHeight);
+    mainFlamePath.close();
+
+    final mainFlameShader = const LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [
+        Color(0xFFFFD600), // Intense flame yellow tip
+        Color(0xFFFF6D00), // Fiery orange mid
+        Color(0xFFDD2C00), // Deep flame red
+        Color(0xFFFF9100), // Magma bed base
+      ],
+      stops: [0.0, 0.30, 0.68, 1.0],
+    ).createShader(Rect.fromLTWH(leftX, y - 20.0, pitWidth, pitHeight + 20.0));
+
+    canvas.drawPath(mainFlamePath, Paint()..shader = mainFlameShader);
+
+    // 5. Layer 3: Inner White-Hot Flame Core Tongues
+    final coreFlamePath = Path()..moveTo(leftX, y + 4.0);
+    for (int t = 0; t <= tongueCount; t++) {
+      final tx = leftX + (pitWidth * (t / tongueCount));
+      final phase = _time * 11.0 + t * 1.9;
+      final fHeight = (7.0 + math.sin(phase).abs() * 12.0 + math.cos(phase * 1.1) * 4.0) * 0.55;
+      final tipX = tx + math.sin(phase * 0.85) * 2.0;
+      final tipY = y - fHeight;
+
+      if (t == 0) {
+        coreFlamePath.lineTo(tx, y + 2.0);
+      } else {
+        final prevX = leftX + (pitWidth * ((t - 1) / tongueCount));
+        coreFlamePath.cubicTo(
+          prevX + (tx - prevX) * 0.25, y + 2.0,
+          tipX - 1.5, tipY + fHeight * 0.25,
+          tipX, tipY,
+        );
+        coreFlamePath.cubicTo(
+          tipX + 1.5, tipY + fHeight * 0.25,
+          tx - (tx - prevX) * 0.25, y + 2.0,
+          tx, y + 2.0,
+        );
+      }
+    }
+    coreFlamePath.lineTo(rightX, y + 16.0);
+    coreFlamePath.lineTo(leftX, y + 16.0);
+    coreFlamePath.close();
+
+    canvas.drawPath(
+      coreFlamePath,
+      Paint()..color = const Color(0xFFFFFDE7).withValues(alpha: 0.88),
+    );
+
+    // 6. Popping Lava Bubbles & Fire Sparks
     final bubbleOffsets = [0.15, 0.32, 0.50, 0.68, 0.85];
-    final yellowPaint = Paint()..color = const Color(0xFFFFFF8D);
+    final yellowPaint = Paint()..color = const Color(0xFFFFEA00);
     final orangePaint = Paint()..color = const Color(0xFFFF6D00);
     final whitePaint = Paint()..color = Colors.white;
 
@@ -765,38 +847,38 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
       final cycle = (_time * (2.2 + b * 0.4) + b * 0.9) % 1.8;
       final progress = (cycle / 1.8).clamp(0.0, 1.0);
 
-      final surfaceWaveY = y + 16.0;
-      final maxBubbleRadius = 3.0 + (b % 3) * 1.2;
+      final surfaceWaveY = y + 4.0;
+      final maxBubbleRadius = 3.2 + (b % 3) * 1.4;
       final currentRadius = maxBubbleRadius * math.sin(progress * math.pi);
-      final bubbleY = surfaceWaveY - currentRadius * 0.4;
+      final bubbleY = surfaceWaveY - currentRadius * 0.35;
 
       if (progress < 0.85) {
         canvas.drawCircle(Offset(bx, bubbleY), currentRadius, yellowPaint);
-        canvas.drawCircle(Offset(bx - currentRadius * 0.25, bubbleY - currentRadius * 0.25), currentRadius * 0.3, whitePaint);
+        canvas.drawCircle(Offset(bx - currentRadius * 0.25, bubbleY - currentRadius * 0.25), currentRadius * 0.35, whitePaint);
       } else {
         final popProgress = (progress - 0.85) / 0.15;
         for (int p = 0; p < 4; p++) {
           final dir = (p % 2 == 0) ? 1.0 : -1.0;
           final sparkX = bx + dir * (3 + p * 2.5) * popProgress;
-          final sparkY = surfaceWaveY - (8 + p * 5) * popProgress;
-          final sparkR = (2.2 * (1 - popProgress)).clamp(0.5, 2.2);
+          final sparkY = surfaceWaveY - (6 + p * 6) * popProgress;
+          final sparkR = (2.0 * (1 - popProgress)).clamp(0.5, 2.0);
           final pPaint = (p % 2 == 0) ? whitePaint : orangePaint;
           canvas.drawCircle(Offset(sparkX, sparkY), sparkR, pPaint);
         }
       }
     }
 
-    // 5. Rising Fiery Volcanic Embers
-    for (int e = 0; e < 6; e++) {
-      final ex = leftX + (pitWidth * ((e * 0.20 + (_time * 0.12)) % 1.0));
-      final ey = y - 4 - ((_time * 40 + e * 18) % 50.0);
-      final eAlpha = (1.0 - (y - ey) / 50.0).clamp(0.0, 0.85);
-      final eRadius = 1.2 + (e % 2) * 0.8;
+    // 7. Rising Fiery Volcanic Embers & Cinder Sparks
+    for (int e = 0; e < 8; e++) {
+      final ex = leftX + (pitWidth * ((e * 0.14 + (_time * 0.14)) % 1.0));
+      final ey = y - 4 - ((_time * 45 + e * 16) % 65.0);
+      final eAlpha = (1.0 - (y - ey) / 65.0).clamp(0.0, 0.90);
+      final eRadius = 1.2 + (e % 3) * 0.6;
 
       canvas.drawCircle(
         Offset(ex, ey),
         eRadius,
-        Paint()..color = (e % 2 == 0 ? const Color(0xFFFFFF8D) : const Color(0xFFFF9100)).withValues(alpha: eAlpha),
+        Paint()..color = (e % 2 == 0 ? const Color(0xFFFFF59D) : const Color(0xFFFF5722)).withValues(alpha: eAlpha),
       );
     }
   }
