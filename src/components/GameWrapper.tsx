@@ -112,6 +112,9 @@ export default function GameWrapper() {
   const startGame = () => {
     soundManager.playUiClick();
     setHasStarted(true);
+    if (window.innerWidth <= 768) {
+      enterFullscreenMode();
+    }
   };
 
   return (
@@ -254,28 +257,24 @@ export default function GameWrapper() {
             <div className="absolute inset-0 scanlines pointer-events-none z-20" />
           )}
 
-          {/* Mobile Landscape Advice */}
-          {hasStarted && isPortraitMobile && !dismissLandscapePrompt && !isFullscreen && (
-            <div className="absolute inset-0 bg-slate-950/95 backdrop-blur-md z-30 flex flex-col items-center justify-center p-6 text-center text-white space-y-3">
+          {/* Mobile Landscape Advice - Now strict and blocks portrait completely */}
+          {hasStarted && isPortraitMobile && (
+            <div className="absolute inset-0 bg-slate-950/95 backdrop-blur-md z-[9999] flex flex-col items-center justify-center p-6 text-center text-white space-y-3">
               <DeviceMobile size={40} className="text-slate-300 animate-bounce" />
-              <h4 className="font-['Chakra_Petch'] font-bold text-lg">Rotate to Landscape</h4>
-              <p className="text-xs text-slate-400 max-w-[32ch]">
-                Dino Run is optimized for widescreen controls. Rotate your phone or launch fullscreen.
+              <h4 className="font-['Chakra_Petch'] font-bold text-xl uppercase tracking-wide text-amber-400">Rotate Device</h4>
+              <p className="text-sm text-slate-300 max-w-[32ch] font-medium leading-relaxed">
+                Dino Run is optimized for widescreen play. Please rotate your phone to landscape mode to continue.
               </p>
-              <div className="flex items-center gap-2 pt-2">
-                <button
-                  onClick={enterFullscreenMode}
-                  className="px-4 py-2 rounded-lg bg-white text-slate-950 font-['Chakra_Petch'] font-bold text-xs uppercase"
-                >
-                  Enter Fullscreen
-                </button>
-                <button
-                  onClick={() => setDismissLandscapePrompt(true)}
-                  className="px-3 py-2 rounded-lg border border-white/10 text-xs text-slate-400"
-                >
-                  Dismiss
-                </button>
-              </div>
+              {!isFullscreen && (
+                <div className="pt-4">
+                  <button
+                    onClick={enterFullscreenMode}
+                    className="px-5 py-2.5 rounded-xl bg-white hover:bg-slate-200 text-slate-950 font-['Chakra_Petch'] font-bold text-sm uppercase transition-colors"
+                  >
+                    Enter Fullscreen
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
