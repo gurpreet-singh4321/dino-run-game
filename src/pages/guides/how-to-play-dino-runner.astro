@@ -174,7 +174,44 @@ const faqs = [
 				</ul>
 			</section>
 
-			{/* Section 5: FAQs */}
+			{/* Section 5: Score Milestones & Velocity Scaling */}
+			<section class="space-y-4">
+				<h2 class="text-2xl sm:text-3xl font-bold text-white font-['Chakra_Petch']">
+					5. Score Milestones & Velocity Scaling
+				</h2>
+				<p>
+					The game's difficulty does not increase linearly. Instead, velocity increases in algorithmic steps until it hits a terminal cap, forcing players to rely on pure reflex memory.
+				</p>
+				<ul class="list-disc pl-6 space-y-2 text-slate-300">
+					<li><strong>0 - 2,500 points:</strong> The Warmup. Game speed is manageable. Focus on building rhythm.</li>
+					<li><strong>4,500 points (First Transition):</strong> Monsoon Era begins. The game introduces fog rendering which slightly obscures distant obstacles.</li>
+					<li><strong>10,000+ points:</strong> The Velocity Cap. The ground moves at maximum speed. Pterodactyls spawn in complex tandem with ground cacti. Here, the "Aerial Duck" (Down Arrow mid-air) becomes mandatory to snap to the ground quickly.</li>
+				</ul>
+			</section>
+
+			{/* Section 6: Advanced Tactics & Common Mistakes */}
+			<section class="space-y-4">
+				<h2 class="text-2xl sm:text-3xl font-bold text-white font-['Chakra_Petch']">
+					6. Advanced Tactics & Common Mistakes
+				</h2>
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-6">
+					<div class="p-6 rounded-2xl bg-rose-500/10 border border-rose-500/20 space-y-3">
+						<h3 class="font-['Chakra_Petch'] font-bold text-lg text-rose-400">Mistake: The Panic Double-Jump</h3>
+						<p class="text-sm text-slate-300">
+							Spamming the jump button when you see multiple obstacles. The physics engine locks your trajectory once airborne. You must wait for the exact moment of commitment.
+						</p>
+					</div>
+
+					<div class="p-6 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 space-y-3">
+						<h3 class="font-['Chakra_Petch'] font-bold text-lg text-emerald-400">Pro-Tip: The Fast-Fall Cancel</h3>
+						<p class="text-sm text-slate-300">
+							If you jump too high over a small cactus and see a Pterodactyl coming, immediately tap the Down Arrow. This cancels your float time, snapping you to the ground instantly to prepare for a slide.
+						</p>
+					</div>
+				</div>
+			</section>
+
+			{/* Section 7: FAQs */}
 			<section class="space-y-6 pt-6 border-t border-white/10">
 				<h2 class="text-2xl sm:text-3xl font-bold text-white font-['Chakra_Petch'] flex items-center gap-2">
 					<Question size={26} className="text-amber-400" />
@@ -187,6 +224,22 @@ const faqs = [
 							<p class="text-sm sm:text-base text-slate-300 leading-relaxed font-normal">{faq.a}</p>
 						</div>
 					))}
+				</div>
+			</section>
+
+			{/* Author Profile */}
+			<section class="mt-12 p-8 rounded-2xl bg-slate-900 border border-white/10 flex flex-col md:flex-row items-center gap-6">
+				<div class="w-20 h-20 shrink-0 rounded-full bg-gradient-to-tr from-emerald-500 to-sky-500 p-1">
+					<div class="w-full h-full rounded-full bg-slate-950 flex items-center justify-center text-white font-['Chakra_Petch'] font-bold text-2xl">
+						GS
+					</div>
+				</div>
+				<div>
+					<h3 class="font-['Chakra_Petch'] font-bold text-xl text-white">Written by Gurpreet Singh</h3>
+					<p class="text-sm text-emerald-400 mb-2 font-['Geist_Mono']">Lead Developer, Dino Run Epochs</p>
+					<p class="text-sm text-slate-300 leading-relaxed">
+						Gurpreet engineered the physics logic, Rive integrations, and biome transition shaders for the game. When he's not optimizing WebAssembly frame rates, he's probably setting a new high score in the Ice Age epoch.
+					</p>
 				</div>
 			</section>
 

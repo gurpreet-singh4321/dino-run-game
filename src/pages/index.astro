@@ -56,6 +56,29 @@ import FeedbackForm from '../components/FeedbackForm';
 		<!-- Technical Specifications & Flame Engine Details -->
 		<EngineArchitecture />
 
+		<!-- Developer Note / E-E-A-T Author Signal -->
+		<section class="w-full py-16 px-4 md:px-8 max-w-[1000px] mx-auto text-slate-300 font-['Outfit'] border-t border-white/10 mt-8">
+			<div class="bg-slate-900/50 p-8 md:p-10 rounded-3xl border border-white/5 relative overflow-hidden">
+				<h2 class="text-2xl md:text-3xl font-bold text-white font-['Chakra_Petch'] mb-4 flex items-center gap-3">
+					<span class="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400">
+						<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 256 256"><path d="M230.14,58.87A8,8,0,0,0,224,56H200V40a16,16,0,0,0-16-16H72A16,16,0,0,0,56,40V56H32a8,8,0,0,0-6.14,2.87,8,8,0,0,0-1.72,6.54l14.41,72A40.09,40.09,0,0,0,72,168v40a16,16,0,0,0,16,16h80a16,16,0,0,0,16-16V168a40.09,40.09,0,0,0,33.45-30.56l14.41-72A8,8,0,0,0,230.14,58.87ZM56,128.71V72H72v64.67A24,24,0,0,1,56,128.71ZM168,208H88V165.75a40,40,0,0,0,80,0ZM184,136H72V40H184ZM200,128.71a24,24,0,0,1-16,7.92V72h16Z"></path></svg>
+					</span>
+					Built by an Indie Developer
+				</h2>
+				<div class="space-y-4 text-sm md:text-base leading-relaxed">
+					<p>
+						Hey, I'm Gurpreet Singh! I built Dino Run Epochs because I loved the original Chrome offline dinosaur game but wanted to see what would happen if we pushed it to the absolute limit. 
+					</p>
+					<p>
+						Instead of the classic endless desert loop, I used <strong>Flutter and the Flame engine</strong> to engineer a full procedural world with 6 distinct epochs (like the Ice Age and Cosmos), dynamic physics, and real-time shader transitions. It's compiled to WebAssembly (WASM) so you can get native 60FPS performance directly in your browser with zero downloads. 
+					</p>
+					<p>
+						If you have feedback or want to see a new biome, <a href="/contact" class="text-emerald-400 hover:text-emerald-300 underline underline-offset-4">drop me a line</a>. Happy running!
+					</p>
+				</div>
+			</div>
+		</section>
+
 		<!-- Knowledge Base FAQ -->
 		<GameFaq client:visible />
 
