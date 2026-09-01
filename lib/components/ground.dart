@@ -231,6 +231,19 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
           Color(0xFF060310), // Void abyss
         ],
       );
+    } else if (currentBiome == 'FOREST') {
+      gradient = const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        stops: [0.0, 0.14, 0.38, 0.68, 1.0],
+        colors: [
+          Color(0xFF8BC34A), // Lush sunlit emerald moss & vibrant forest turf
+          Color(0xFF689F38), // Lush green moss layer
+          Color(0xFF436A22), // Rich fertile forest humus soil
+          Color(0xFF2B4415), // Dark nutrient-dense forest peat
+          Color(0xFF17260B), // Deep ancient root-rock bedrock
+        ],
+      );
     } else {
       gradient = LinearGradient(
         begin: Alignment.topCenter,
@@ -245,7 +258,9 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
         ? const Color(0xFFFFF1A8)
         : (currentBiome == 'COSMOS'
             ? const Color(0xFF4DEEEA)
-            : topColor);
+            : (currentBiome == 'FOREST'
+                ? const Color(0xFFCCFF90)
+                : topColor));
     canvas.drawLine(
       Offset(0, y),
       Offset(w, y),
@@ -559,12 +574,82 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
         final r = (i % 3 == 0) ? 1.6 : 1.1;
         canvas.drawCircle(Offset(px, py), r, isCyan ? motePaintCyan : motePaintMagenta);
       }
+    } else if (currentBiome == 'FOREST' && detailAlpha > 0.05) {
+      // 🌲 1. Subterranean Ancient Tree Roots Winding through Forest Soil Strata
+      final rootPaint = Paint()
+        ..color = const Color(0xFF4E342E).withValues(alpha: 0.75 * detailAlpha)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3.2
+        ..strokeCap = StrokeCap.round;
+
+      final rootLightPaint = Paint()
+        ..color = const Color(0xFF8D6E63).withValues(alpha: 0.55 * detailAlpha)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.2
+        ..strokeCap = StrokeCap.round;
+
+      const rootSpacing = 160.0;
+      int rIdx = 0;
+      for (double rx = -(_scrollOffset % rootSpacing); rx < w + rootSpacing; rx += rootSpacing) {
+        rIdx++;
+        final rootPath = Path()
+          ..moveTo(rx, y + 6.0)
+          ..quadraticBezierTo(rx + 25.0, y + 18.0 + (rIdx % 3) * 4.0, rx + 55.0, y + 22.0)
+          ..quadraticBezierTo(rx + 85.0, y + 26.0, rx + 110.0, y + 36.0 + (rIdx % 2) * 6.0);
+
+        canvas.drawPath(rootPath, rootPaint);
+        canvas.drawPath(rootPath, rootLightPaint);
+
+        // Branch rootlet
+        final branchPath = Path()
+          ..moveTo(rx + 55.0, y + 22.0)
+          ..quadraticBezierTo(rx + 70.0, y + 34.0, rx + 82.0, y + 44.0);
+        canvas.drawPath(branchPath, rootLightPaint);
+      }
+
+      // 🌲 2. Lush Surface Grass Tufts & Clover Rosettes along the forest edge
+      const grassSpacing = 28.0;
+      int gIdx = 0;
+      final grassLight = Paint()..color = const Color(0xFFAEEA00).withValues(alpha: 0.90 * detailAlpha);
+      final grassEmerald = Paint()..color = const Color(0xFF64DD17).withValues(alpha: 0.85 * detailAlpha);
+      final flowerPaint = Paint()..color = const Color(0xFFFFEE58).withValues(alpha: 0.95 * detailAlpha);
+
+      for (double gx = -(_scrollOffset % grassSpacing); gx < w + grassSpacing; gx += grassSpacing) {
+        gIdx++;
+        final bladeH = 5.0 + (gIdx % 4) * 2.0;
+        final gPath = Path()
+          ..moveTo(gx, y + 1.0)
+          ..quadraticBezierTo(gx + 2.0, y - bladeH * 0.7, gx + 4.0, y - bladeH)
+          ..quadraticBezierTo(gx + 3.0, y - bladeH * 0.3, gx + 2.0, y + 1.0)
+          ..close();
+
+        canvas.drawPath(gPath, (gIdx % 2 == 0) ? grassLight : grassEmerald);
+
+        // Tiny forest wildflowers every 4th tuft
+        if (gIdx % 4 == 0) {
+          canvas.drawCircle(Offset(gx + 4.0, y - bladeH), 1.6, flowerPaint);
+          canvas.drawCircle(Offset(gx + 4.0, y - bladeH), 0.7, Paint()..color = Colors.white);
+        }
+      }
+
+      // 🌲 3. Glowing Fairy Spore Motes & Fireflies in Soil and Glade
+      final sporePaintLime = Paint()..color = const Color(0xFFCCFF90).withValues(alpha: 0.85 * detailAlpha);
+      final sporePaintGold = Paint()..color = const Color(0xFFFFD54F).withValues(alpha: 0.80 * detailAlpha);
+
+      for (int i = 0; i < 20; i++) {
+        final seedX = (i * 103.0);
+        final px = (seedX - _scrollOffset) % (w + 40.0) - 20.0;
+        final py = y + 8.0 + (i * 4.7) % (groundHeight - 14.0);
+        final pulse = 0.8 + 0.2 * math.sin(_time * 4.0 + i);
+        final isLime = (i % 2 == 0);
+        canvas.drawCircle(Offset(px, py), 1.4 * pulse, isLime ? sporePaintLime : sporePaintGold);
+      }
     }
 
     canvas.clipRect(Rect.fromLTWH(0, y, w, groundHeight));
 
     // Fallback small pebbles (deterministic scrolling positions)
-    if (currentBiome != 'DESERT' && currentBiome != 'RAIN' && currentBiome != 'STORM' && currentBiome != 'COSMOS') {
+    if (currentBiome != 'DESERT' && currentBiome != 'RAIN' && currentBiome != 'STORM' && currentBiome != 'COSMOS' && currentBiome != 'FOREST') {
       final pebblePaint = Paint()..color = bottomColor.withValues(alpha: 0.3);
       for (int i = 0; i < 12; i++) {
         final seedX = (i * 127.0);

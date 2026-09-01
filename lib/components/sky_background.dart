@@ -2204,7 +2204,7 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     }
 
     if (_forestBgImage != null && biome == 'FOREST') {
-      _drawTiledParallaxImage(canvas, _forestBgImage!, mirrorTiling: true);
+      _drawTiledParallaxImage(canvas, _forestBgImage!, mirrorTiling: false);
       _drawForestAtmosphere(canvas, size.x, yGround);
       return;
     }
