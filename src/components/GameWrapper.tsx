@@ -20,6 +20,7 @@ export default function GameWrapper() {
   const [iframeKey, setIframeKey] = useState(0);
   const [isPortraitMobile, setIsPortraitMobile] = useState(false);
   const [dismissLandscapePrompt, setDismissLandscapePrompt] = useState(false);
+  const [hasStarted, setHasStarted] = useState(false);
 
   useEffect(() => {
     const checkOrientation = () => {
@@ -54,6 +55,7 @@ export default function GameWrapper() {
   const enterFullscreenMode = async () => {
     soundManager.pauseOst();
     setIsFullscreen(true);
+    setHasStarted(true);
     document.body.style.overflow = 'hidden';
 
     const el = containerRef.current || document.documentElement;
@@ -104,6 +106,12 @@ export default function GameWrapper() {
   const reloadGame = () => {
     soundManager.pauseOst();
     setIframeKey(prev => prev + 1);
+    setHasStarted(true);
+  };
+
+  const startGame = () => {
+    soundManager.playUiClick();
+    setHasStarted(true);
   };
 
   return (
@@ -140,8 +148,10 @@ export default function GameWrapper() {
         }`}>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-400" />
-              <span className="text-slate-300 font-semibold text-[11px]">RUNNER ENGINE ACTIVE</span>
+              <span className={`w-2 h-2 rounded-full ${hasStarted ? 'bg-emerald-400' : 'bg-amber-400 animate-pulse'}`} />
+              <span className="text-slate-300 font-semibold text-[11px] uppercase">
+                {hasStarted ? 'RUNNER ENGINE ACTIVE' : 'ENGINE STANDBY'}
+              </span>
             </div>
             <span className="text-slate-600 hidden md:inline">•</span>
             <span className="text-slate-400 hidden md:inline text-[11px]">CANVASKIT 60FPS</span>
@@ -158,17 +168,19 @@ export default function GameWrapper() {
               title="Toggle CRT Scanline Effect"
             >
               <Television size={13} weight={scanlines ? "fill" : "regular"} />
-              <span>CRT Filter</span>
+              <span className="hidden sm:inline">CRT Filter</span>
             </button>
 
-            <button
-              onClick={reloadGame}
-              className="p-1 sm:px-2.5 sm:py-1 rounded-md bg-white/[0.03] border border-white/8 text-slate-400 hover:text-white transition-colors flex items-center gap-1 text-[11px] cursor-pointer"
-              title="Restart Game"
-            >
-              <ArrowClockwise size={13} />
-              <span className="hidden sm:inline">Reset</span>
-            </button>
+            {hasStarted && (
+              <button
+                onClick={reloadGame}
+                className="p-1 sm:px-2.5 sm:py-1 rounded-md bg-white/[0.03] border border-white/8 text-slate-400 hover:text-white transition-colors flex items-center gap-1 text-[11px] cursor-pointer"
+                title="Restart Game"
+              >
+                <ArrowClockwise size={13} />
+                <span className="hidden sm:inline">Reset</span>
+              </button>
+            )}
 
             <button
               onClick={toggleFullscreen}
@@ -191,19 +203,51 @@ export default function GameWrapper() {
         </div>
 
         {/* Recessed Game Screen Frame */}
-        <div className={`relative w-full overflow-hidden bg-black ${
+        <div className={`relative w-full overflow-hidden bg-slate-950 ${
           isFullscreen 
             ? 'flex-1 w-full h-full rounded-none border-none' 
             : 'aspect-[16/10] sm:aspect-video rounded-xl border border-white/8 shadow-inner'
         }`}>
           
-          <iframe
-            key={iframeKey}
-            src="/game/index.html"
-            title="Dino Run Epochs Arcade Game - Play Online"
-            className="w-full h-full border-0 outline-none bg-black"
-            allow="autoplay; fullscreen; accelerometer"
-          />
+          {!hasStarted ? (
+            <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center z-10">
+              <div 
+                className="absolute inset-0 bg-cover bg-center opacity-40 grayscale-[0.3]"
+                style={{ backgroundImage: 'url(/assets/backgrounds/bg_forest.jpg)' }}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/60 to-transparent" />
+              
+              <div className="relative z-10 flex flex-col items-center max-w-[500px]">
+                <button
+                  onClick={startGame}
+                  className="group relative px-10 py-5 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-['Chakra_Petch'] font-bold text-2xl uppercase tracking-wider transition-all shadow-[0_0_40px_rgba(245,158,11,0.3)] hover:shadow-[0_0_60px_rgba(245,158,11,0.5)] active:scale-95 flex items-center gap-3 cursor-pointer overflow-hidden"
+                >
+                  <div className="absolute inset-0 bg-white/20 translate-y-[100%] group-hover:translate-y-[0%] transition-transform duration-300" />
+                  <Play size={28} weight="fill" className="relative z-10" />
+                  <span className="relative z-10">Play Now</span>
+                </button>
+
+                <p className="mt-6 text-white font-['Geist_Mono'] font-bold tracking-widest text-sm flex items-center gap-3 uppercase">
+                  <span>Free</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                  <span>No Download</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-sky-400" />
+                  <span>7 Epochs</span>
+                </p>
+                <p className="mt-3 text-slate-400 text-sm font-['Outfit']">
+                  Works seamlessly on Desktop & Mobile.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <iframe
+              key={iframeKey}
+              src="/game/index.html"
+              title="Dino Run Epochs Arcade Game - Play Online"
+              className="w-full h-full border-0 outline-none bg-black"
+              allow="autoplay; fullscreen; accelerometer"
+            />
+          )}
 
           {/* CRT Scanline Overlay */}
           {scanlines && (
@@ -211,7 +255,7 @@ export default function GameWrapper() {
           )}
 
           {/* Mobile Landscape Advice */}
-          {isPortraitMobile && !dismissLandscapePrompt && !isFullscreen && (
+          {hasStarted && isPortraitMobile && !dismissLandscapePrompt && !isFullscreen && (
             <div className="absolute inset-0 bg-slate-950/95 backdrop-blur-md z-30 flex flex-col items-center justify-center p-6 text-center text-white space-y-3">
               <DeviceMobile size={40} className="text-slate-300 animate-bounce" />
               <h4 className="font-['Chakra_Petch'] font-bold text-lg">Rotate to Landscape</h4>
@@ -245,7 +289,7 @@ export default function GameWrapper() {
               <span><strong>P / ESC</strong> Pause</span>
             </div>
             <div className="text-slate-500 hidden sm:inline">
-              Instant WASM Runtime • No Sign-up
+              High Score: <span className="text-amber-400 font-bold">SAVED LOCALLY</span>
             </div>
           </div>
         )}

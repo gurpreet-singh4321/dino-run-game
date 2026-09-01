@@ -23,14 +23,14 @@ import FeedbackForm from '../components/FeedbackForm';
 	<Navbar pathname={Astro.url.pathname} client:load />
 
 	<main class="w-full relative z-10 flex flex-col items-center">
-		<!-- Hero Section -->
-		<Hero client:load />
+		<!-- Arcade Gameplay Viewport Area (Now the Hero) -->
+		<GameWrapper client:load />
 
 		<!-- Top Leaderboard Ad Slot (Guarded, 728x90) -->
 		<AdBanner client:visible format="leaderboard" className="w-full max-w-[1360px] px-4" />
 
-		<!-- Arcade Gameplay Viewport Area -->
-		<GameWrapper client:load />
+		<!-- Game Features Presentation -->
+		<Hero client:load />
 
 		<!-- Community Standings / Arcade Hall of Fame & Rectangle Ad Unit -->
 		<section class="w-full py-8 px-4 md:px-8 max-w-[1360px] mx-auto">
