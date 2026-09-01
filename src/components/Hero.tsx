@@ -105,7 +105,7 @@ export default function Hero() {
           </div>
 
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-white font-['Chakra_Petch'] leading-[1.08]">
-            THE CHROME DINO <br className="hidden sm:block" />
+            THE DINO <br className="hidden sm:block" />
             RE-ENGINEERED <br className="hidden sm:block" />
             <span className="text-amber-400 block sm:inline mt-1 sm:mt-0">
               ACROSS 6 EPOCHS.

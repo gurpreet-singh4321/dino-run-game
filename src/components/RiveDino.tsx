@@ -76,15 +76,6 @@ export default function RiveDino({ className = "w-24 h-24" }: RiveDinoProps) {
         ref={canvasRef}
         className={`w-full h-full object-contain ${riveLoaded ? 'opacity-100' : 'opacity-0'} transition-opacity duration-300`}
       />
-      {!riveLoaded && (
-        <img 
-          src="/assets/dino_sprite.png" 
-          alt="Dino Rex Sprite" 
-          className="absolute inset-0 w-full h-full object-contain pixelated drop-shadow-[0_4px_12px_rgba(245,158,11,0.4)]"
-          width="96"
-          height="96"
-        />
-      )}
     </div>
   );
 }
