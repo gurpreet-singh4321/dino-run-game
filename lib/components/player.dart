@@ -520,133 +520,203 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
     }
   }
 
-  /// 🚀 Sci-Fi Dual-Thruster Jetpack & Plasma Plume (Backpack Tanks & Exhaust)
+  /// 🚀 High-Tech Stylized Sci-Fi Jetpack (Aero-Chassis, Dual Thrusters, Arc Reactor & Plasma Plumes)
   void _renderJetpackBack(Canvas canvas, Size drawSize) {
     final w = drawSize.width;
     final h = drawSize.height;
 
-    // Dino is facing right. The jetpack sits on Dino's back (left side: x ~ 0.14w to 0.32w, y ~ 0.44h to 0.72h)
-    final packLeft = w * 0.14;
+    // Dino is facing right. Jetpack is mounted on the back (left side: x ~ 0.08w to 0.30w, y ~ 0.44h to 0.74h)
+    final packLeft = w * 0.10;
     final packTop = h * 0.46;
-    final packW = w * 0.18;
-    final packH = h * 0.26;
+    final packW = w * 0.22;
+    final packH = h * 0.28;
 
     final isFiring = isThrusting || game.spacePhase == SpacePhase.launch;
 
-    // 1. Dual Plasma Exhaust Plumes (Shooting downward from rocket nozzles)
-    final flamePulse = 0.85 + 0.15 * math.sin(_totalElapsed * (isFiring ? 28.0 : 12.0));
-    final flameLen = isFiring ? (32.0 * flamePulse) : (14.0 * flamePulse);
+    // 1. Dual High-Velocity Plasma Exhaust Jets (Shooting downward from rocket nozzles)
+    final flamePulse = 0.85 + 0.15 * math.sin(_totalElapsed * (isFiring ? 30.0 : 14.0));
+    final flameLen = isFiring ? (36.0 * flamePulse) : (16.0 * flamePulse);
     final nozzleY = packTop + packH;
 
     for (int t = 0; t < 2; t++) {
-      final nozzleX = packLeft + 3.0 + t * (packW - 8.0);
-      final flamePath = Path()
-        ..moveTo(nozzleX - 3.5, nozzleY)
-        ..lineTo(nozzleX + 3.5, nozzleY)
-        ..quadraticBezierTo(nozzleX + 2.0, nozzleY + flameLen * 0.6, nozzleX, nozzleY + flameLen)
-        ..quadraticBezierTo(nozzleX - 2.0, nozzleY + flameLen * 0.6, nozzleX - 3.5, nozzleY)
+      final nozzleX = packLeft + 4.5 + t * (packW - 9.0);
+      final flameW = isFiring ? 8.0 : 5.0;
+
+      // Outer Plasma Energy Sheath
+      final outerFlamePath = Path()
+        ..moveTo(nozzleX - flameW * 0.5, nozzleY)
+        ..lineTo(nozzleX + flameW * 0.5, nozzleY)
+        ..quadraticBezierTo(nozzleX + flameW * 0.3, nozzleY + flameLen * 0.65, nozzleX, nozzleY + flameLen)
+        ..quadraticBezierTo(nozzleX - flameW * 0.3, nozzleY + flameLen * 0.65, nozzleX - flameW * 0.5, nozzleY)
         ..close();
 
-      // Outer Plasma Glow
       final outerFlameShader = LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: isFiring
             ? const [Color(0xFF00E5FF), Color(0xFF7C4DFF), Color(0x00FF4081)]
-            : const [Color(0x9900E5FF), Color(0x44448AFF), Colors.transparent],
-        stops: const [0.0, 0.6, 1.0],
-      ).createShader(Rect.fromLTWH(nozzleX - 6, nozzleY, 12, flameLen));
+            : const [Color(0xBB00E5FF), Color(0x5500B0FF), Colors.transparent],
+        stops: const [0.0, 0.65, 1.0],
+      ).createShader(Rect.fromLTWH(nozzleX - flameW, nozzleY, flameW * 2, flameLen));
 
       canvas.drawPath(
-        flamePath,
+        outerFlamePath,
         Paint()
           ..shader = outerFlameShader
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2),
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.5),
       );
 
-      // Inner White-Hot Core
-      final corePath = Path()
-        ..moveTo(nozzleX - 1.8, nozzleY)
-        ..lineTo(nozzleX + 1.8, nozzleY)
-        ..lineTo(nozzleX, nozzleY + flameLen * 0.55)
+      // Mid Electric Cyan Thrust Jet
+      final midFlamePath = Path()
+        ..moveTo(nozzleX - flameW * 0.3, nozzleY)
+        ..lineTo(nozzleX + flameW * 0.3, nozzleY)
+        ..lineTo(nozzleX, nozzleY + flameLen * 0.8)
         ..close();
-      canvas.drawPath(corePath, Paint()..color = Colors.white.withValues(alpha: isFiring ? 0.95 : 0.7));
+      canvas.drawPath(
+        midFlamePath,
+        Paint()..color = (isFiring ? const Color(0xFF18FFFF) : const Color(0xFF80D8FF)).withValues(alpha: 0.9),
+      );
+
+      // Inner White-Hot Shock Diamond Core
+      final corePath = Path()
+        ..moveTo(nozzleX - flameW * 0.15, nozzleY)
+        ..lineTo(nozzleX + flameW * 0.15, nozzleY)
+        ..lineTo(nozzleX, nozzleY + flameLen * 0.45)
+        ..close();
+      canvas.drawPath(corePath, Paint()..color = Colors.white.withValues(alpha: isFiring ? 0.98 : 0.85));
+
+      // Dynamic Plasma Spark Particles
+      if (isFiring) {
+        for (int p = 0; p < 2; p++) {
+          final sparkOffset = math.sin(_totalElapsed * 24.0 + t * 5.0 + p * 3.0) * 3.5;
+          final sparkY = nozzleY + flameLen * (0.6 + p * 0.3);
+          canvas.drawCircle(
+            Offset(nozzleX + sparkOffset, sparkY),
+            1.2,
+            Paint()..color = const Color(0xFF80D8FF).withValues(alpha: 0.8),
+          );
+        }
+      }
     }
 
-    // 2. Twin Titanium Fuel Canisters
+    // 2. Central Aero-Chassis Shell (Ergonomic Matte White & Carbon Titanium Backplate)
+    final chassisRect = Rect.fromLTWH(packLeft + 2.0, packTop + 2.0, packW - 4.0, packH - 6.0);
+    final chassisShader = const LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [
+        Color(0xFFECEFF1), // Clean astronaut white
+        Color(0xFFB0BEC5), // High-tech matte alloy
+        Color(0xFF37474F), // Shadowed dark trim
+      ],
+      stops: [0.0, 0.55, 1.0],
+    ).createShader(chassisRect);
+
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(chassisRect, const Radius.circular(5.0)),
+      Paint()..shader = chassisShader,
+    );
+
+    // 3. Twin High-Pressure Titanium Thruster Pods
     for (int t = 0; t < 2; t++) {
-      final tankRect = Rect.fromLTWH(packLeft + t * (packW * 0.52), packTop, packW * 0.46, packH - 4);
-      final tankShader = const LinearGradient(
+      final podW = (packW - 3.0) * 0.46;
+      final podLeft = packLeft + t * (podW + 3.0);
+      final podRect = Rect.fromLTWH(podLeft, packTop, podW, packH - 4.0);
+
+      final podShader = const LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
-          Color(0xFFCFD8DC), // Chrome highlight
-          Color(0xFF90A4AE), // Mid titanium
-          Color(0xFF37474F), // Shadowed edge
+          Color(0xFFFFFFFF), // Specular chrome highlight
+          Color(0xFF78909C), // Spacecraft titanium
+          Color(0xFF263238), // Carbon dark edge
         ],
-        stops: [0.0, 0.45, 1.0],
-      ).createShader(tankRect);
+        stops: [0.0, 0.40, 1.0],
+      ).createShader(podRect);
 
       canvas.drawRRect(
-        RRect.fromRectAndRadius(tankRect, const Radius.circular(4)),
-        Paint()..shader = tankShader,
+        RRect.fromRectAndRadius(podRect, const Radius.circular(4.0)),
+        Paint()..shader = podShader,
       );
 
-      // Cyan Glowing Energy Fuel Core Slit
-      final slitRect = Rect.fromLTWH(tankRect.left + 2.5, tankRect.top + 5, tankRect.width - 5, tankRect.height - 10);
-      final slitPulse = 0.75 + 0.25 * math.sin(_totalElapsed * 6.0 + t);
+      // Top Intake Aero Cap & LED Status Indicator
+      final capRect = Rect.fromLTWH(podLeft + 1.0, packTop - 2.5, podW - 2.0, 3.2);
       canvas.drawRRect(
-        RRect.fromRectAndRadius(slitRect, const Radius.circular(2)),
-        Paint()..color = const Color(0xFF00E5FF).withValues(alpha: 0.85 * slitPulse),
-      );
-
-      // Bottom Bell Nozzles
-      final nozzleRect = Rect.fromLTWH(tankRect.left - 1, packTop + packH - 4, tankRect.width + 2, 4.5);
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(nozzleRect, const Radius.circular(1.5)),
+        RRect.fromRectAndRadius(capRect, const Radius.circular(1.5)),
         Paint()..color = const Color(0xFF263238),
       );
+      canvas.drawCircle(
+        Offset(podRect.center.dx, packTop - 1.0),
+        1.1,
+        Paint()..color = (t == 0 ? const Color(0xFF00E676) : const Color(0xFF00E5FF)),
+      );
+
+      // Neon Cyan Energy Level Conduit Line
+      final conduitRect = Rect.fromLTWH(podLeft + 2.2, packTop + 5.0, podW - 4.4, podRect.height - 12.0);
+      final pulse = 0.75 + 0.25 * math.sin(_totalElapsed * 6.0 + t * 2.0);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(conduitRect, const Radius.circular(1.5)),
+        Paint()..color = const Color(0xFF00E5FF).withValues(alpha: 0.90 * pulse),
+      );
+
+      // Heavy Vector Bell Nozzle
+      final nozzleRect = Rect.fromLTWH(podLeft - 0.5, packTop + packH - 4.0, podW + 1.0, 4.5);
+      final nozzleShader = const LinearGradient(
+        colors: [Color(0xFF455A64), Color(0xFF212121)],
+      ).createShader(nozzleRect);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(nozzleRect, const Radius.circular(1.5)),
+        Paint()..shader = nozzleShader,
+      );
+
       // Nozzle Heat Glow Rim
       canvas.drawLine(
         Offset(nozzleRect.left, nozzleRect.bottom),
         Offset(nozzleRect.right, nozzleRect.bottom),
         Paint()
-          ..color = const Color(0xFFFF9100).withValues(alpha: isFiring ? 0.9 : 0.4)
-          ..strokeWidth = 1.2,
-      );
-
-      // Top Intake Cap & LED
-      final capRect = Rect.fromLTWH(tankRect.left + 1, packTop - 2.5, tankRect.width - 2, 3);
-      canvas.drawOval(capRect, Paint()..color = const Color(0xFF455A64));
-      canvas.drawCircle(
-        Offset(tankRect.center.dx, packTop - 1),
-        1.2,
-        Paint()..color = (t == 0 ? const Color(0xFF76FF03) : const Color(0xFF00E5FF)),
+          ..color = (isFiring ? const Color(0xFFFF9100) : const Color(0xFF00E5FF)).withValues(alpha: 0.95)
+          ..strokeWidth = 1.4,
       );
     }
+
+    // 4. Central Arc Reactor Core (Pulsating Blue Core on Jetpack Center)
+    final coreCenter = Offset(packLeft + packW * 0.5, packTop + packH * 0.42);
+    final corePulse = 0.8 + 0.2 * math.sin(_totalElapsed * 8.0);
+    canvas.drawCircle(coreCenter, 3.6, Paint()..color = const Color(0xFF263238));
+    canvas.drawCircle(coreCenter, 2.5, Paint()..color = const Color(0xFF00E5FF).withValues(alpha: corePulse));
+    canvas.drawCircle(coreCenter, 1.2, Paint()..color = Colors.white);
   }
 
-  /// 🚀 Sci-Fi Jetpack Mounting Harness & Chest Buckle (Front Layer over Dino)
+  /// 🚀 Sci-Fi Jetpack Torso Harness & Chest Buckle (Properly positioned across torso, never covering the face/eye)
   void _renderJetpackFront(Canvas canvas, Size drawSize) {
     final w = drawSize.width;
     final h = drawSize.height;
 
-    // Dark carbon-fiber mounting strap over Dino's shoulder / chest
+    // Dark padded tech strap across Dino's upper torso/belly (clearing head and eyes)
     final strapPaint = Paint()
-      ..color = const Color(0xFF212121).withValues(alpha: 0.85)
-      ..strokeWidth = 3.2
+      ..color = const Color(0xFF263238).withValues(alpha: 0.90)
+      ..strokeWidth = 2.8
       ..strokeCap = StrokeCap.round
       ..style = PaintingStyle.stroke;
 
     final strapPath = Path()
-      ..moveTo(w * 0.28, h * 0.50)
-      ..quadraticBezierTo(w * 0.38, h * 0.56, w * 0.52, h * 0.57);
+      ..moveTo(w * 0.22, h * 0.64)
+      ..quadraticBezierTo(w * 0.36, h * 0.68, w * 0.52, h * 0.67);
     canvas.drawPath(strapPath, strapPaint);
 
-    // Metallic Golden Chest Buckle Badge
-    final buckleCenter = Offset(w * 0.44, h * 0.56);
+    // Cyan Telemetry Stripe on the harness strap
+    final stripePaint = Paint()
+      ..color = const Color(0xFF00E5FF).withValues(alpha: 0.85)
+      ..strokeWidth = 1.0
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+    canvas.drawPath(strapPath, stripePaint);
+
+    // Sci-Fi Metallic Chest Buckle Badge with LED Indicator
+    final buckleCenter = Offset(w * 0.40, h * 0.67);
     canvas.drawCircle(buckleCenter, 3.2, Paint()..color = const Color(0xFFFFD54F));
-    canvas.drawCircle(buckleCenter, 1.5, Paint()..color = const Color(0xFF37474F));
+    canvas.drawCircle(buckleCenter, 1.8, Paint()..color = const Color(0xFF263238));
+    canvas.drawCircle(buckleCenter, 0.9, Paint()..color = const Color(0xFF00E5FF));
   }
 
   /// 🫧 Cute Iridescent Soap Bubble Shield centered on Dino

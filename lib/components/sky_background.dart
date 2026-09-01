@@ -37,6 +37,7 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
   ui.Image? _iceBgImage;
   ui.Image? _volcanoBgImage;
   ui.Image? _cosmosBgImage;
+  ui.Image? _spaceBgImage;
 
   @override
   Future<void> onLoad() async {
@@ -112,6 +113,18 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     } catch (_) {
       try {
         _cosmosBgImage = await game.images.load('cosmos_bg.jpg');
+      } catch (_) {}
+    }
+
+    try {
+      final data = await rootBundle.load('assets/images/space_bg.jpg');
+      final bytes = data.buffer.asUint8List();
+      final codec = await ui.instantiateImageCodec(bytes);
+      final frame = await codec.getNextFrame();
+      _spaceBgImage = frame.image;
+    } catch (_) {
+      try {
+        _spaceBgImage = await game.images.load('space_bg.jpg');
       } catch (_) {}
     }
 
@@ -662,8 +675,8 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     final w = size.x;
     final h = size.y;
 
-    // 1. Deep Space Low-Earth Orbit Image Layer (3-panel continuous panoramic Earth orbit)
-    final spaceImg = _cosmosBgImage;
+    // 1. Deep Space Low-Earth Orbit Image Layer (Continuous panoramic Earth orbit)
+    final spaceImg = _spaceBgImage ?? _cosmosBgImage;
     if (spaceImg != null) {
       _drawTiledParallaxImage(
         canvas,
