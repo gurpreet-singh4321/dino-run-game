@@ -405,55 +405,6 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
         canvas.drawOval(Rect.fromCenter(center: Offset(fx + 120, y + 32), width: 5.5, height: 3.5), amberPebblePaint);
         canvas.drawCircle(Offset(fx + 119, y + 31), 0.8, agateHighlightPaint);
       }
-    } else if (currentBiome == 'FOREST' && detailAlpha > 0.05) {
-      // 1. Grass tufts along ground surface
-      final grassPaint = Paint()
-        ..color = const Color(0xFF2E7D32).withValues(alpha: detailAlpha)
-        ..strokeWidth = 2.0;
-      for (double gx = -(_scrollOffset % 40.0); gx < w + 40; gx += 40.0) {
-        canvas.drawLine(Offset(gx, y), Offset(gx - 3, y - 6), grassPaint);
-        canvas.drawLine(Offset(gx, y), Offset(gx + 3, y - 8), grassPaint);
-        canvas.drawLine(Offset(gx, y), Offset(gx + 6, y - 5), grassPaint);
-      }
-
-      // 2. Easter Egg: Glowing Dinosaur Fossil Tracks & Amber Stones on Forest Floor
-      final fossilPaint = Paint()
-        ..color = const Color(0xFF81C784).withValues(alpha: 0.55 * detailAlpha)
-        ..strokeWidth = 1.8
-        ..style = PaintingStyle.stroke
-        ..strokeCap = StrokeCap.round;
-      final amberPaint = Paint()..color = const Color(0xFFFFD54F).withValues(alpha: 0.85 * detailAlpha);
-
-      for (double fx = -(_scrollOffset % 190.0) + 70; fx < w + 190; fx += 190.0) {
-        // 3-toed dinosaur footprint impression
-        canvas.drawLine(Offset(fx, y + 16), Offset(fx - 4, y + 8), fossilPaint);
-        canvas.drawLine(Offset(fx, y + 16), Offset(fx, y + 6), fossilPaint);
-        canvas.drawLine(Offset(fx, y + 16), Offset(fx + 4, y + 8), fossilPaint);
-        canvas.drawCircle(Offset(fx, y + 17), 2.0, fossilPaint..style = PaintingStyle.fill);
-
-        // Prehistoric glowing amber stone
-        canvas.drawOval(Rect.fromCenter(center: Offset(fx + 45, y + 24), width: 7, height: 5), amberPaint);
-        canvas.drawCircle(Offset(fx + 45, y + 24), 1.0, Paint()..color = Colors.white);
-      }
-    } else if (currentBiome == 'ICE' && detailAlpha > 0.05) {
-      // Frosty ice sheen top rim
-      final frostPaint = Paint()
-        ..color = Colors.white.withValues(alpha: 0.7 * detailAlpha)
-        ..strokeWidth = 3.0;
-      canvas.drawLine(Offset(0, y + 1), Offset(w, y + 1), frostPaint);
-    } else if (currentBiome == 'VOLCANO' && detailAlpha > 0.05) {
-      // Glowing animated fire & lava cracks
-      final crackPaint = Paint()
-        ..color = const Color(0xFFFF5722).withValues(alpha: 0.75 * detailAlpha)
-        ..strokeWidth = 1.8;
-      final fireGlowPaint = Paint()
-        ..color = const Color(0xFFFFD54F).withValues(alpha: 0.85 * detailAlpha)
-        ..strokeWidth = 1.0;
-      for (double cx = -(_scrollOffset % 60.0); cx < w + 60; cx += 60.0) {
-        canvas.drawLine(Offset(cx, y + 10), Offset(cx + 15, y + 25), crackPaint);
-        canvas.drawLine(Offset(cx + 15, y + 25), Offset(cx + 25, y + 18), crackPaint);
-        canvas.drawLine(Offset(cx + 4, y + 12), Offset(cx + 14, y + 23), fireGlowPaint);
-      }
     } else if ((currentBiome == 'RAIN' || currentBiome == 'STORM') && detailAlpha > 0.05) {
       // 1. Ancient Mossy Stone Block Slabs (Flagstone pavement - strictly scrolling left)
       final stoneBorderPaint = Paint()
@@ -512,6 +463,15 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
           canvas.drawCircle(Offset(px + 24 + 3, y - sH), 1.0, puddlePaint);
         }
       }
+
+      // ✨ Shimmering wet stone flecks
+      final wetSparklePaint = Paint()..color = const Color(0xFFE0F7FA).withValues(alpha: 0.85 * detailAlpha);
+      for (int i = 0; i < 24; i++) {
+        final seedX = i * 67.3;
+        final gx = (seedX - _scrollOffset) % (w + 40.0) - 20.0;
+        final gy = y + 4.0 + ((i * 11.7) % (groundHeight - 12.0));
+        canvas.drawCircle(Offset(gx, gy), 1.0, wetSparklePaint);
+      }
     } else if (currentBiome == 'COSMOS' && detailAlpha > 0.05) {
       // 🌌 1. Bioluminescent Neon Cyan & Magenta Energy Currents
       final cyanEnergyPaint = Paint()
@@ -560,7 +520,28 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
       }
       canvas.drawPath(bPath, deepObsidianPaint..style = PaintingStyle.stroke);
 
-      // 🌌 2. Embedded Bioluminescent Cyan Crystal Shards (Deterministic scrolling)
+      // ✨ Glistening Stardust & Ion Quartz Flecks
+      final cosmosWhite = Paint()..color = const Color(0xFFFFFFFF).withValues(alpha: 0.90 * detailAlpha);
+      final cosmosCyan = Paint()..color = const Color(0xFF80DEEA).withValues(alpha: 0.85 * detailAlpha);
+      final cosmosMagenta = Paint()..color = const Color(0xFFFF80AB).withValues(alpha: 0.75 * detailAlpha);
+      final cosmosPurple = Paint()..color = const Color(0xFFCE93D8).withValues(alpha: 0.60 * detailAlpha);
+
+      for (int i = 0; i < 32; i++) {
+        final seedX = i * 61.3;
+        final gx = (seedX - _scrollOffset) % (w + 40.0) - 20.0;
+        final gy = y + 3.0 + ((i * 13.1) % (groundHeight - 12.0));
+        final grainRadius = 0.8 + ((i % 5) * 0.35);
+        final paint = (i % 4 == 0)
+            ? cosmosWhite
+            : (i % 3 == 0)
+                ? cosmosCyan
+                : (i % 2 == 0)
+                    ? cosmosMagenta
+                    : cosmosPurple;
+        canvas.drawCircle(Offset(gx, gy), grainRadius, paint);
+      }
+
+      // 🌌 2. Embedded Bioluminescent Cyan Crystal Shards
       const crystalSpacing = 135.0;
       int crystalIdx = 0;
       for (double cx = -(_scrollOffset % crystalSpacing); cx < w + crystalSpacing; cx += crystalSpacing) {
@@ -583,61 +564,114 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
         ).createShader(Rect.fromLTWH(cx + 8, y - shardH, 8, shardH + 1));
 
         canvas.drawPath(cPath, Paint()..shader = crystalShader);
-
-        // Crystal apex glint
         canvas.drawCircle(
           Offset(cx + 12, y - shardH),
           1.2,
           Paint()..color = Colors.white.withValues(alpha: 0.9 * detailAlpha),
         );
       }
-
-      // 🌌 3. Sparkling Stardust & Ion Quartz Motes in the Bedrock
-      final motePaintCyan = Paint()..color = const Color(0xFF80DEEA).withValues(alpha: 0.85 * detailAlpha);
-      final motePaintMagenta = Paint()..color = const Color(0xFFFF80AB).withValues(alpha: 0.75 * detailAlpha);
-
-      for (int i = 0; i < 24; i++) {
-        final seedX = (i * 97.0);
-        final px = (seedX - _scrollOffset) % (w + 40.0) - 20.0;
-        final py = y + 10.0 + (i * 5.3) % (groundHeight - 16.0);
-        final isCyan = (i % 2 == 0);
-        final r = (i % 3 == 0) ? 1.6 : 1.1;
-        canvas.drawCircle(Offset(px, py), r, isCyan ? motePaintCyan : motePaintMagenta);
-      }
     } else if (currentBiome == 'FOREST' && detailAlpha > 0.05) {
-      // 🌲 1. Subterranean Ancient Tree Roots Winding through Forest Soil Strata
-      final rootPaint = Paint()
-        ..color = const Color(0xFF4E342E).withValues(alpha: 0.75 * detailAlpha)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 3.2
+      // 🌲 1. Multi-layered Forest Humus Strata & Soil Wave Contours (Matching Desert Level Depth)
+      final forestHighlightPaint = Paint()
+        ..color = const Color(0xFFDCEDC8).withValues(alpha: 0.85 * detailAlpha)
+        ..strokeWidth = 2.0
         ..strokeCap = StrokeCap.round;
-
-      final rootLightPaint = Paint()
-        ..color = const Color(0xFF8D6E63).withValues(alpha: 0.55 * detailAlpha)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.2
+      final forestMidWavePaint = Paint()
+        ..color = const Color(0xFF7CB342).withValues(alpha: 0.70 * detailAlpha)
+        ..strokeWidth = 2.2
         ..strokeCap = StrokeCap.round;
+      final forestShadowWavePaint = Paint()
+        ..color = const Color(0xFF33691E).withValues(alpha: 0.65 * detailAlpha)
+        ..strokeWidth = 2.4
+        ..strokeCap = StrokeCap.round;
+      final forestDeepStrataPaint = Paint()
+        ..color = const Color(0xFF1B3E0B).withValues(alpha: 0.55 * detailAlpha)
+        ..strokeWidth = 3.0;
 
-      const rootSpacing = 160.0;
-      int rIdx = 0;
-      for (double rx = -(_scrollOffset % rootSpacing); rx < w + rootSpacing; rx += rootSpacing) {
-        rIdx++;
-        final rootPath = Path()
-          ..moveTo(rx, y + 6.0)
-          ..quadraticBezierTo(rx + 25.0, y + 18.0 + (rIdx % 3) * 4.0, rx + 55.0, y + 22.0)
-          ..quadraticBezierTo(rx + 85.0, y + 26.0, rx + 110.0, y + 36.0 + (rIdx % 2) * 6.0);
+      // Soft Top Emerald Forest Turf Crest Rim
+      final forestCrestPaint = Paint()
+        ..color = const Color(0xFFCCFF90).withValues(alpha: 0.95 * detailAlpha)
+        ..strokeWidth = 3.2;
+      canvas.drawLine(Offset(0, y + 1), Offset(w, y + 1), forestCrestPaint);
 
-        canvas.drawPath(rootPath, rootPaint);
-        canvas.drawPath(rootPath, rootLightPaint);
+      // Layer 1: Fine Upper Moss Waves (Wavelength ~28px)
+      const r1W = 28.0;
+      final r1Path = Path();
+      for (double rx = -(_scrollOffset % r1W) - r1W; rx < w + r1W; rx += r1W) {
+        r1Path.moveTo(rx, y + 5);
+        r1Path.quadraticBezierTo(rx + r1W * 0.5, y + 8, rx + r1W, y + 5);
+      }
+      canvas.drawPath(r1Path, forestHighlightPaint..style = PaintingStyle.stroke);
 
-        // Branch rootlet
-        final branchPath = Path()
-          ..moveTo(rx + 55.0, y + 22.0)
-          ..quadraticBezierTo(rx + 70.0, y + 34.0, rx + 82.0, y + 44.0);
-        canvas.drawPath(branchPath, rootLightPaint);
+      // Layer 2: Mid Loam Soil Contours (Wavelength ~54px)
+      const r2W = 54.0;
+      final r2LightPath = Path();
+      final r2DarkPath = Path();
+      for (double rx = -((_scrollOffset * 1.0) % r2W) - r2W; rx < w + r2W; rx += r2W) {
+        r2LightPath.moveTo(rx, y + 15);
+        r2LightPath.quadraticBezierTo(rx + 22, y + 20, rx + 44, y + 14);
+        r2DarkPath.moveTo(rx + 2, y + 17);
+        r2DarkPath.quadraticBezierTo(rx + 24, y + 22, rx + 46, y + 16);
+      }
+      canvas.drawPath(r2DarkPath, forestShadowWavePaint..style = PaintingStyle.stroke);
+      canvas.drawPath(r2LightPath, forestMidWavePaint..style = PaintingStyle.stroke);
+
+      // Layer 3: Lower Nutrient Peat Strata Wavebands (Wavelength ~90px)
+      const r3W = 90.0;
+      final r3Path = Path();
+      for (double rx = -((_scrollOffset * 1.0) % r3W) - r3W; rx < w + r3W; rx += r3W) {
+        r3Path.moveTo(rx, y + 32);
+        r3Path.cubicTo(rx + 25, y + 36, rx + 65, y + 28, rx + r3W, y + 33);
+      }
+      canvas.drawPath(r3Path, forestDeepStrataPaint..style = PaintingStyle.stroke);
+
+      // Layer 4: Deep Ancient Root-Rock Bedrock
+      final r4Path = Path();
+      for (double rx = -((_scrollOffset * 1.0) % 130.0) - 130.0; rx < w + 130.0; rx += 130.0) {
+        r4Path.moveTo(rx, y + 50);
+        r4Path.quadraticBezierTo(rx + 65, y + 56, rx + 130, y + 49);
+      }
+      canvas.drawPath(r4Path, forestDeepStrataPaint..style = PaintingStyle.stroke);
+
+      // ✨ 2. Shimmering Morning Dewdrops & Emerald Quartz Glistening Flecks (Just like Desert!)
+      final dewSparklePaint = Paint()..color = const Color(0xFFFFFFFF).withValues(alpha: 0.95 * detailAlpha);
+      final emeraldGlitterPaint = Paint()..color = const Color(0xFFB2FF59).withValues(alpha: 0.85 * detailAlpha);
+      final goldPollenPaint = Paint()..color = const Color(0xFFFFEE58).withValues(alpha: 0.75 * detailAlpha);
+      final forestPeatFlecks = Paint()..color = const Color(0xFF558B2F).withValues(alpha: 0.55 * detailAlpha);
+
+      for (int i = 0; i < 32; i++) {
+        final seedX = i * 59.3;
+        final gx = (seedX - _scrollOffset) % (w + 40.0) - 20.0;
+        final gy = y + 3.0 + ((i * 13.7) % (groundHeight - 12.0));
+        final grainRadius = 0.8 + ((i % 5) * 0.35);
+
+        final paint = (i % 4 == 0)
+            ? dewSparklePaint
+            : (i % 3 == 0)
+                ? emeraldGlitterPaint
+                : (i % 2 == 0)
+                    ? goldPollenPaint
+                    : forestPeatFlecks;
+        canvas.drawCircle(Offset(gx, gy), grainRadius, paint);
       }
 
-      // 🌲 2. Lush Surface Grass Tufts & Clover Rosettes along the forest edge
+      // 🌲 3. Polished Forest Jade, River Pebbles & Amber Fossils
+      final jadePebblePaint = Paint()..color = const Color(0xFF81C784).withValues(alpha: 0.85 * detailAlpha);
+      final jadeHighlightPaint = Paint()..color = Colors.white.withValues(alpha: 0.90 * detailAlpha);
+      final forestAmberPaint = Paint()..color = const Color(0xFFFFB300).withValues(alpha: 0.75 * detailAlpha);
+
+      const pebblePeriod = 180.0;
+      for (double fx = -(_scrollOffset % pebblePeriod) + 40; fx < w + pebblePeriod; fx += pebblePeriod) {
+        // Polished jade river stone
+        canvas.drawOval(Rect.fromCenter(center: Offset(fx + 35, y + 22), width: 7, height: 4.5), jadePebblePaint);
+        canvas.drawCircle(Offset(fx + 33.5, y + 21), 1.0, jadeHighlightPaint);
+
+        // Warm amber nodule
+        canvas.drawOval(Rect.fromCenter(center: Offset(fx + 120, y + 32), width: 5.5, height: 3.5), forestAmberPaint);
+        canvas.drawCircle(Offset(fx + 119, y + 31), 0.8, jadeHighlightPaint);
+      }
+
+      // 🌲 4. Surface Grass Tufts & Wildflower Clusters
       const grassSpacing = 28.0;
       int gIdx = 0;
       final grassLight = Paint()..color = const Color(0xFFAEEA00).withValues(alpha: 0.90 * detailAlpha);
@@ -655,61 +689,113 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
 
         canvas.drawPath(gPath, (gIdx % 2 == 0) ? grassLight : grassEmerald);
 
-        // Tiny forest wildflowers every 4th tuft
         if (gIdx % 4 == 0) {
           canvas.drawCircle(Offset(gx + 4.0, y - bladeH), 1.6, flowerPaint);
           canvas.drawCircle(Offset(gx + 4.0, y - bladeH), 0.7, Paint()..color = Colors.white);
         }
       }
-
-      // 🌲 3. Glowing Fairy Spore Motes & Fireflies in Soil and Glade
-      final sporePaintLime = Paint()..color = const Color(0xFFCCFF90).withValues(alpha: 0.85 * detailAlpha);
-      final sporePaintGold = Paint()..color = const Color(0xFFFFD54F).withValues(alpha: 0.80 * detailAlpha);
-
-      for (int i = 0; i < 20; i++) {
-        final seedX = (i * 103.0);
-        final px = (seedX - _scrollOffset) % (w + 40.0) - 20.0;
-        final py = y + 8.0 + (i * 4.7) % (groundHeight - 14.0);
-        final pulse = 0.8 + 0.2 * math.sin(_time * 4.0 + i);
-        final isLime = (i % 2 == 0);
-        canvas.drawCircle(Offset(px, py), 1.4 * pulse, isLime ? sporePaintLime : sporePaintGold);
-      }
     } else if (currentBiome == 'ICE' && detailAlpha > 0.05) {
-      // ❄️ 1. Subterranean Glacial Fractures & Crystalline Crevasses
-      final fracturePaint = Paint()
-        ..color = const Color(0xFF00E5FF).withValues(alpha: 0.65 * detailAlpha)
-        ..style = PaintingStyle.stroke
+      // ❄️ 1. Multi-layered Glacial Permafrost Strata & Ice Wave Contours (Matching Desert Level Depth)
+      final iceHighlightPaint = Paint()
+        ..color = const Color(0xFFFFFFFF).withValues(alpha: 0.90 * detailAlpha)
         ..strokeWidth = 2.0
         ..strokeCap = StrokeCap.round;
-
-      final fractureGlow = Paint()
-        ..color = const Color(0xFF80DEEA).withValues(alpha: 0.45 * detailAlpha)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 4.0
+      final iceMidWavePaint = Paint()
+        ..color = const Color(0xFF80DEEA).withValues(alpha: 0.75 * detailAlpha)
+        ..strokeWidth = 2.2
         ..strokeCap = StrokeCap.round;
+      final iceShadowWavePaint = Paint()
+        ..color = const Color(0xFF0097A7).withValues(alpha: 0.65 * detailAlpha)
+        ..strokeWidth = 2.4
+        ..strokeCap = StrokeCap.round;
+      final iceDeepStrataPaint = Paint()
+        ..color = const Color(0xFF006064).withValues(alpha: 0.55 * detailAlpha)
+        ..strokeWidth = 3.0;
 
-      const fractureSpacing = 140.0;
-      int fIdx = 0;
-      for (double fx = -(_scrollOffset % fractureSpacing); fx < w + fractureSpacing; fx += fractureSpacing) {
-        fIdx++;
-        final fPath = Path()
-          ..moveTo(fx, y + 2.0)
-          ..lineTo(fx + 18.0, y + 14.0 + (fIdx % 3) * 5.0)
-          ..lineTo(fx + 38.0, y + 20.0)
-          ..lineTo(fx + 65.0, y + 36.0 + (fIdx % 2) * 8.0);
+      // Soft Top Diamond Snow Crest Rim
+      final snowCrestPaint = Paint()
+        ..color = const Color(0xFFE0F7FA).withValues(alpha: 0.95 * detailAlpha)
+        ..strokeWidth = 3.2;
+      canvas.drawLine(Offset(0, y + 1), Offset(w, y + 1), snowCrestPaint);
 
-        canvas.drawPath(fPath, fractureGlow);
-        canvas.drawPath(fPath, fracturePaint);
+      // Layer 1: Fine Upper Frost Ripples (Wavelength ~28px)
+      const r1W = 28.0;
+      final r1Path = Path();
+      for (double rx = -(_scrollOffset % r1W) - r1W; rx < w + r1W; rx += r1W) {
+        r1Path.moveTo(rx, y + 5);
+        r1Path.quadraticBezierTo(rx + r1W * 0.5, y + 8, rx + r1W, y + 5);
+      }
+      canvas.drawPath(r1Path, iceHighlightPaint..style = PaintingStyle.stroke);
 
-        // Branching micro-frost crack
-        final branch = Path()
-          ..moveTo(fx + 38.0, y + 20.0)
-          ..lineTo(fx + 52.0, y + 12.0)
-          ..lineTo(fx + 68.0, y + 16.0);
-        canvas.drawPath(branch, fracturePaint);
+      // Layer 2: Mid Glacial Sapphire Contours (Wavelength ~54px)
+      const r2W = 54.0;
+      final r2LightPath = Path();
+      final r2DarkPath = Path();
+      for (double rx = -((_scrollOffset * 1.0) % r2W) - r2W; rx < w + r2W; rx += r2W) {
+        r2LightPath.moveTo(rx, y + 15);
+        r2LightPath.quadraticBezierTo(rx + 22, y + 20, rx + 44, y + 14);
+        r2DarkPath.moveTo(rx + 2, y + 17);
+        r2DarkPath.quadraticBezierTo(rx + 24, y + 22, rx + 46, y + 16);
+      }
+      canvas.drawPath(r2DarkPath, iceShadowWavePaint..style = PaintingStyle.stroke);
+      canvas.drawPath(r2LightPath, iceMidWavePaint..style = PaintingStyle.stroke);
+
+      // Layer 3: Lower Deep Cobalt Permafrost Strata (Wavelength ~90px)
+      const r3W = 90.0;
+      final r3Path = Path();
+      for (double rx = -((_scrollOffset * 1.0) % r3W) - r3W; rx < w + r3W; rx += r3W) {
+        r3Path.moveTo(rx, y + 32);
+        r3Path.cubicTo(rx + 25, y + 36, rx + 65, y + 28, rx + r3W, y + 33);
+      }
+      canvas.drawPath(r3Path, iceDeepStrataPaint..style = PaintingStyle.stroke);
+
+      // Layer 4: Deep Glacial Bedrock Abyss
+      final r4Path = Path();
+      for (double rx = -((_scrollOffset * 1.0) % 130.0) - 130.0; rx < w + 130.0; rx += 130.0) {
+        r4Path.moveTo(rx, y + 50);
+        r4Path.quadraticBezierTo(rx + 65, y + 56, rx + 130, y + 49);
+      }
+      canvas.drawPath(r4Path, iceDeepStrataPaint..style = PaintingStyle.stroke);
+
+      // ✨ 2. Shimmering Diamond Snow Crystals & Specular Glacial Flecks (Glistening Effect!)
+      final diamondSparklePaint = Paint()..color = const Color(0xFFFFFFFF).withValues(alpha: 0.95 * detailAlpha);
+      final cyanFrostPaint = Paint()..color = const Color(0xFFB2EBF2).withValues(alpha: 0.85 * detailAlpha);
+      final sapphireGlitterPaint = Paint()..color = const Color(0xFF4DD0E1).withValues(alpha: 0.75 * detailAlpha);
+      final deepIceFlecks = Paint()..color = const Color(0xFF00ACC1).withValues(alpha: 0.55 * detailAlpha);
+
+      for (int i = 0; i < 32; i++) {
+        final seedX = i * 59.3;
+        final gx = (seedX - _scrollOffset) % (w + 40.0) - 20.0;
+        final gy = y + 3.0 + ((i * 13.7) % (groundHeight - 12.0));
+        final grainRadius = 0.8 + ((i % 5) * 0.35);
+
+        final paint = (i % 4 == 0)
+            ? diamondSparklePaint
+            : (i % 3 == 0)
+                ? cyanFrostPaint
+                : (i % 2 == 0)
+                    ? sapphireGlitterPaint
+                    : deepIceFlecks;
+        canvas.drawCircle(Offset(gx, gy), grainRadius, paint);
       }
 
-      // ❄️ 2. Jagged Diamond Ice Crystals & Frost Spikes protruding from surface
+      // ❄️ 3. Polished Frozen Sapphires & Diamond Ice Geodes
+      final sapphireGemPaint = Paint()..color = const Color(0xFF80DEEA).withValues(alpha: 0.85 * detailAlpha);
+      final iceGlintPaint = Paint()..color = Colors.white.withValues(alpha: 0.95 * detailAlpha);
+      final arcticOpalPaint = Paint()..color = const Color(0xFFB3E5FC).withValues(alpha: 0.75 * detailAlpha);
+
+      const pebblePeriod = 180.0;
+      for (double fx = -(_scrollOffset % pebblePeriod) + 40; fx < w + pebblePeriod; fx += pebblePeriod) {
+        // Polished sapphire geode
+        canvas.drawOval(Rect.fromCenter(center: Offset(fx + 35, y + 22), width: 7, height: 4.5), sapphireGemPaint);
+        canvas.drawCircle(Offset(fx + 33.5, y + 21), 1.0, iceGlintPaint);
+
+        // Arctic opal nodule
+        canvas.drawOval(Rect.fromCenter(center: Offset(fx + 120, y + 32), width: 5.5, height: 3.5), arcticOpalPaint);
+        canvas.drawCircle(Offset(fx + 119, y + 31), 0.8, iceGlintPaint);
+      }
+
+      // ❄️ 4. Jagged Diamond Ice Crystals protruding from surface
       const crystalSpacing = 36.0;
       int cIdx = 0;
       for (double cx = -(_scrollOffset % crystalSpacing); cx < w + crystalSpacing; cx += crystalSpacing) {
@@ -732,63 +818,115 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
         ).createShader(Rect.fromLTWH(cx + 4.0, y - spikeH, 8.0, spikeH + 1.0));
 
         canvas.drawPath(cPath, Paint()..shader = iceShader);
-
-        // Apex diamond glint
         canvas.drawCircle(
           Offset(cx + 8.0, y - spikeH),
           1.2,
           Paint()..color = Colors.white.withValues(alpha: 0.95 * detailAlpha),
         );
       }
-
-      // ❄️ 3. Sparkling Frost Crystals & Aurora Snow Dust in Bedrock
-      final frostPaint = Paint()..color = Colors.white.withValues(alpha: 0.85 * detailAlpha);
-      final cyanDustPaint = Paint()..color = const Color(0xFF80DEEA).withValues(alpha: 0.75 * detailAlpha);
-
-      for (int i = 0; i < 22; i++) {
-        final seedX = (i * 91.0);
-        final px = (seedX - _scrollOffset) % (w + 40.0) - 20.0;
-        final py = y + 8.0 + (i * 4.9) % (groundHeight - 14.0);
-        final isWhite = (i % 2 == 0);
-        final r = (i % 3 == 0) ? 1.5 : 1.0;
-        canvas.drawCircle(Offset(px, py), r, isWhite ? frostPaint : cyanDustPaint);
-      }
     } else if (currentBiome == 'VOLCANO' && detailAlpha > 0.05) {
-      // 🌋 1. Incandescent Magma Fissures & Heat Veins in Charred Basalt
-      final fissurePaint = Paint()
-        ..color = const Color(0xFFFFD600).withValues(alpha: 0.90 * detailAlpha)
-        ..style = PaintingStyle.stroke
+      // 🌋 1. Multi-layered Volcanic Basalt Strata & Magma Wave Contours (Matching Desert Level Depth)
+      final volcanoHighlightPaint = Paint()
+        ..color = const Color(0xFFFFD54F).withValues(alpha: 0.85 * detailAlpha)
+        ..strokeWidth = 2.0
+        ..strokeCap = StrokeCap.round;
+      final volcanoMidWavePaint = Paint()
+        ..color = const Color(0xFFFF6D00).withValues(alpha: 0.70 * detailAlpha)
         ..strokeWidth = 2.2
         ..strokeCap = StrokeCap.round;
-
-      final fissureGlow = Paint()
-        ..color = const Color(0xFFFF6D00).withValues(alpha: 0.70 * detailAlpha)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 5.0
+      final volcanoShadowWavePaint = Paint()
+        ..color = const Color(0xFFD84315).withValues(alpha: 0.65 * detailAlpha)
+        ..strokeWidth = 2.4
         ..strokeCap = StrokeCap.round;
+      final volcanoDeepStrataPaint = Paint()
+        ..color = const Color(0xFF3E1107).withValues(alpha: 0.55 * detailAlpha)
+        ..strokeWidth = 3.0;
 
-      const fissureSpacing = 130.0;
-      int vIdx = 0;
-      for (double vx = -(_scrollOffset % fissureSpacing); vx < w + fissureSpacing; vx += fissureSpacing) {
-        vIdx++;
-        final heatPulse = 0.85 + 0.15 * math.sin(_time * 6.0 + vIdx);
-        final vPath = Path()
-          ..moveTo(vx, y + 1.0)
-          ..quadraticBezierTo(vx + 20.0, y + 10.0 + (vIdx % 3) * 4.0, vx + 45.0, y + 14.0)
-          ..quadraticBezierTo(vx + 70.0, y + 18.0, vx + 95.0, y + 30.0 + (vIdx % 2) * 8.0);
+      // Soft Top Molten Basalt Crest Rim
+      final heatPulse = 0.85 + 0.15 * math.sin(_time * 4.0);
+      final volcanoCrestPaint = Paint()
+        ..color = const Color(0xFFFFAB40).withValues(alpha: 0.95 * detailAlpha * heatPulse)
+        ..strokeWidth = 3.2;
+      canvas.drawLine(Offset(0, y + 1), Offset(w, y + 1), volcanoCrestPaint);
 
-        fissureGlow.color = const Color(0xFFFF6D00).withValues(alpha: 0.65 * detailAlpha * heatPulse);
-        canvas.drawPath(vPath, fissureGlow);
-        canvas.drawPath(vPath, fissurePaint);
+      // Layer 1: Fine Upper Magma Heat Ripples (Wavelength ~28px)
+      const r1W = 28.0;
+      final r1Path = Path();
+      for (double rx = -(_scrollOffset % r1W) - r1W; rx < w + r1W; rx += r1W) {
+        r1Path.moveTo(rx, y + 5);
+        r1Path.quadraticBezierTo(rx + r1W * 0.5, y + 8, rx + r1W, y + 5);
+      }
+      canvas.drawPath(r1Path, volcanoHighlightPaint..style = PaintingStyle.stroke);
 
-        // Branching magma seam
-        final branch = Path()
-          ..moveTo(vx + 45.0, y + 14.0)
-          ..quadraticBezierTo(vx + 60.0, y + 24.0, vx + 75.0, y + 34.0);
-        canvas.drawPath(branch, fissurePaint);
+      // Layer 2: Mid Charred Basalt Contours (Wavelength ~54px)
+      const r2W = 54.0;
+      final r2LightPath = Path();
+      final r2DarkPath = Path();
+      for (double rx = -((_scrollOffset * 1.0) % r2W) - r2W; rx < w + r2W; rx += r2W) {
+        r2LightPath.moveTo(rx, y + 15);
+        r2LightPath.quadraticBezierTo(rx + 22, y + 20, rx + 44, y + 14);
+        r2DarkPath.moveTo(rx + 2, y + 17);
+        r2DarkPath.quadraticBezierTo(rx + 24, y + 22, rx + 46, y + 16);
+      }
+      canvas.drawPath(r2DarkPath, volcanoShadowWavePaint..style = PaintingStyle.stroke);
+      canvas.drawPath(r2LightPath, volcanoMidWavePaint..style = PaintingStyle.stroke);
+
+      // Layer 3: Lower Glowing Magma Strata Wavebands (Wavelength ~90px)
+      const r3W = 90.0;
+      final r3Path = Path();
+      for (double rx = -((_scrollOffset * 1.0) % r3W) - r3W; rx < w + r3W; rx += r3W) {
+        r3Path.moveTo(rx, y + 32);
+        r3Path.cubicTo(rx + 25, y + 36, rx + 65, y + 28, rx + r3W, y + 33);
+      }
+      canvas.drawPath(r3Path, volcanoDeepStrataPaint..style = PaintingStyle.stroke);
+
+      // Layer 4: Deep Magma Chamber Floor
+      final r4Path = Path();
+      for (double rx = -((_scrollOffset * 1.0) % 130.0) - 130.0; rx < w + 130.0; rx += 130.0) {
+        r4Path.moveTo(rx, y + 50);
+        r4Path.quadraticBezierTo(rx + 65, y + 56, rx + 130, y + 49);
+      }
+      canvas.drawPath(r4Path, volcanoDeepStrataPaint..style = PaintingStyle.stroke);
+
+      // ✨ 2. Shimmering Pyrite Sparks & Incandescent Magma Glistening Flecks
+      final magmaSparklePaint = Paint()..color = const Color(0xFFFFFDE7).withValues(alpha: 0.95 * detailAlpha);
+      final goldHeatPaint = Paint()..color = const Color(0xFFFFD600).withValues(alpha: 0.85 * detailAlpha);
+      final orangeEmberPaint = Paint()..color = const Color(0xFFFF9100).withValues(alpha: 0.75 * detailAlpha);
+      final basaltFlecks = Paint()..color = const Color(0xFFDD2C00).withValues(alpha: 0.55 * detailAlpha);
+
+      for (int i = 0; i < 32; i++) {
+        final seedX = i * 59.3;
+        final gx = (seedX - _scrollOffset) % (w + 40.0) - 20.0;
+        final gy = y + 3.0 + ((i * 13.7) % (groundHeight - 12.0));
+        final grainRadius = 0.8 + ((i % 5) * 0.35);
+
+        final paint = (i % 4 == 0)
+            ? magmaSparklePaint
+            : (i % 3 == 0)
+                ? goldHeatPaint
+                : (i % 2 == 0)
+                    ? orangeEmberPaint
+                    : basaltFlecks;
+        canvas.drawCircle(Offset(gx, gy), grainRadius, paint);
       }
 
-      // 🌋 2. Jagged Obsidian Basalt Shards & Charred Rock Points
+      // 🌋 3. Polished Fire Agate & Obsidian Gem Nodules
+      final fireAgatePaint = Paint()..color = const Color(0xFFFF7043).withValues(alpha: 0.85 * detailAlpha);
+      final fireGlintPaint = Paint()..color = Colors.white.withValues(alpha: 0.90 * detailAlpha);
+      final obsidianGemPaint = Paint()..color = const Color(0xFFFFAB00).withValues(alpha: 0.75 * detailAlpha);
+
+      const pebblePeriod = 180.0;
+      for (double fx = -(_scrollOffset % pebblePeriod) + 40; fx < w + pebblePeriod; fx += pebblePeriod) {
+        // Polished fire agate
+        canvas.drawOval(Rect.fromCenter(center: Offset(fx + 35, y + 22), width: 7, height: 4.5), fireAgatePaint);
+        canvas.drawCircle(Offset(fx + 33.5, y + 21), 1.0, fireGlintPaint);
+
+        // Glowing obsidian amber nodule
+        canvas.drawOval(Rect.fromCenter(center: Offset(fx + 120, y + 32), width: 5.5, height: 3.5), obsidianGemPaint);
+        canvas.drawCircle(Offset(fx + 119, y + 31), 0.8, fireGlintPaint);
+      }
+
+      // 🌋 4. Jagged Obsidian Basalt Shards along running surface
       const rockSpacing = 32.0;
       int rIdx = 0;
       final basaltRockPaint = Paint()..color = const Color(0xFF1E1E24);
@@ -804,21 +942,7 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
           ..close();
 
         canvas.drawPath(rPath, basaltRockPaint);
-        // Molten glow on the rock peak
         canvas.drawCircle(Offset(rx + 6.0, y - rH), 1.1, heatPeakPaint);
-      }
-
-      // 🌋 3. Floating Volcanic Ash Cinders & Rising Magma Embers
-      final emberGold = Paint()..color = const Color(0xFFFFD54F).withValues(alpha: 0.85 * detailAlpha);
-      final emberRed = Paint()..color = const Color(0xFFFF3D00).withValues(alpha: 0.80 * detailAlpha);
-
-      for (int i = 0; i < 22; i++) {
-        final seedX = (i * 99.0);
-        final px = (seedX - _scrollOffset) % (w + 40.0) - 20.0;
-        final py = y + 8.0 + (i * 4.6) % (groundHeight - 14.0);
-        final pulse = 0.8 + 0.2 * math.sin(_time * 5.0 + i);
-        final isGold = (i % 2 == 0);
-        canvas.drawCircle(Offset(px, py), 1.5 * pulse, isGold ? emberGold : emberRed);
       }
     }
 

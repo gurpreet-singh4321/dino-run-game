@@ -517,68 +517,170 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
 
     canvas.save();
 
-    // 1. Pterodactyl Body & Head Base
+    // Smooth continuous 60fps wing flap physics
+    final flapPhase = math.sin(age * 18.0);
+    final wingFlexY = flapPhase * (h * 0.48);
+    final wingTipFlexY = flapPhase * (h * 0.65);
+
+    // 1. Far Back Wing (Darker depth layer)
+    final backWingPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [const Color(0xFF381452), const Color(0xFF1E0A2E)],
+      ).createShader(Rect.fromLTWH(w * 0.4, -h * 0.8, w * 0.6, h * 2.2));
+
+    final backWingPath = Path()
+      ..moveTo(w * 0.52, h * 0.45)
+      ..cubicTo(w * 0.60, h * 0.45 - wingFlexY * 0.8, w * 0.76, h * 0.40 - wingTipFlexY * 0.8, w * 0.90, h * 0.35 - wingTipFlexY * 0.8)
+      ..quadraticBezierTo(w * 0.82, h * 0.50 - wingFlexY * 0.4, w * 0.74, h * 0.54)
+      ..quadraticBezierTo(w * 0.66, h * 0.52 - wingFlexY * 0.2, w * 0.58, h * 0.58)
+      ..close();
+    canvas.drawPath(backWingPath, backWingPaint);
+
+    // 2. Main Cute Bat Body & Belly
     final bodyPaint = Paint()
       ..shader = const LinearGradient(
-        colors: [Color(0xFF7B1FA2), Color(0xFF4A148C)],
-      ).createShader(Rect.fromLTWH(0, 0, w, h));
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFF512DA8), Color(0xFF311B92), Color(0xFF1A0A3A)],
+      ).createShader(Rect.fromLTWH(w * 0.15, h * 0.25, w * 0.65, h * 0.65));
 
-    // Head with sharp beak & backward crest
-    final headPath = Path()
-      ..moveTo(w * 0.15, h * 0.45) // Beak tip (facing left towards player)
-      ..lineTo(w * 0.35, h * 0.35) // Top snout
-      ..lineTo(w * 0.55, h * 0.2)  // Head crest top spike
-      ..quadraticBezierTo(w * 0.42, h * 0.4, w * 0.38, h * 0.52) // Head back
-      ..lineTo(w * 0.15, h * 0.48) // Lower beak
+    // Torso & Hind body
+    final bodyPath = Path()
+      ..moveTo(w * 0.32, h * 0.38)
+      ..cubicTo(w * 0.58, h * 0.30, w * 0.75, h * 0.42, w * 0.72, h * 0.64)
+      ..cubicTo(w * 0.70, h * 0.82, w * 0.48, h * 0.86, w * 0.32, h * 0.72)
+      ..cubicTo(w * 0.24, h * 0.65, w * 0.22, h * 0.45, w * 0.32, h * 0.38)
       ..close();
-    canvas.drawPath(headPath, bodyPaint);
+    canvas.drawPath(bodyPath, bodyPaint);
 
-    // Beak inner highlight
-    final beakPaint = Paint()..color = const Color(0xFFFFB300);
-    final beakPath = Path()
-      ..moveTo(w * 0.15, h * 0.45)
-      ..lineTo(w * 0.28, h * 0.4)
-      ..lineTo(w * 0.28, h * 0.48)
+    // Soft Violet/Lilac Belly Patch
+    final bellyPaint = Paint()
+      ..shader = const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [Color(0xFF9575CD), Color(0xFF7E57C2)],
+      ).createShader(Rect.fromLTWH(w * 0.35, h * 0.48, w * 0.28, h * 0.28));
+    canvas.drawOval(
+      Rect.fromCenter(center: Offset(w * 0.46, h * 0.60), width: w * 0.24, height: h * 0.22),
+      bellyPaint,
+    );
+
+    // Tiny tucked feet talons
+    final footPaint = Paint()..color = const Color(0xFFD1C4E9);
+    canvas.drawCircle(Offset(w * 0.56, h * 0.74), 2.2, footPaint);
+    canvas.drawCircle(Offset(w * 0.64, h * 0.72), 2.2, footPaint);
+
+    // 3. Bat Head, Pointy Ears & Expressive Cute Face
+    final headCenter = Offset(w * 0.28, h * 0.48);
+    canvas.drawCircle(headCenter, w * 0.16, bodyPaint);
+
+    // Left & Right Pointy Bat Ears
+    final earPaint = Paint()..color = const Color(0xFF311B92);
+    final earInnerPaint = Paint()..color = const Color(0xFFFF80AB).withValues(alpha: 0.85);
+
+    // Front ear (facing viewer)
+    final ear1 = Path()
+      ..moveTo(w * 0.22, h * 0.36)
+      ..lineTo(w * 0.18, h * 0.14)
+      ..lineTo(w * 0.32, h * 0.32)
       ..close();
-    canvas.drawPath(beakPath, beakPaint);
+    canvas.drawPath(ear1, earPaint);
 
-    // Glowing menacing eye
-    canvas.drawCircle(Offset(w * 0.32, h * 0.41), 3.0, Paint()..color = const Color(0xFFFFEB3B));
-    canvas.drawCircle(Offset(w * 0.31, h * 0.41), 1.4, Paint()..color = Colors.black);
-
-    // Sleek Torso
-    final torsoPath = Path()
-      ..moveTo(w * 0.38, h * 0.5)
-      ..quadraticBezierTo(w * 0.55, h * 0.4, w * 0.72, h * 0.52)
-      ..quadraticBezierTo(w * 0.55, h * 0.68, w * 0.38, h * 0.58)
+    final ear1Inner = Path()
+      ..moveTo(w * 0.23, h * 0.34)
+      ..lineTo(w * 0.20, h * 0.18)
+      ..lineTo(w * 0.30, h * 0.32)
       ..close();
-    canvas.drawPath(torsoPath, bodyPaint);
+    canvas.drawPath(ear1Inner, earInnerPaint);
 
-    // 2. Leather Bat Wings with 2-Frame Flap Animation!
-    final wingY = _birdFrame == 0 ? -h * 0.45 : h * 0.45;
-    final wingMidY = _birdFrame == 0 ? -h * 0.15 : h * 0.2;
-
-    final wingPath = Path()
-      ..moveTo(w * 0.48, h * 0.48)
-      ..quadraticBezierTo(w * 0.52, wingY, w * 0.82, wingY * 0.8) // Wing bone top
-      ..quadraticBezierTo(w * 0.68, wingMidY, w * 0.58, h * 0.55) // Outer membrane arch
-      ..quadraticBezierTo(w * 0.52, h * 0.58, w * 0.48, h * 0.48)
+    // Back ear
+    final ear2 = Path()
+      ..moveTo(w * 0.34, h * 0.34)
+      ..lineTo(w * 0.36, h * 0.16)
+      ..lineTo(w * 0.44, h * 0.36)
       ..close();
+    canvas.drawPath(ear2, earPaint);
 
-    final wingPaint = Paint()
+    // Cute Snub Nose & Mouth
+    final nosePaint = Paint()..color = const Color(0xFFFF80AB);
+    canvas.drawCircle(Offset(w * 0.18, h * 0.50), 2.0, nosePaint);
+
+    // Tiny Cute Vampire Fangs
+    final fangPaint = Paint()..color = Colors.white;
+    final fangPath = Path()
+      ..moveTo(w * 0.17, h * 0.54)
+      ..lineTo(w * 0.19, h * 0.60)
+      ..lineTo(w * 0.21, h * 0.54)
+      ..close();
+    canvas.drawPath(fangPath, fangPaint);
+
+    // Big Glowing Amber Eyes with Specular Sparkle Glint
+    final eyeOuter = Paint()..color = const Color(0xFFFFD54F);
+    final eyePupil = Paint()..color = const Color(0xFF1A0A3A);
+    final eyeGlint = Paint()..color = Colors.white;
+
+    // Left eye (closer, bigger)
+    canvas.drawOval(Rect.fromCenter(center: Offset(w * 0.22, h * 0.44), width: 7.0, height: 8.5), eyeOuter);
+    canvas.drawOval(Rect.fromCenter(center: Offset(w * 0.21, h * 0.44), width: 4.5, height: 6.0), eyePupil);
+    canvas.drawCircle(Offset(w * 0.20, h * 0.42), 1.5, eyeGlint);
+    canvas.drawCircle(Offset(w * 0.23, h * 0.46), 0.7, eyeGlint);
+
+    // Soft Blush Cheek
+    canvas.drawCircle(
+      Offset(w * 0.26, h * 0.54),
+      3.0,
+      Paint()..color = const Color(0xFFFF4081).withValues(alpha: 0.45),
+    );
+
+    // 4. Foreground Scalloped Leather Wing (Articulated with smooth Béziers)
+    final foreWingPaint = Paint()
       ..shader = LinearGradient(
-        colors: [const Color(0xFFAB47BC), const Color(0xFF6A1B9A)],
-      ).createShader(Rect.fromLTWH(w * 0.4, -h, w * 0.5, h * 2));
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [const Color(0xFFBA68C8), const Color(0xFF7B1FA2), const Color(0xFF4A148C)],
+      ).createShader(Rect.fromLTWH(w * 0.35, -h * 0.8, w * 0.65, h * 2.2));
 
-    canvas.drawPath(wingPath, wingPaint);
+    final wingOrigin = Offset(w * 0.44, h * 0.46);
+    final wingElbow = Offset(w * 0.56, h * 0.40 + wingFlexY);
+    final wingTip = Offset(w * 0.86, h * 0.30 + wingTipFlexY);
 
-    // Wing bone finger lines
-    final bonePaint = Paint()
-      ..color = const Color(0xFFE1BEE7).withValues(alpha: 0.7)
-      ..strokeWidth = 1.5
+    final foreWingPath = Path()
+      ..moveTo(wingOrigin.dx, wingOrigin.dy)
+      ..quadraticBezierTo(wingElbow.dx, wingElbow.dy, wingTip.dx, wingTip.dy) // Top wing bone
+      ..quadraticBezierTo(w * 0.76, h * 0.48 + wingFlexY * 0.6, w * 0.68, h * 0.64 + wingFlexY * 0.4) // Scallop 1
+      ..quadraticBezierTo(w * 0.60, h * 0.56 + wingFlexY * 0.3, w * 0.52, h * 0.66) // Scallop 2
+      ..quadraticBezierTo(w * 0.48, h * 0.58, wingOrigin.dx, wingOrigin.dy) // Scallop 3
+      ..close();
+    canvas.drawPath(foreWingPath, foreWingPaint);
+
+    // Wing Bone Finger Struts & Highlights
+    final wingBonePaint = Paint()
+      ..color = const Color(0xFFE1BEE7).withValues(alpha: 0.85)
+      ..strokeWidth = 2.0
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    // Main forearm bone
+    canvas.drawLine(wingOrigin, wingElbow, wingBonePaint);
+    canvas.drawLine(wingElbow, wingTip, wingBonePaint);
+
+    // Thumb claw
+    canvas.drawLine(wingElbow, Offset(wingElbow.dx - 2, wingElbow.dy - 3), wingBonePaint);
+
+    // Webbing rib struts
+    final ribPaint = Paint()
+      ..color = const Color(0xFFCE93D8).withValues(alpha: 0.60)
+      ..strokeWidth = 1.2
       ..style = PaintingStyle.stroke;
-    canvas.drawLine(Offset(w * 0.48, h * 0.48), Offset(w * 0.82, wingY * 0.8), bonePaint);
-    canvas.drawLine(Offset(w * 0.55, h * 0.38), Offset(w * 0.68, wingMidY), bonePaint);
+    canvas.drawLine(wingElbow, Offset(w * 0.68, h * 0.64 + wingFlexY * 0.4), ribPaint);
+    canvas.drawLine(wingOrigin, Offset(w * 0.52, h * 0.66), ribPaint);
+
+    // Tiny magical night trail sparkles behind bat
+    final trailSparkle = Paint()..color = const Color(0xFFE1BEE7).withValues(alpha: 0.7);
+    final t1 = (age * 6.0) % 1.0;
+    canvas.drawCircle(Offset(w * 0.88 + t1 * 12.0, h * 0.36 + math.sin(age * 8.0) * 4.0), 1.2 * (1.0 - t1), trailSparkle);
 
     canvas.restore();
   }
