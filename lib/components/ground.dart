@@ -235,13 +235,39 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
       gradient = const LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-        stops: [0.0, 0.14, 0.38, 0.68, 1.0],
+        stops: [0.0, 0.12, 0.36, 0.68, 1.0],
         colors: [
-          Color(0xFF8BC34A), // Lush sunlit emerald moss & vibrant forest turf
-          Color(0xFF689F38), // Lush green moss layer
-          Color(0xFF436A22), // Rich fertile forest humus soil
-          Color(0xFF2B4415), // Dark nutrient-dense forest peat
-          Color(0xFF17260B), // Deep ancient root-rock bedrock
+          Color(0xFF9CCC65), // Vibrant sunlit lime-emerald moss
+          Color(0xFF689F38), // Lush green forest turf
+          Color(0xFF3E6B20), // Rich fertile forest humus soil
+          Color(0xFF264015), // Dark nutrient-dense peat
+          Color(0xFF122008), // Deep ancient root-rock bedrock
+        ],
+      );
+    } else if (currentBiome == 'ICE') {
+      gradient = const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        stops: [0.0, 0.12, 0.35, 0.68, 1.0],
+        colors: [
+          Color(0xFFFFFFFF), // Pure crystalline diamond ice & fresh powder snow crest
+          Color(0xFFB2EBF2), // Translucent sunlit frost
+          Color(0xFF4DD0E1), // Vibrant cyan glacial ice layer
+          Color(0xFF00838F), // Deep arctic sapphire permafrost
+          Color(0xFF00363A), // Subterranean glacial bedrock abyss
+        ],
+      );
+    } else if (currentBiome == 'VOLCANO') {
+      gradient = const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        stops: [0.0, 0.14, 0.38, 0.70, 1.0],
+        colors: [
+          Color(0xFF37474F), // Charred obsidian crust with glowing heat cracks
+          Color(0xFF263238), // Smoldering basalt rock layer
+          Color(0xFF1E1210), // Dark volcanic stone with embedded embers
+          Color(0xFF3E1107), // Subterranean magma-heated bedrock
+          Color(0xFF180402), // Deep volcanic magma chamber floor
         ],
       );
     } else {
@@ -260,7 +286,11 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
             ? const Color(0xFF4DEEEA)
             : (currentBiome == 'FOREST'
                 ? const Color(0xFFCCFF90)
-                : topColor));
+                : (currentBiome == 'ICE'
+                    ? const Color(0xFFE0F7FA)
+                    : (currentBiome == 'VOLCANO'
+                        ? const Color(0xFFFF6D00)
+                        : topColor))));
     canvas.drawLine(
       Offset(0, y),
       Offset(w, y),
@@ -644,12 +674,158 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
         final isLime = (i % 2 == 0);
         canvas.drawCircle(Offset(px, py), 1.4 * pulse, isLime ? sporePaintLime : sporePaintGold);
       }
+    } else if (currentBiome == 'ICE' && detailAlpha > 0.05) {
+      // ❄️ 1. Subterranean Glacial Fractures & Crystalline Crevasses
+      final fracturePaint = Paint()
+        ..color = const Color(0xFF00E5FF).withValues(alpha: 0.65 * detailAlpha)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.0
+        ..strokeCap = StrokeCap.round;
+
+      final fractureGlow = Paint()
+        ..color = const Color(0xFF80DEEA).withValues(alpha: 0.45 * detailAlpha)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 4.0
+        ..strokeCap = StrokeCap.round;
+
+      const fractureSpacing = 140.0;
+      int fIdx = 0;
+      for (double fx = -(_scrollOffset % fractureSpacing); fx < w + fractureSpacing; fx += fractureSpacing) {
+        fIdx++;
+        final fPath = Path()
+          ..moveTo(fx, y + 2.0)
+          ..lineTo(fx + 18.0, y + 14.0 + (fIdx % 3) * 5.0)
+          ..lineTo(fx + 38.0, y + 20.0)
+          ..lineTo(fx + 65.0, y + 36.0 + (fIdx % 2) * 8.0);
+
+        canvas.drawPath(fPath, fractureGlow);
+        canvas.drawPath(fPath, fracturePaint);
+
+        // Branching micro-frost crack
+        final branch = Path()
+          ..moveTo(fx + 38.0, y + 20.0)
+          ..lineTo(fx + 52.0, y + 12.0)
+          ..lineTo(fx + 68.0, y + 16.0);
+        canvas.drawPath(branch, fracturePaint);
+      }
+
+      // ❄️ 2. Jagged Diamond Ice Crystals & Frost Spikes protruding from surface
+      const crystalSpacing = 36.0;
+      int cIdx = 0;
+      for (double cx = -(_scrollOffset % crystalSpacing); cx < w + crystalSpacing; cx += crystalSpacing) {
+        cIdx++;
+        final spikeH = 6.0 + (cIdx % 4) * 2.5;
+        final cPath = Path()
+          ..moveTo(cx + 4.0, y + 1.0)
+          ..lineTo(cx + 8.0, y - spikeH)
+          ..lineTo(cx + 12.0, y + 1.0)
+          ..close();
+
+        final iceShader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.white.withValues(alpha: 0.95 * detailAlpha),
+            const Color(0xFF80DEEA).withValues(alpha: 0.85 * detailAlpha),
+            const Color(0xFF00ACC1).withValues(alpha: 0.70 * detailAlpha),
+          ],
+        ).createShader(Rect.fromLTWH(cx + 4.0, y - spikeH, 8.0, spikeH + 1.0));
+
+        canvas.drawPath(cPath, Paint()..shader = iceShader);
+
+        // Apex diamond glint
+        canvas.drawCircle(
+          Offset(cx + 8.0, y - spikeH),
+          1.2,
+          Paint()..color = Colors.white.withValues(alpha: 0.95 * detailAlpha),
+        );
+      }
+
+      // ❄️ 3. Sparkling Frost Crystals & Aurora Snow Dust in Bedrock
+      final frostPaint = Paint()..color = Colors.white.withValues(alpha: 0.85 * detailAlpha);
+      final cyanDustPaint = Paint()..color = const Color(0xFF80DEEA).withValues(alpha: 0.75 * detailAlpha);
+
+      for (int i = 0; i < 22; i++) {
+        final seedX = (i * 91.0);
+        final px = (seedX - _scrollOffset) % (w + 40.0) - 20.0;
+        final py = y + 8.0 + (i * 4.9) % (groundHeight - 14.0);
+        final isWhite = (i % 2 == 0);
+        final r = (i % 3 == 0) ? 1.5 : 1.0;
+        canvas.drawCircle(Offset(px, py), r, isWhite ? frostPaint : cyanDustPaint);
+      }
+    } else if (currentBiome == 'VOLCANO' && detailAlpha > 0.05) {
+      // 🌋 1. Incandescent Magma Fissures & Heat Veins in Charred Basalt
+      final fissurePaint = Paint()
+        ..color = const Color(0xFFFFD600).withValues(alpha: 0.90 * detailAlpha)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.2
+        ..strokeCap = StrokeCap.round;
+
+      final fissureGlow = Paint()
+        ..color = const Color(0xFFFF6D00).withValues(alpha: 0.70 * detailAlpha)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 5.0
+        ..strokeCap = StrokeCap.round;
+
+      const fissureSpacing = 130.0;
+      int vIdx = 0;
+      for (double vx = -(_scrollOffset % fissureSpacing); vx < w + fissureSpacing; vx += fissureSpacing) {
+        vIdx++;
+        final heatPulse = 0.85 + 0.15 * math.sin(_time * 6.0 + vIdx);
+        final vPath = Path()
+          ..moveTo(vx, y + 1.0)
+          ..quadraticBezierTo(vx + 20.0, y + 10.0 + (vIdx % 3) * 4.0, vx + 45.0, y + 14.0)
+          ..quadraticBezierTo(vx + 70.0, y + 18.0, vx + 95.0, y + 30.0 + (vIdx % 2) * 8.0);
+
+        fissureGlow.color = const Color(0xFFFF6D00).withValues(alpha: 0.65 * detailAlpha * heatPulse);
+        canvas.drawPath(vPath, fissureGlow);
+        canvas.drawPath(vPath, fissurePaint);
+
+        // Branching magma seam
+        final branch = Path()
+          ..moveTo(vx + 45.0, y + 14.0)
+          ..quadraticBezierTo(vx + 60.0, y + 24.0, vx + 75.0, y + 34.0);
+        canvas.drawPath(branch, fissurePaint);
+      }
+
+      // 🌋 2. Jagged Obsidian Basalt Shards & Charred Rock Points
+      const rockSpacing = 32.0;
+      int rIdx = 0;
+      final basaltRockPaint = Paint()..color = const Color(0xFF1E1E24);
+      final heatPeakPaint = Paint()..color = const Color(0xFFFF9100).withValues(alpha: 0.90 * detailAlpha);
+
+      for (double rx = -(_scrollOffset % rockSpacing); rx < w + rockSpacing; rx += rockSpacing) {
+        rIdx++;
+        final rH = 5.0 + (rIdx % 4) * 2.0;
+        final rPath = Path()
+          ..moveTo(rx + 2.0, y + 1.0)
+          ..lineTo(rx + 6.0, y - rH)
+          ..lineTo(rx + 10.0, y + 1.0)
+          ..close();
+
+        canvas.drawPath(rPath, basaltRockPaint);
+        // Molten glow on the rock peak
+        canvas.drawCircle(Offset(rx + 6.0, y - rH), 1.1, heatPeakPaint);
+      }
+
+      // 🌋 3. Floating Volcanic Ash Cinders & Rising Magma Embers
+      final emberGold = Paint()..color = const Color(0xFFFFD54F).withValues(alpha: 0.85 * detailAlpha);
+      final emberRed = Paint()..color = const Color(0xFFFF3D00).withValues(alpha: 0.80 * detailAlpha);
+
+      for (int i = 0; i < 22; i++) {
+        final seedX = (i * 99.0);
+        final px = (seedX - _scrollOffset) % (w + 40.0) - 20.0;
+        final py = y + 8.0 + (i * 4.6) % (groundHeight - 14.0);
+        final pulse = 0.8 + 0.2 * math.sin(_time * 5.0 + i);
+        final isGold = (i % 2 == 0);
+        canvas.drawCircle(Offset(px, py), 1.5 * pulse, isGold ? emberGold : emberRed);
+      }
     }
 
     canvas.clipRect(Rect.fromLTWH(0, y, w, groundHeight));
 
     // Fallback small pebbles (deterministic scrolling positions)
-    if (currentBiome != 'DESERT' && currentBiome != 'RAIN' && currentBiome != 'STORM' && currentBiome != 'COSMOS' && currentBiome != 'FOREST') {
+    if (currentBiome != 'DESERT' && currentBiome != 'RAIN' && currentBiome != 'STORM' && currentBiome != 'COSMOS' && currentBiome != 'FOREST' && currentBiome != 'ICE' && currentBiome != 'VOLCANO') {
       final pebblePaint = Paint()..color = bottomColor.withValues(alpha: 0.3);
       for (int i = 0; i < 12; i++) {
         final seedX = (i * 127.0);
