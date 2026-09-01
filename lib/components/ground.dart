@@ -978,35 +978,76 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
     final pitWidth = gap.width;
     final pitHeight = groundHeight + 30.0;
 
-    // 1. Dark Basalt Rock Pit Rim & Charred Edges
-    final basaltPaint = Paint()..color = const Color(0xFF1B1B1B);
+    // 1. Natural Charred Basalt Cliff Walls on Left & Right
+    final basaltPaint = Paint()..color = const Color(0xFF1E1E24);
     final heatEdgePaint = Paint()
-      ..color = const Color(0xFFFF5722).withValues(alpha: 0.85)
-      ..strokeWidth = 2.0;
+      ..color = const Color(0xFFFF6D00).withValues(alpha: 0.90)
+      ..strokeWidth = 2.2
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
 
-    // Left cliff edge
-    canvas.drawRect(Rect.fromLTWH(leftX - 3.0, y, 4.0, pitHeight), basaltPaint);
-    canvas.drawLine(Offset(leftX, y), Offset(leftX, y + pitHeight), heatEdgePaint);
+    // Left cliff edge (jagged organic rock profile)
+    final leftWallPath = Path()
+      ..moveTo(leftX - 6.0, y)
+      ..lineTo(leftX, y)
+      ..lineTo(leftX + 2.0, y + 12.0)
+      ..lineTo(leftX - 1.0, y + 28.0)
+      ..lineTo(leftX + 3.0, y + pitHeight)
+      ..lineTo(leftX - 8.0, y + pitHeight)
+      ..close();
+    canvas.drawPath(leftWallPath, basaltPaint);
 
-    // Right cliff edge
-    canvas.drawRect(Rect.fromLTWH(rightX - 1.0, y, 4.0, pitHeight), basaltPaint);
-    canvas.drawLine(Offset(rightX, y), Offset(rightX, y + pitHeight), heatEdgePaint);
+    final leftRimPath = Path()
+      ..moveTo(leftX, y)
+      ..lineTo(leftX + 2.0, y + 12.0)
+      ..lineTo(leftX - 1.0, y + 28.0)
+      ..lineTo(leftX + 3.0, y + pitHeight);
+    canvas.drawPath(leftRimPath, heatEdgePaint);
 
-    // 2. Deep Molten Magma Reservoir Bed Fill (Bottom to Top Incandescent Basin)
-    final poolRect = Rect.fromLTWH(leftX, y + 4.0, pitWidth, pitHeight - 4.0);
+    // Right cliff edge (jagged organic rock profile)
+    final rightWallPath = Path()
+      ..moveTo(rightX + 6.0, y)
+      ..lineTo(rightX, y)
+      ..lineTo(rightX - 2.0, y + 14.0)
+      ..lineTo(rightX + 1.0, y + 30.0)
+      ..lineTo(rightX - 3.0, y + pitHeight)
+      ..lineTo(rightX + 8.0, y + pitHeight)
+      ..close();
+    canvas.drawPath(rightWallPath, basaltPaint);
+
+    final rightRimPath = Path()
+      ..moveTo(rightX, y)
+      ..lineTo(rightX - 2.0, y + 14.0)
+      ..lineTo(rightX + 1.0, y + 30.0)
+      ..lineTo(rightX - 3.0, y + pitHeight);
+    canvas.drawPath(rightRimPath, heatEdgePaint);
+
+    // 2. Fluid Molten Magma Reservoir Bed with Dynamic Undulating Molten Surface
+    final poolPath = Path()..moveTo(leftX, y + pitHeight);
+    poolPath.lineTo(leftX, y + 6.0);
+
+    for (double px = leftX; px <= rightX; px += 4.0) {
+      final normX = (px - leftX) / pitWidth;
+      final wave = math.sin(_time * 4.5 + normX * math.pi * 3) * 2.2;
+      final py = y + 5.0 + wave;
+      poolPath.lineTo(px, py);
+    }
+    poolPath.lineTo(rightX, y + pitHeight);
+    poolPath.close();
+
     final magmaShader = const LinearGradient(
       begin: Alignment.topCenter,
       end: Alignment.bottomCenter,
       colors: [
-        Color(0xFFFFF9C4), // White-hot molten yellow-white surface
+        Color(0xFFFFF9C4), // White-hot molten surface
         Color(0xFFFFD600), // Intense solar gold
         Color(0xFFFF6D00), // Blazing orange magma
         Color(0xFFC62828), // Deep volcanic crimson
         Color(0xFF1B0000), // Deep basalt chamber base
       ],
-      stops: [0.0, 0.15, 0.45, 0.78, 1.0],
-    ).createShader(poolRect);
-    canvas.drawRect(poolRect, Paint()..shader = magmaShader);
+      stops: [0.0, 0.12, 0.40, 0.75, 1.0],
+    ).createShader(Rect.fromLTWH(leftX, y, pitWidth, pitHeight));
+    canvas.drawPath(poolPath, Paint()..shader = magmaShader);
 
     // 3. Layer 1: Ambient Fire Flame Sheath (Soft Outer Heat Aura)
     final tongueCount = math.max(6, (pitWidth / 14).floor());
@@ -1183,7 +1224,7 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
     }
   }
 
-  /// Roaring Eruption Fire Fountains & Magma Pillars
+  /// Roaring Eruption Fire Fountains & Fluid Magma Pillars
   void _renderLavaEruption(Canvas canvas, GroundGap gap, double y) {
     final eruptionScale = gap.eruptionTimer < 0.2
         ? (gap.eruptionTimer / 0.2) * 0.70
@@ -1192,142 +1233,125 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
     final pitLeft = gap.x;
     final pitWidth = gap.width;
 
-    // Raging Fire Spout Columns
-    final outerPath = Path();
-    final innerPath = Path();
-    final corePath = Path();
+    final sproutOffsets = [0.12, 0.30, 0.50, 0.70, 0.88];
+    final eqFrequencies = [9.0, 14.0, 18.0, 13.0, 16.0];
+    final eqPhases = [0.0, 1.2, 2.5, 0.8, 1.9];
 
-    outerPath.moveTo(pitLeft, y + 25);
-    innerPath.moveTo(pitLeft, y + 25);
-    corePath.moveTo(pitLeft, y + 25);
-
-    final sproutOffsets = [0.08, 0.24, 0.40, 0.56, 0.72, 0.88];
-    final eqFrequencies = [9.0, 14.0, 18.0, 15.0, 11.0, 16.0];
-    final eqPhases = [0.0, 1.2, 2.5, 0.8, 3.1, 1.9];
-
-    for (int s = 0; s < 6; s++) {
+    // 1. Render Each Magma Geyser Spout with Smooth Organic Fluid Droplets & Hot Cores
+    for (int s = 0; s < sproutOffsets.length; s++) {
       final cx = pitLeft + pitWidth * sproutOffsets[s];
-      final targetH = gap.spikeTargetHeights[s] * 0.70;
-      final eqBounce = 0.40 + 0.60 * math.sin(_time * eqFrequencies[s] + eqPhases[s]).abs();
-      final H = targetH * eruptionScale * eqBounce;
-      final topY = y + 15 - H;
-      final halfW = 9.0 + (targetH / 200.0) * 5.0;
+      final targetH = gap.spikeTargetHeights[s % gap.spikeTargetHeights.length] * 0.75;
+      final eqBounce = 0.50 + 0.50 * math.sin(_time * eqFrequencies[s] + eqPhases[s]).abs();
+      final H = (targetH * eruptionScale * eqBounce).clamp(8.0, 140.0);
+      final topY = y + 8.0 - H;
+      final spoutHalfW = 8.0 + (H / 140.0) * 8.0;
 
-      final prevX = (s == 0) ? pitLeft : pitLeft + pitWidth * sproutOffsets[s - 1];
+      final sway = math.sin(_time * 10.0 + s * 1.5) * 4.0;
+      final apexX = cx + sway;
 
-      // Dynamic flame wave
-      final flameWave = math.sin(_time * 15.0 + s * 2.0) * 3.0;
+      // Outer Fiery Magma Spout Jet
+      final spoutPath = Path()
+        ..moveTo(cx - spoutHalfW, y + 10.0)
+        ..cubicTo(
+          cx - spoutHalfW * 0.8, y - H * 0.35,
+          apexX - spoutHalfW * 0.4, topY + H * 0.20,
+          apexX, topY,
+        )
+        ..cubicTo(
+          apexX + spoutHalfW * 0.4, topY + H * 0.20,
+          cx + spoutHalfW * 0.8, y - H * 0.35,
+          cx + spoutHalfW, y + 10.0,
+        )
+        ..close();
 
-      // Outer raging crimson & orange flame
-      outerPath.cubicTo(
-        prevX + (cx - prevX) * 0.5, y + 10,
-        cx - halfW + flameWave, topY + H * 0.3,
-        cx - halfW * 0.5, topY,
+      final spoutShader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: const [
+          Color(0xFFFFF9C4), // White-hot liquid apex tip
+          Color(0xFFFFD600), // Intense solar gold
+          Color(0xFFFF6D00), // Blazing volcanic orange
+          Color(0xFFDD2C00), // Deep magma crimson
+        ],
+        stops: const [0.0, 0.25, 0.65, 1.0],
+      ).createShader(Rect.fromLTWH(cx - spoutHalfW, topY, spoutHalfW * 2, H + 10.0));
+
+      canvas.drawPath(spoutPath, Paint()..shader = spoutShader);
+
+      // Inner White-Hot Magma Core
+      final coreHalfW = spoutHalfW * 0.45;
+      final coreH = H * 0.82;
+      final coreTopY = y + 8.0 - coreH;
+      final innerCorePath = Path()
+        ..moveTo(cx - coreHalfW, y + 8.0)
+        ..cubicTo(
+          cx - coreHalfW * 0.6, y - coreH * 0.35,
+          apexX - coreHalfW * 0.3, coreTopY + coreH * 0.20,
+          apexX, coreTopY,
+        )
+        ..cubicTo(
+          apexX + coreHalfW * 0.3, coreTopY + coreH * 0.20,
+          cx + coreHalfW * 0.6, y - coreH * 0.35,
+          cx + coreHalfW, y + 8.0,
+        )
+        ..close();
+
+      final innerCoreShader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: const [
+          Color(0xFFFFFFFF), // Pure white incandescent center
+          Color(0xFFFFFDE7),
+          Color(0xFFFFD54F),
+        ],
+        stops: const [0.0, 0.40, 1.0],
+      ).createShader(Rect.fromLTWH(cx - coreHalfW, coreTopY, coreHalfW * 2, coreH + 8.0));
+
+      canvas.drawPath(innerCorePath, Paint()..shader = innerCoreShader);
+
+      // Apex Molten Droplet
+      canvas.drawCircle(
+        Offset(apexX, topY),
+        spoutHalfW * 0.35,
+        Paint()..color = Colors.white,
       );
-      outerPath.cubicTo(
-        cx + flameWave, topY - 8,
-        cx + halfW * 0.5, topY,
-        cx + halfW - flameWave, topY + H * 0.3,
-      );
-
-      // Inner fiery orange jet core
-      innerPath.cubicTo(
-        prevX + (cx - prevX) * 0.5, y + 12,
-        cx - halfW * 0.6, topY + H * 0.35,
-        cx, topY + 4,
-      );
-      innerPath.cubicTo(
-        cx, topY + 4,
-        cx + halfW * 0.6, topY + H * 0.35,
-        cx + halfW * 0.6, y + 18,
-      );
-
-      // White-hot center vein
-      corePath.lineTo(cx + flameWave * 0.5, topY + 5);
     }
 
-    outerPath.lineTo(pitLeft + pitWidth, y + 25);
-    outerPath.close();
-
-    final maxH = 120.0;
-
-    // Render Layered Fire Geyser Streams
-    canvas.drawPath(
-      outerPath,
-      Paint()
-        ..shader = LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: const [
-            Color(0xFFFF6D00),
-            Color(0xFFFF3D00),
-            Color(0xFFD50000),
-            Color(0xFF7F0000),
-          ],
-          stops: const [0.0, 0.35, 0.70, 1.0],
-        ).createShader(Rect.fromLTWH(pitLeft, y - maxH, pitWidth, maxH + 30)),
-    );
-
-    canvas.drawPath(
-      innerPath,
-      Paint()
-        ..shader = LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: const [
-            Color(0xFFFFFFFF),
-            Color(0xFFFFFF8D),
-            Color(0xFFFF9800),
-            Color(0xFFFF3D00),
-          ],
-          stops: const [0.0, 0.25, 0.65, 1.0],
-        ).createShader(Rect.fromLTWH(pitLeft, y - maxH, pitWidth, maxH + 30)),
-    );
-
-    // Glowing White-Hot Core Line
-    canvas.drawPath(
-      corePath,
-      Paint()
-        ..color = const Color(0xFFFFFFFF)
-        ..strokeWidth = 2.5
-        ..style = PaintingStyle.stroke,
-    );
-
-    // 3. Leaping Fire Spark Particles
+    // 2. Leaping Molten Magma Droplets & Fire Spark Particles
     final sparkYellow = Paint()..color = const Color(0xFFFFFF8D);
     final sparkOrange = Paint()..color = const Color(0xFFFF9800);
     final sparkRed = Paint()..color = const Color(0xFFFF3D00);
 
-    for (int s = 0; s < 6; s++) {
+    for (int s = 0; s < sproutOffsets.length; s++) {
       final cx = pitLeft + pitWidth * sproutOffsets[s];
-      final targetH = gap.spikeTargetHeights[s] * 0.85;
-      final eqBounce = 0.40 + 0.60 * math.sin(_time * eqFrequencies[s] + eqPhases[s]).abs();
+      final targetH = gap.spikeTargetHeights[s % gap.spikeTargetHeights.length] * 0.75;
+      final eqBounce = 0.50 + 0.50 * math.sin(_time * eqFrequencies[s] + eqPhases[s]).abs();
       final H = targetH * eruptionScale * eqBounce;
-      final topY = y + 15 - H;
+      final topY = y + 8.0 - H;
 
       final rng = math.Random((cx * 77 + s * 31).toInt());
       for (int p = 0; p < 4; p++) {
         final phase = (_time * 3.8 + p * 0.4 + s) % 1.5;
         final progress = phase / 1.5;
-        final spreadX = (rng.nextDouble() - 0.5) * 32.0 * progress;
-        final sparkY = topY - (22.0 * math.sin(progress * math.pi)) + progress * progress * 16.0;
+        final spreadX = (rng.nextDouble() - 0.5) * 36.0 * progress;
+        final sparkY = topY - (22.0 * math.sin(progress * math.pi)) + progress * progress * 20.0;
         final sparkX = cx + spreadX;
-        final r = (2.5 * (1.0 - progress)).clamp(0.6, 2.5);
+        final r = (2.4 * (1.0 - progress)).clamp(0.6, 2.4);
         final pPaint = (p % 3 == 0) ? sparkYellow : (p % 2 == 0) ? sparkOrange : sparkRed;
 
         canvas.drawCircle(Offset(sparkX, sparkY), r, pPaint);
       }
     }
 
-    // 4. Billowing Rising Smoke Plumes from Spouts
-    final smokePaint = Paint()..color = const Color(0xFF37474F).withValues(alpha: 0.35);
+    // 3. Billowing Rising Smoke Plumes from Spouts
+    final smokePaint = Paint()..color = const Color(0xFF37474F).withValues(alpha: 0.30);
 
-    for (int s = 0; s < 6; s += 2) {
+    for (int s = 0; s < sproutOffsets.length; s += 2) {
       final cx = pitLeft + pitWidth * sproutOffsets[s];
-      final targetH = gap.spikeTargetHeights[s] * 0.85;
-      final eqBounce = 0.40 + 0.60 * math.sin(_time * eqFrequencies[s] + eqPhases[s]).abs();
+      final targetH = gap.spikeTargetHeights[s % gap.spikeTargetHeights.length] * 0.75;
+      final eqBounce = 0.50 + 0.50 * math.sin(_time * eqFrequencies[s] + eqPhases[s]).abs();
       final H = targetH * eruptionScale * eqBounce;
-      final topY = y + 15 - H;
+      final topY = y + 8.0 - H;
 
       final sCycle = (_time * 1.8 + s * 0.4) % 1.4;
       final sProg = sCycle / 1.4;
