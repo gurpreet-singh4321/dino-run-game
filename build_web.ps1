@@ -4,7 +4,7 @@ Write-Host " Building Flutter Web Release Package... " -ForegroundColor Cyan
 Write-Host "=========================================" -ForegroundColor Cyan
 
 Set-Location "$PSScriptRoot\..\dino_run_epochs"
-flutter build web --release --base-href /game/
+flutter build web --profile --base-href /game/
 
 Write-Host "=========================================" -ForegroundColor Green
 Write-Host " Syncing Output to dino_run_epochs_web... " -ForegroundColor Green

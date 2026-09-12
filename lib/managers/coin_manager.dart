@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Manages persistent coin balance, upgrades, unlocked skins, daily rewards, and missions.
@@ -111,7 +112,27 @@ class CoinManager {
     }
   }
 
+  // Debounced save — batch writes, max once per 2 seconds
+  bool _dirty = false;
+  Timer? _saveTimer;
+
   Future<void> _save() async {
+    _dirty = true;
+    _saveTimer?.cancel();
+    _saveTimer = Timer(const Duration(seconds: 2), () => _flushSave());
+  }
+
+  /// Force an immediate save (call on game-over, app-pause, purchase).
+  Future<void> forceSave() async {
+    _saveTimer?.cancel();
+    _saveTimer = null;
+    if (_dirty) {
+      await _flushSave();
+    }
+  }
+
+  Future<void> _flushSave() async {
+    _dirty = false;
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt(_coinKey, _coins);

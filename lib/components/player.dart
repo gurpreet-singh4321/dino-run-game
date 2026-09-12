@@ -17,6 +17,8 @@ import 'rolling_ball.dart';
 class Player extends PositionComponent with CollisionCallbacks, HasGameReference<DinoGame> {
   static const double gravity = 800;
   static const double jumpForce = -480;
+  static final math.Random _rng = math.Random();
+  static final Paint _reusePaint = Paint();
 
   double velocityY = 0;
   int jumpsLeft = 2;
@@ -427,6 +429,7 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
 
   @override
   void render(Canvas canvas) {
+    if (game.state == GameState.menu) return;
     super.render(canvas);
 
     if (isDead) {
@@ -470,13 +473,13 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
     bool applyGlitch = false;
     // Invincibility flash and glitch
     if (invincibleTimer > 0) {
-      if (math.Random().nextDouble() > 0.7) return; // 30% chance to be invisible (blink)
+      if (_rng.nextDouble() > 0.7) return; // 30% chance to be invisible (blink)
       applyGlitch = true;
     }
 
     if (applyGlitch) {
       canvas.save();
-      canvas.translate((math.Random().nextDouble() - 0.5) * 20, 0);
+      canvas.translate((_rng.nextDouble() - 0.5) * 20, 0);
     }
 
     final drawSize = Size(size.x, size.y);

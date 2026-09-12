@@ -9,7 +9,7 @@ class RiveDinoSkin extends CharacterSkin {
   String get id => 'rive_dino';
 
   @override
-  String get displayName => 'Rive Dino';
+  String get displayName => 'Dino';
 
   @override
   int get price => 0;
