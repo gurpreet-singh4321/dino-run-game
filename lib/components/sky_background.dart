@@ -27,6 +27,16 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
   // Background leftward parallax scroll offset
   double _bgScrollOffset = 0;
 
+  // Procedural Desert Parallax
+  double _desertFarOffset = 0;
+  double _desertMidOffset = 0;
+  Path? _desertFarPath;
+  Path? _desertMidPath;
+  Path? _desertMidHighlightPath;
+  double _cachedDesertYGround = 0;
+  double _cachedDesertHeight = 0;
+  final double _desertRepeatWidth = 2048.0;
+
   // Lightning effect for rain/storm
   double _lightningTimer = 0;
   double _lightningFlashAlpha = 0;
@@ -229,7 +239,10 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     _time += dt;
 
     if (game.state == GameState.playing || game.state == GameState.spaceMode) {
-      _bgScrollOffset += game.speedManager.currentSpeed * dt * 0.075;
+      final speed = game.speedManager.currentSpeed;
+      _bgScrollOffset += speed * dt * 0.075;
+      _desertFarOffset = (_desertFarOffset + speed * dt * 0.04) % _desertRepeatWidth;
+      _desertMidOffset = (_desertMidOffset + speed * dt * 0.12) % _desertRepeatWidth;
     }
 
     // Space mode landscape slide down off-screen
@@ -1317,155 +1330,99 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     canvas.drawCircle(center, size * 0.22, Paint()..color = Colors.white);
   }
 
-  /// Master Desert Artwork rendering: AI background image or procedural vector fallback
-  void _drawDesertArtwork(Canvas canvas, double w, double yGround) {
-    if (_desertBgImage != null) {
-      final img = _desertBgImage!;
-      final imgW = img.width.toDouble();
-      final imgH = img.height.toDouble();
-      final scale = size.y / imgH;
-      final renderW = imgW * scale;
-
-      final srcRect = Rect.fromLTWH(0, 0, imgW, imgH);
-      final dstRect = Rect.fromLTWH(0, 0, renderW, size.y);
-      canvas.drawImageRect(img, srcRect, dstRect, Paint()..filterQuality = FilterQuality.low);
+  void _buildDesertPaths(double yGround) {
+    if (_desertFarPath != null && _cachedDesertYGround == yGround && _cachedDesertHeight == size.y) {
       return;
     }
+    _cachedDesertYGround = yGround;
+    _cachedDesertHeight = size.y;
 
-    // 1. Far Soft Sand Dune Horizon Silhouette (Atmospheric backdrop - seamlessly matching at 0 and w)
-    final farDunePath = Path()
-      ..moveTo(0, yGround - 50)
-      ..quadraticBezierTo(w * 0.18, yGround - 72, w * 0.38, yGround - 48)
-      ..quadraticBezierTo(w * 0.58, yGround - 80, w * 0.78, yGround - 52)
-      ..quadraticBezierTo(w * 0.90, yGround - 72, w, yGround - 50)
-      ..lineTo(w, size.y)
-      ..lineTo(0, size.y);
-    final farDuneShader = LinearGradient(
-      begin: Alignment.topCenter,
-      end: Alignment.bottomCenter,
-      colors: [
-        const Color(0xFFF0D58C).withValues(alpha: 0.75),
-        const Color(0xFFE0B65E).withValues(alpha: 0.60),
-      ],
-    ).createShader(Rect.fromLTWH(0, yGround - 85, w, 140));
-    canvas.drawPath(farDunePath, Paint()..shader = farDuneShader);
+    final w = _desertRepeatWidth;
+    final farPath = Path();
+    
+    final baseH = size.y * 0.10;
+    final peakH = size.y * 0.30;
+    final midH = size.y * 0.20;
+    
+    farPath.moveTo(0, yGround - baseH);
+    farPath.lineTo(w * 0.05, yGround - baseH);
+    farPath.lineTo(w * 0.08, yGround - peakH);
+    farPath.lineTo(w * 0.25, yGround - peakH);
+    farPath.lineTo(w * 0.30, yGround - baseH);
+    farPath.lineTo(w * 0.40, yGround - baseH);
+    farPath.lineTo(w * 0.45, yGround - midH);
+    farPath.lineTo(w * 0.60, yGround - midH);
+    farPath.lineTo(w * 0.65, yGround - baseH);
+    farPath.lineTo(w * 0.75, yGround - baseH);
+    farPath.lineTo(w * 0.80, yGround - peakH * 0.8);
+    farPath.lineTo(w * 0.92, yGround - peakH * 0.8);
+    farPath.lineTo(w * 0.95, yGround - baseH);
+    farPath.lineTo(w, yGround - baseH);
+    farPath.lineTo(w, size.y);
+    farPath.lineTo(0, size.y);
+    farPath.close();
 
-    // 2. Far Landmarks:
-    // Distant Sphinx on left dune ridge
-    _drawDesertSphinx(canvas, Offset(w * 0.08, yGround - 58), 0.68);
-    // Secondary Sphinx on mid-right dune ridge
-    _drawDesertSphinx(canvas, Offset(w * 0.72, yGround - 66), 0.75);
-    // Ancient Sand Citadel / Castle on right dune
-    _drawDesertSandCitadel(canvas, Offset(w * 0.88, yGround - 66), 0.80);
+    _desertFarPath = farPath;
 
-    // 3. Midground Sweeping Sand Dunes (Rich S-crests with golden light & shadow - seamlessly matching at 0 and w)
-    final midDunePath = Path()
-      ..moveTo(0, yGround - 40)
-      ..cubicTo(w * 0.16, yGround - 62, w * 0.32, yGround - 26, w * 0.48, yGround - 52)
-      ..cubicTo(w * 0.62, yGround - 74, w * 0.76, yGround - 28, w * 0.90, yGround - 58)
-      ..lineTo(w, yGround - 40)
-      ..lineTo(w, size.y)
-      ..lineTo(0, size.y);
-    final midDuneShader = LinearGradient(
-      begin: Alignment.topCenter,
-      end: Alignment.bottomCenter,
-      colors: [
-        const Color(0xFFFBE48A), // Bright sunlit crest
-        const Color(0xFFE8BC50), // Mid dune gold
-        const Color(0xFFC7922E), // Rich warm shadow
-      ],
-      stops: const [0.0, 0.42, 1.0],
-    ).createShader(Rect.fromLTWH(0, yGround - 75, w, 150));
-    canvas.drawPath(midDunePath, Paint()..shader = midDuneShader);
+    final midPath = Path();
+    final midHighlightPath = Path();
+    final mBase = size.y * 0.04;
+    final mPeak = size.y * 0.12;
 
-    // Dune Ridge Golden Highlight & Shadow Crest Sweep
-    final ridgePath = Path()
-      ..moveTo(0, yGround - 40)
-      ..cubicTo(w * 0.16, yGround - 62, w * 0.32, yGround - 26, w * 0.48, yGround - 52)
-      ..cubicTo(w * 0.62, yGround - 74, w * 0.76, yGround - 28, w * 0.90, yGround - 58)
-      ..lineTo(w, yGround - 40);
+    midPath.moveTo(0, yGround - mBase);
+    midPath.cubicTo(w * 0.08, yGround - mBase, w * 0.12, yGround - mPeak, w * 0.25, yGround - mPeak);
+    midPath.cubicTo(w * 0.38, yGround - mPeak, w * 0.42, yGround - mBase, w * 0.55, yGround - mBase);
+    midPath.cubicTo(w * 0.65, yGround - mBase, w * 0.70, yGround - mPeak * 0.8, w * 0.80, yGround - mPeak * 0.8);
+    midPath.cubicTo(w * 0.90, yGround - mPeak * 0.8, w * 0.95, yGround - mBase, w, yGround - mBase);
+    midPath.lineTo(w, size.y);
+    midPath.lineTo(0, size.y);
+    midPath.close();
 
-    // Golden sun glint on the ridge edge
-    canvas.drawPath(
-      ridgePath,
-      Paint()
-        ..color = const Color(0xFFFFF5B8).withValues(alpha: 0.75)
-        ..strokeWidth = 2.0
-        ..style = ui.PaintingStyle.stroke,
-    );
-    // Soft shadow below the ridge
-    canvas.drawPath(
-      ridgePath,
-      Paint()
-        ..color = const Color(0xFF9E6E1C).withValues(alpha: 0.40)
-        ..strokeWidth = 3.5
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.5)
-        ..style = ui.PaintingStyle.stroke,
-    );
+    midHighlightPath.moveTo(0, yGround - mBase);
+    midHighlightPath.cubicTo(w * 0.08, yGround - mBase, w * 0.12, yGround - mPeak, w * 0.25, yGround - mPeak);
+    midHighlightPath.moveTo(w * 0.55, yGround - mBase);
+    midHighlightPath.cubicTo(w * 0.65, yGround - mBase, w * 0.70, yGround - mPeak * 0.8, w * 0.80, yGround - mPeak * 0.8);
 
-    // 4. Midground Scenic Elements:
-    // Desert Oasis nestled in left dune valley
-    _drawDesertOasis(canvas, Offset(w * 0.22, yGround - 42), 135);
+    _desertMidPath = midPath;
+    _desertMidHighlightPath = midHighlightPath;
+  }
 
-    // Camel Caravan walking along the central ridge
-    _drawDesertCamelCaravan(canvas, Offset(w * 0.60, yGround - 48), 0.82);
+  /// Master Desert Artwork rendering
+  void _drawDesertArtwork(Canvas canvas, double w, double yGround) {
+    _buildDesertPaths(yGround);
 
-    // Ancient Petroglyphs carved into the sand slopes
-    _drawDesertPetroglyphs(canvas, Offset(w * 0.11, yGround - 28), 0.75);
-    _drawDesertPetroglyphs(canvas, Offset(w * 0.78, yGround - 32), 0.65);
+    final farPaint = Paint()
+      ..color = const Color(0xFFD7B29B)
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: const [Color(0xFFD7B29B), Color(0xFFB99A9E)],
+      ).createShader(Rect.fromLTWH(0, yGround - size.y * 0.30, _desertRepeatWidth, size.y * 0.30));
 
-    // 5. Grand 3D Pyramids with Golden Capstones
-    // Great Pyramid of Giza (Center Left)
-    _draw3DPyramid(
-      canvas,
-      apex: Offset(w * 0.38, yGround - 165),
-      leftBaseX: w * 0.18,
-      rightBaseX: w * 0.56,
-      yGround: yGround,
-      hasGoldenCapstone: true,
-    );
+    final midPaint = Paint()..color = const Color(0xFFD6A16B);
+    final midHighlightPaint = Paint()
+      ..color = const Color(0xFFE9BE83)
+      ..style = ui.PaintingStyle.stroke
+      ..strokeWidth = 3.0;
 
-    // Pyramid of Khafre (Center Right)
-    _draw3DPyramid(
-      canvas,
-      apex: Offset(w * 0.76, yGround - 140),
-      leftBaseX: w * 0.62,
-      rightBaseX: w * 0.89,
-      yGround: yGround,
-      hasGoldenCapstone: true,
-    );
+    double startFar = -(_desertFarOffset % _desertRepeatWidth);
+    while (startFar < w) {
+      canvas.save();
+      canvas.translate(startFar, 0);
+      canvas.drawPath(_desertFarPath!, farPaint);
+      canvas.restore();
+      startFar += _desertRepeatWidth;
+    }
 
-    // 6. Foreground Dune Ridge Hugging Base of Pyramids (seamlessly matching at 0 and w)
-    final fgDunePath = Path()
-      ..moveTo(0, yGround - 15)
-      ..quadraticBezierTo(w * 0.22, yGround - 26, w * 0.46, yGround - 8)
-      ..quadraticBezierTo(w * 0.72, yGround - 28, w, yGround - 15)
-      ..lineTo(w, size.y)
-      ..lineTo(0, size.y);
-    final fgDuneShader = LinearGradient(
-      begin: Alignment.topCenter,
-      end: Alignment.bottomCenter,
-      colors: const [
-        Color(0xFFFBE48A),
-        Color(0xFFE5B946),
-        Color(0xFFCA9428),
-      ],
-      stops: const [0.0, 0.4, 1.0],
-    ).createShader(Rect.fromLTWH(0, yGround - 30, w, 60));
-    canvas.drawPath(fgDunePath, Paint()..shader = fgDuneShader);
-
-    // Foreground Crest Golden Edge
-    final fgCrest = Path()
-      ..moveTo(0, yGround - 15)
-      ..quadraticBezierTo(w * 0.22, yGround - 26, w * 0.46, yGround - 8)
-      ..quadraticBezierTo(w * 0.72, yGround - 28, w, yGround - 15);
-    canvas.drawPath(
-      fgCrest,
-      Paint()
-        ..color = const Color(0xFFFFF9C4).withValues(alpha: 0.85)
-        ..strokeWidth = 1.8
-        ..style = ui.PaintingStyle.stroke,
-    );
+    double startMid = -(_desertMidOffset % _desertRepeatWidth);
+    while (startMid < w) {
+      canvas.save();
+      canvas.translate(startMid, 0);
+      canvas.drawPath(_desertMidPath!, midPaint);
+      canvas.drawPath(_desertMidHighlightPath!, midHighlightPaint);
+      canvas.restore();
+      startMid += _desertRepeatWidth;
+    }
   }
 
   void _drawDesertSphinx(Canvas canvas, Offset pos, double scale) {
@@ -2191,9 +2148,8 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
   void _drawParallaxBackground(Canvas canvas, String biome) {
     final yGround = size.y - 120 + _spaceSlideOffset;
 
-    if (_desertBgImage != null && biome == 'DESERT') {
-      _drawTiledParallaxImage(canvas, _desertBgImage!, mirrorTiling: true);
-      _drawDesertAtmosphereImmersion(canvas, yGround);
+    if (biome == 'DESERT') {
+      _drawDesertArtwork(canvas, size.x, yGround);
       return;
     }
 
