@@ -31,6 +31,7 @@ class RollingBall extends PositionComponent with CollisionCallbacks, HasGameRefe
 
   @override
   void update(double dt) {
+    dt *= game.globalTimeScale;
     super.update(dt);
 
     if (game.state == GameState.playing) {

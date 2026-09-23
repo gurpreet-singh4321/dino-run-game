@@ -24,6 +24,7 @@ class SpawnManager extends Component with HasGameReference<DinoGame> {
 
   @override
   void update(double dt) {
+    dt *= game.globalTimeScale;
     super.update(dt);
     if (game.state == GameState.playing) {
       _updateGroundSpawning(dt);

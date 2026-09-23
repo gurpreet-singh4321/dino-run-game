@@ -1,12 +1,8 @@
+// ignore_for_file: avoid_print
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flame/components.dart';
 import 'package:flame/collisions.dart';
 import 'package:flame/game.dart';
-import 'package:dino_run_epochs/game/dino_game.dart';
-import 'package:dino_run_epochs/game/game_state.dart';
-import 'package:dino_run_epochs/components/player.dart';
-import 'package:dino_run_epochs/components/obstacle.dart';
-import 'package:dino_run_epochs/managers/coin_manager.dart';
 
 class TestGame extends FlameGame with HasCollisionDetection {}
 

@@ -27,16 +27,6 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
   // Background leftward parallax scroll offset
   double _bgScrollOffset = 0;
 
-  // Procedural Desert Parallax
-  double _desertFarOffset = 0;
-  double _desertMidOffset = 0;
-  Path? _desertFarPath;
-  Path? _desertMidPath;
-  Path? _desertMidHighlightPath;
-  double _cachedDesertYGround = 0;
-  double _cachedDesertHeight = 0;
-  final double _desertRepeatWidth = 2048.0;
-
   // Lightning effect for rain/storm
   double _lightningTimer = 0;
   double _lightningFlashAlpha = 0;
@@ -49,94 +39,82 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
   ui.Image? _cosmosBgImage;
   ui.Image? _spaceBgImage;
 
+  Future<ui.Image?> _loadImageSafely(List<String> paths) async {
+    for (final path in paths) {
+      try {
+        final data = await rootBundle.load(path);
+        final bytes = data.buffer.asUint8List();
+        final codec = await ui.instantiateImageCodec(bytes);
+        final frame = await codec.getNextFrame();
+        return frame.image;
+      } catch (_) {}
+      try {
+        final flamePath = path.startsWith('assets/images/')
+            ? path.substring('assets/images/'.length)
+            : path;
+        final img = await game.images.load(flamePath);
+        return img;
+      } catch (_) {}
+    }
+    return null;
+  }
+
   @override
   Future<void> onLoad() async {
     size = game.size;
     priority = -100; // Draw behind everything
 
-    try {
-      final data = await rootBundle.load('assets/images/desert_bg_v3.jpg');
-      final bytes = data.buffer.asUint8List();
-      final codec = await ui.instantiateImageCodec(bytes);
-      final frame = await codec.getNextFrame();
-      _desertBgImage = frame.image;
-    } catch (_) {
-      try {
-        _desertBgImage = await game.images.load('desert_bg_v3.jpg');
-      } catch (_) {}
-    }
+    final results = await Future.wait([
+      _loadImageSafely([
+        'assets/images/biomes/desert_fossil_canyon.png',
+        'assets/images/biomes/desert_panorama.jpg',
+        'assets/images/desert_bg_v3.jpg',
+        'assets/images/desert_bg.jpg',
+        'assets/images/desert_bg_panorama.jpg',
+        'assets/images/desert_bg_hd.jpg',
+      ]),
+      _loadImageSafely([
+        'assets/images/biomes/rain_painted_v1.png',
+        'assets/images/biomes/rain_panorama.jpg',
+        'assets/images/rain_bg.jpg',
+      ]),
+      _loadImageSafely([
+        'assets/images/biomes/forest_painted_v1.png',
+        'assets/images/biomes/forest_panorama.jpg',
+        'assets/images/forest_bg.jpg',
+      ]),
+      _loadImageSafely([
+        'assets/images/biomes/ice_painted_v1.png',
+        'assets/images/biomes/ice_panorama.jpg',
+        'assets/images/ice_bg.jpg',
+      ]),
+      _loadImageSafely([
+        'assets/images/biomes/volcano_painted_v1.png',
+        'assets/images/biomes/volcano_panorama.jpg',
+        'assets/images/volcano_bg.jpg',
+      ]),
+      _loadImageSafely([
+        'assets/images/biomes/cosmos_painted_v1.png',
+        'assets/images/biomes/cosmos_panorama.jpg',
+        'assets/images/cosmos_bg.jpg',
+        'assets/images/space_bg.jpg',
+      ]),
+      _loadImageSafely([
+        'assets/images/biomes/cosmos_painted_v1.png',
+        'assets/images/space_bg.jpg',
+        'assets/images/space_bg_panorama.jpg',
+        'assets/images/biomes/cosmos_panorama.jpg',
+        'assets/images/cosmos_bg.jpg',
+      ]),
+    ]);
 
-    try {
-      final data = await rootBundle.load('assets/images/rain_bg.jpg');
-      final bytes = data.buffer.asUint8List();
-      final codec = await ui.instantiateImageCodec(bytes);
-      final frame = await codec.getNextFrame();
-      _rainBgImage = frame.image;
-    } catch (_) {
-      try {
-        _rainBgImage = await game.images.load('rain_bg.jpg');
-      } catch (_) {}
-    }
-
-    try {
-      final data = await rootBundle.load('assets/images/forest_bg.jpg');
-      final bytes = data.buffer.asUint8List();
-      final codec = await ui.instantiateImageCodec(bytes);
-      final frame = await codec.getNextFrame();
-      _forestBgImage = frame.image;
-    } catch (_) {
-      try {
-        _forestBgImage = await game.images.load('forest_bg.jpg');
-      } catch (_) {}
-    }
-
-    try {
-      final data = await rootBundle.load('assets/images/ice_bg.jpg');
-      final bytes = data.buffer.asUint8List();
-      final codec = await ui.instantiateImageCodec(bytes);
-      final frame = await codec.getNextFrame();
-      _iceBgImage = frame.image;
-    } catch (_) {
-      try {
-        _iceBgImage = await game.images.load('ice_bg.jpg');
-      } catch (_) {}
-    }
-
-    try {
-      final data = await rootBundle.load('assets/images/volcano_bg.jpg');
-      final bytes = data.buffer.asUint8List();
-      final codec = await ui.instantiateImageCodec(bytes);
-      final frame = await codec.getNextFrame();
-      _volcanoBgImage = frame.image;
-    } catch (_) {
-      try {
-        _volcanoBgImage = await game.images.load('volcano_bg.jpg');
-      } catch (_) {}
-    }
-
-    try {
-      final data = await rootBundle.load('assets/images/cosmos_bg.jpg');
-      final bytes = data.buffer.asUint8List();
-      final codec = await ui.instantiateImageCodec(bytes);
-      final frame = await codec.getNextFrame();
-      _cosmosBgImage = frame.image;
-    } catch (_) {
-      try {
-        _cosmosBgImage = await game.images.load('cosmos_bg.jpg');
-      } catch (_) {}
-    }
-
-    try {
-      final data = await rootBundle.load('assets/images/space_bg.jpg');
-      final bytes = data.buffer.asUint8List();
-      final codec = await ui.instantiateImageCodec(bytes);
-      final frame = await codec.getNextFrame();
-      _spaceBgImage = frame.image;
-    } catch (_) {
-      try {
-        _spaceBgImage = await game.images.load('space_bg.jpg');
-      } catch (_) {}
-    }
+    _desertBgImage = results[0];
+    _rainBgImage = results[1];
+    _forestBgImage = results[2];
+    _iceBgImage = results[3];
+    _volcanoBgImage = results[4];
+    _cosmosBgImage = results[5];
+    _spaceBgImage = results[6];
 
     // Spawn pterodactyls for prehistoric skies
     for (int i = 0; i < 3; i++) {
@@ -239,10 +217,7 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     _time += dt;
 
     if (game.state == GameState.playing || game.state == GameState.spaceMode) {
-      final speed = game.speedManager.currentSpeed;
-      _bgScrollOffset += speed * dt * 0.075;
-      _desertFarOffset = (_desertFarOffset + speed * dt * 0.04) % _desertRepeatWidth;
-      _desertMidOffset = (_desertMidOffset + speed * dt * 0.12) % _desertRepeatWidth;
+      _bgScrollOffset += game.speedManager.currentSpeed * dt * 0.075;
     }
 
     // Space mode landscape slide down off-screen
@@ -694,7 +669,7 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       _drawTiledParallaxImage(
         canvas,
         spaceImg,
-        mirrorTiling: false,
+        mirrorTiling: true,
         scrollSpeed: 0.35,
         alpha: sp,
         targetHeight: h,
@@ -1330,99 +1305,147 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     canvas.drawCircle(center, size * 0.22, Paint()..color = Colors.white);
   }
 
-  void _buildDesertPaths(double yGround) {
-    if (_desertFarPath != null && _cachedDesertYGround == yGround && _cachedDesertHeight == size.y) {
+  /// Master Desert Artwork rendering: AI background image or procedural vector fallback
+  void _drawDesertArtwork(Canvas canvas, double w, double yGround) {
+    if (_desertBgImage != null) {
+      _drawTiledParallaxImage(canvas, _desertBgImage!, mirrorTiling: true);
       return;
     }
-    _cachedDesertYGround = yGround;
-    _cachedDesertHeight = size.y;
 
-    final w = _desertRepeatWidth;
-    final farPath = Path();
-    
-    final baseH = size.y * 0.10;
-    final peakH = size.y * 0.30;
-    final midH = size.y * 0.20;
-    
-    farPath.moveTo(0, yGround - baseH);
-    farPath.lineTo(w * 0.05, yGround - baseH);
-    farPath.lineTo(w * 0.08, yGround - peakH);
-    farPath.lineTo(w * 0.25, yGround - peakH);
-    farPath.lineTo(w * 0.30, yGround - baseH);
-    farPath.lineTo(w * 0.40, yGround - baseH);
-    farPath.lineTo(w * 0.45, yGround - midH);
-    farPath.lineTo(w * 0.60, yGround - midH);
-    farPath.lineTo(w * 0.65, yGround - baseH);
-    farPath.lineTo(w * 0.75, yGround - baseH);
-    farPath.lineTo(w * 0.80, yGround - peakH * 0.8);
-    farPath.lineTo(w * 0.92, yGround - peakH * 0.8);
-    farPath.lineTo(w * 0.95, yGround - baseH);
-    farPath.lineTo(w, yGround - baseH);
-    farPath.lineTo(w, size.y);
-    farPath.lineTo(0, size.y);
-    farPath.close();
+    // 1. Far Soft Sand Dune Horizon Silhouette (Atmospheric backdrop - seamlessly matching at 0 and w)
+    final farDunePath = Path()
+      ..moveTo(0, yGround - 50)
+      ..quadraticBezierTo(w * 0.18, yGround - 72, w * 0.38, yGround - 48)
+      ..quadraticBezierTo(w * 0.58, yGround - 80, w * 0.78, yGround - 52)
+      ..quadraticBezierTo(w * 0.90, yGround - 72, w, yGround - 50)
+      ..lineTo(w, size.y)
+      ..lineTo(0, size.y);
+    final farDuneShader = LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [
+        const Color(0xFFF0D58C).withValues(alpha: 0.75),
+        const Color(0xFFE0B65E).withValues(alpha: 0.60),
+      ],
+    ).createShader(Rect.fromLTWH(0, yGround - 85, w, 140));
+    canvas.drawPath(farDunePath, Paint()..shader = farDuneShader);
 
-    _desertFarPath = farPath;
+    // 2. Far Landmarks:
+    // Distant Sphinx on left dune ridge
+    _drawDesertSphinx(canvas, Offset(w * 0.08, yGround - 58), 0.68);
+    // Secondary Sphinx on mid-right dune ridge
+    _drawDesertSphinx(canvas, Offset(w * 0.72, yGround - 66), 0.75);
+    // Ancient Sand Citadel / Castle on right dune
+    _drawDesertSandCitadel(canvas, Offset(w * 0.88, yGround - 66), 0.80);
 
-    final midPath = Path();
-    final midHighlightPath = Path();
-    final mBase = size.y * 0.04;
-    final mPeak = size.y * 0.12;
+    // 3. Midground Sweeping Sand Dunes (Rich S-crests with golden light & shadow - seamlessly matching at 0 and w)
+    final midDunePath = Path()
+      ..moveTo(0, yGround - 40)
+      ..cubicTo(w * 0.16, yGround - 62, w * 0.32, yGround - 26, w * 0.48, yGround - 52)
+      ..cubicTo(w * 0.62, yGround - 74, w * 0.76, yGround - 28, w * 0.90, yGround - 58)
+      ..lineTo(w, yGround - 40)
+      ..lineTo(w, size.y)
+      ..lineTo(0, size.y);
+    final midDuneShader = LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [
+        const Color(0xFFFBE48A), // Bright sunlit crest
+        const Color(0xFFE8BC50), // Mid dune gold
+        const Color(0xFFC7922E), // Rich warm shadow
+      ],
+      stops: const [0.0, 0.42, 1.0],
+    ).createShader(Rect.fromLTWH(0, yGround - 75, w, 150));
+    canvas.drawPath(midDunePath, Paint()..shader = midDuneShader);
 
-    midPath.moveTo(0, yGround - mBase);
-    midPath.cubicTo(w * 0.08, yGround - mBase, w * 0.12, yGround - mPeak, w * 0.25, yGround - mPeak);
-    midPath.cubicTo(w * 0.38, yGround - mPeak, w * 0.42, yGround - mBase, w * 0.55, yGround - mBase);
-    midPath.cubicTo(w * 0.65, yGround - mBase, w * 0.70, yGround - mPeak * 0.8, w * 0.80, yGround - mPeak * 0.8);
-    midPath.cubicTo(w * 0.90, yGround - mPeak * 0.8, w * 0.95, yGround - mBase, w, yGround - mBase);
-    midPath.lineTo(w, size.y);
-    midPath.lineTo(0, size.y);
-    midPath.close();
+    // Dune Ridge Golden Highlight & Shadow Crest Sweep
+    final ridgePath = Path()
+      ..moveTo(0, yGround - 40)
+      ..cubicTo(w * 0.16, yGround - 62, w * 0.32, yGround - 26, w * 0.48, yGround - 52)
+      ..cubicTo(w * 0.62, yGround - 74, w * 0.76, yGround - 28, w * 0.90, yGround - 58)
+      ..lineTo(w, yGround - 40);
 
-    midHighlightPath.moveTo(0, yGround - mBase);
-    midHighlightPath.cubicTo(w * 0.08, yGround - mBase, w * 0.12, yGround - mPeak, w * 0.25, yGround - mPeak);
-    midHighlightPath.moveTo(w * 0.55, yGround - mBase);
-    midHighlightPath.cubicTo(w * 0.65, yGround - mBase, w * 0.70, yGround - mPeak * 0.8, w * 0.80, yGround - mPeak * 0.8);
+    // Golden sun glint on the ridge edge
+    canvas.drawPath(
+      ridgePath,
+      Paint()
+        ..color = const Color(0xFFFFF5B8).withValues(alpha: 0.75)
+        ..strokeWidth = 2.0
+        ..style = ui.PaintingStyle.stroke,
+    );
+    // Soft shadow below the ridge
+    canvas.drawPath(
+      ridgePath,
+      Paint()
+        ..color = const Color(0xFF9E6E1C).withValues(alpha: 0.40)
+        ..strokeWidth = 3.5
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.5)
+        ..style = ui.PaintingStyle.stroke,
+    );
 
-    _desertMidPath = midPath;
-    _desertMidHighlightPath = midHighlightPath;
-  }
+    // 4. Midground Scenic Elements:
+    // Desert Oasis nestled in left dune valley
+    _drawDesertOasis(canvas, Offset(w * 0.22, yGround - 42), 135);
 
-  /// Master Desert Artwork rendering
-  void _drawDesertArtwork(Canvas canvas, double w, double yGround) {
-    _buildDesertPaths(yGround);
+    // Camel Caravan walking along the central ridge
+    _drawDesertCamelCaravan(canvas, Offset(w * 0.60, yGround - 48), 0.82);
 
-    final farPaint = Paint()
-      ..color = const Color(0xFFD7B29B)
-      ..shader = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: const [Color(0xFFD7B29B), Color(0xFFB99A9E)],
-      ).createShader(Rect.fromLTWH(0, yGround - size.y * 0.30, _desertRepeatWidth, size.y * 0.30));
+    // Ancient Petroglyphs carved into the sand slopes
+    _drawDesertPetroglyphs(canvas, Offset(w * 0.11, yGround - 28), 0.75);
+    _drawDesertPetroglyphs(canvas, Offset(w * 0.78, yGround - 32), 0.65);
 
-    final midPaint = Paint()..color = const Color(0xFFD6A16B);
-    final midHighlightPaint = Paint()
-      ..color = const Color(0xFFE9BE83)
-      ..style = ui.PaintingStyle.stroke
-      ..strokeWidth = 3.0;
+    // 5. Grand 3D Pyramids with Golden Capstones
+    // Great Pyramid of Giza (Center Left)
+    _draw3DPyramid(
+      canvas,
+      apex: Offset(w * 0.38, yGround - 165),
+      leftBaseX: w * 0.18,
+      rightBaseX: w * 0.56,
+      yGround: yGround,
+      hasGoldenCapstone: true,
+    );
 
-    double startFar = -(_desertFarOffset % _desertRepeatWidth);
-    while (startFar < w) {
-      canvas.save();
-      canvas.translate(startFar, 0);
-      canvas.drawPath(_desertFarPath!, farPaint);
-      canvas.restore();
-      startFar += _desertRepeatWidth;
-    }
+    // Pyramid of Khafre (Center Right)
+    _draw3DPyramid(
+      canvas,
+      apex: Offset(w * 0.76, yGround - 140),
+      leftBaseX: w * 0.62,
+      rightBaseX: w * 0.89,
+      yGround: yGround,
+      hasGoldenCapstone: true,
+    );
 
-    double startMid = -(_desertMidOffset % _desertRepeatWidth);
-    while (startMid < w) {
-      canvas.save();
-      canvas.translate(startMid, 0);
-      canvas.drawPath(_desertMidPath!, midPaint);
-      canvas.drawPath(_desertMidHighlightPath!, midHighlightPaint);
-      canvas.restore();
-      startMid += _desertRepeatWidth;
-    }
+    // 6. Foreground Dune Ridge Hugging Base of Pyramids (seamlessly matching at 0 and w)
+    final fgDunePath = Path()
+      ..moveTo(0, yGround - 15)
+      ..quadraticBezierTo(w * 0.22, yGround - 26, w * 0.46, yGround - 8)
+      ..quadraticBezierTo(w * 0.72, yGround - 28, w, yGround - 15)
+      ..lineTo(w, size.y)
+      ..lineTo(0, size.y);
+    final fgDuneShader = LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: const [
+        Color(0xFFFBE48A),
+        Color(0xFFE5B946),
+        Color(0xFFCA9428),
+      ],
+      stops: const [0.0, 0.4, 1.0],
+    ).createShader(Rect.fromLTWH(0, yGround - 30, w, 60));
+    canvas.drawPath(fgDunePath, Paint()..shader = fgDuneShader);
+
+    // Foreground Crest Golden Edge
+    final fgCrest = Path()
+      ..moveTo(0, yGround - 15)
+      ..quadraticBezierTo(w * 0.22, yGround - 26, w * 0.46, yGround - 8)
+      ..quadraticBezierTo(w * 0.72, yGround - 28, w, yGround - 15);
+    canvas.drawPath(
+      fgCrest,
+      Paint()
+        ..color = const Color(0xFFFFF9C4).withValues(alpha: 0.85)
+        ..strokeWidth = 1.8
+        ..style = ui.PaintingStyle.stroke,
+    );
   }
 
   void _drawDesertSphinx(Canvas canvas, Offset pos, double scale) {
@@ -2103,7 +2126,7 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
   }) {
     final imgW = img.width.toDouble();
     final imgH = img.height.toDouble();
-    final h = targetHeight > 0 ? targetHeight : size.y;
+    final h = targetHeight > 0 ? targetHeight : game.ground.groundY + 12;
     final scale = h / imgH;
     final tileW = imgW * scale;
 
@@ -2149,18 +2172,42 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     final yGround = size.y - 120 + _spaceSlideOffset;
 
     if (biome == 'DESERT') {
-      _drawDesertArtwork(canvas, size.x, yGround);
+      if (_desertBgImage != null) {
+        _drawTiledParallaxImage(canvas, _desertBgImage!, mirrorTiling: true);
+      } else {
+        final tileW = size.x;
+        final pShift = _bgScrollOffset % tileW;
+        canvas.save();
+        canvas.translate(-pShift, 0);
+        _drawDesertArtwork(canvas, size.x, yGround);
+        canvas.translate(tileW, 0);
+        _drawDesertArtwork(canvas, size.x, yGround);
+        canvas.restore();
+      }
+      _drawDesertAtmosphereImmersion(canvas, yGround);
       return;
     }
 
-    if (_rainBgImage != null && biome == 'RAIN') {
-      _drawTiledParallaxImage(canvas, _rainBgImage!, mirrorTiling: true);
-      _drawRainAtmosphere(canvas, size.x, yGround);
-      return;
+    if (biome == 'RAIN') {
+      if (_rainBgImage != null) {
+        _drawTiledParallaxImage(canvas, _rainBgImage!, mirrorTiling: true);
+        _drawRainAtmosphere(canvas, size.x, yGround);
+        return;
+      } else {
+        final tileW = size.x;
+        final pShift = _bgScrollOffset % tileW;
+        canvas.save();
+        canvas.translate(-pShift, 0);
+        _drawRainTempleArtwork(canvas, size.x, yGround);
+        canvas.translate(tileW, 0);
+        _drawRainTempleArtwork(canvas, size.x, yGround);
+        canvas.restore();
+        return;
+      }
     }
 
     if (_forestBgImage != null && biome == 'FOREST') {
-      _drawTiledParallaxImage(canvas, _forestBgImage!, mirrorTiling: false);
+      _drawTiledParallaxImage(canvas, _forestBgImage!, mirrorTiling: true);
       _drawForestAtmosphere(canvas, size.x, yGround);
       return;
     }
@@ -2178,7 +2225,7 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     }
 
     if (_cosmosBgImage != null && biome == 'COSMOS') {
-      _drawTiledParallaxImage(canvas, _cosmosBgImage!, mirrorTiling: false);
+      _drawTiledParallaxImage(canvas, _cosmosBgImage!, mirrorTiling: true);
       _drawCosmosAtmosphere(canvas, size.x, yGround);
       return;
     }

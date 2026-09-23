@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'dart:ui' as ui;
 import 'package:flame/components.dart';
 import 'package:flame/collisions.dart';
 import '../game/dino_game.dart';
@@ -14,11 +15,23 @@ import 'falling_stone.dart';
 import 'collectible.dart';
 import 'rolling_ball.dart';
 
+class _TrailEntry {
+  double dx = 0;
+  double dy = 0;
+  double scaleX = 1.0;
+  double scaleY = 1.0;
+  double lean = 0.0;
+  double age = 0.0;
+  int frame = 0;
+  bool isFalling = false;
+  bool isOnGround = true;
+  bool active = false;
+}
+
 class Player extends PositionComponent with CollisionCallbacks, HasGameReference<DinoGame> {
   static const double gravity = 800;
   static const double jumpForce = -480;
   static final math.Random _rng = math.Random();
-  static final Paint _reusePaint = Paint();
 
   double velocityY = 0;
   int jumpsLeft = 2;
@@ -38,6 +51,16 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
   bool movingRight = false;
   double targetX = 0;
 
+  // Jump Juice Mechanics
+  bool _jumpCutApplied = false;
+  double _coyoteTimer = 0;
+  double _jumpBufferTimer = 0;
+  double squashX = 1.0;
+  double squashY = 1.0;
+  double _prevVelocityY = 0;
+  double _jumpTime = 0;
+  bool _isJumpReleased = false;
+
   // Animation
   int _animFrame = 0;
   double _animTimer = 0;
@@ -45,11 +68,49 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
   double _footstepTimer = 0;
   static const double _animSpeed = 0.12; // 100ms per frame
 
+  // Visual Polish
+  double _currentLean = 0.0;
+  final List<_TrailEntry> _trail = List.generate(3, (_) => _TrailEntry());
+  int _trailHead = 0;
+  double _trailTimer = 0;
+
+  static final List<Paint> _shadowPaints = List.generate(8, (i) {
+    final alpha = 0.1 + 0.2 * (i / 7.0);
+    return Paint()..shader = ui.Gradient.radial(
+      Offset.zero, 
+      48.0, 
+      [Colors.black.withValues(alpha: alpha), Colors.transparent], 
+      const [0.2, 1.0]
+    );
+  });
+  static final Paint _magnetRingPaint = Paint()..style = PaintingStyle.stroke;
+  static final Paint _magnetFillPaint = Paint()..style = PaintingStyle.fill;
+  static final Paint _magnetHaloBack = Paint()..style = PaintingStyle.stroke..strokeWidth = 4.0;
+  static final Paint _magnetHaloFront = Paint()..style = PaintingStyle.stroke..strokeWidth = 4.5;
+  static final Paint _magnetRingBack = Paint()..style = PaintingStyle.stroke..strokeWidth = 2.4;
+  static final Paint _magnetRingFront = Paint()..style = PaintingStyle.stroke..strokeWidth = 2.8;
+  static final Paint _sparklePaint = Paint()..color = Colors.white;
+  static final Paint _sparkleGlowPaint = Paint()..color = const Color(0xFF00E5FF);
+  
+  static final Paint _giantAuraPaint = Paint();
+  static final Paint _giantStrokePaint = Paint()..style = PaintingStyle.stroke..strokeWidth = 2.0;
+  
+  static final Paint _invincibleAuraPaint = Paint()..style = PaintingStyle.stroke..strokeWidth = 2.5;
+  static final Paint _invincibleGlowPaint = Paint();
+  
+  static final Paint _shieldSheenPaint = Paint();
+  static final Paint _shieldDotPaint = Paint();
+  
+  static final Paint _plasterPaint = Paint()..color = const Color(0xFFFF80AB);
+  static final Paint _trailPaint = Paint();
+
   // Skin system
   late CharacterSkin skin;
 
   void setSkin(CharacterSkin newSkin) {
+    if (!SkinRegistry.isAvailable(newSkin.id)) return;
     skin = newSkin;
+    skin.resetMotion();
     game.coinManager.setActiveSkin(newSkin.id);
   }
 
@@ -108,6 +169,7 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
 
   @override
   void update(double dt) {
+    dt *= game.globalTimeScale;
     super.update(dt);
     _totalElapsed += dt;
     
@@ -123,7 +185,6 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
       return;
     }
 
-    skin.update(dt);
 
     // Animation timer (Freeze animation cycles in space mode and mid-air!)
     if (game.state == GameState.playing && isOnGround) {
@@ -142,6 +203,11 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
       _updateSpacePhysics(dt);
     }
 
+    skin.advanceMotion(dt, speed: game.speedManager.currentSpeed,
+      velocityY: velocityY, grounded: isOnGround,
+      idle: game.state == GameState.menu,
+      space: inSpaceMode, characterWidth: size.x * scale.x);
+
     // Powerup timers
     if (shieldTimer > 0) shieldTimer -= dt;
     if (magnetTimer > 0) magnetTimer -= dt;
@@ -152,9 +218,80 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
         scale = Vector2.all(1.0);
       }
     }
+
+    // Jump Juice Timers & Squash
+    if (_coyoteTimer > 0) {
+      _coyoteTimer -= dt;
+      if (_coyoteTimer <= 0 && jumpsLeft == 2) {
+        jumpsLeft = 1;
+      }
+    }
+    if (_jumpBufferTimer > 0) _jumpBufferTimer -= dt;
+
+    squashX += (1.0 - squashX) * 15 * dt;
+    squashY += (1.0 - squashY) * 15 * dt;
+
+    // Visual Polish: Lean
+    if (!inSpaceMode && !isDead) {
+      final speedFactor = (game.speedManager.currentSpeed / 1200.0).clamp(0.0, 1.0);
+      _currentLean = speedFactor * 0.10;
+      if (!isOnGround) {
+        if (velocityY < 0) {
+          _currentLean += 0.08;
+        } else {
+          _currentLean -= 0.12;
+        }
+      }
+    } else {
+      _currentLean = 0.0;
+    }
+
+    // Visual Polish: Trail
+    for (var e in _trail) {
+      if (e.active) {
+        e.age += dt;
+        if (e.age > 0.25) e.active = false;
+      }
+    }
+
+    final isHighSpeed = (game.speedManager.currentSpeed / game.speedManager.maxSpeed) > 0.7;
+    final hasPowerup = invincibleTimer > 0 || giantTimer > 0 || shieldTimer > 0;
+    
+    if (!isDead && !inSpaceMode && (isHighSpeed || hasPowerup)) {
+      _trailTimer += dt;
+      if (_trailTimer >= 0.04) {
+        _trailTimer = 0;
+        final entry = _trail[_trailHead];
+        entry.dx = position.x;
+        entry.dy = position.y;
+        entry.scaleX = squashX;
+        entry.scaleY = squashY;
+        entry.lean = _currentLean;
+        entry.frame = _animFrame;
+        entry.isFalling = velocityY > 0;
+        entry.isOnGround = isOnGround;
+        entry.age = 0;
+        entry.active = true;
+        _trailHead = (_trailHead + 1) % 3; // Reduce to 3 entries
+      }
+    } else {
+      for (var e in _trail) {
+        e.active = false;
+      }
+    }
+    
+    _jumpTime += dt;
+    
+    if (_isJumpReleased && !_jumpCutApplied && velocityY < 0 && !inSpaceMode) {
+      if (_jumpTime >= 0.09) {
+        velocityY *= 0.6;
+        _jumpCutApplied = true;
+      }
+    }
   }
 
   void _updateGroundPhysics(double dt) {
+    _prevVelocityY = velocityY;
     velocityY += gravity * dt;
     position.y += velocityY * dt;
 
@@ -182,10 +319,30 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
           } else {
             game.particlePool.emitJumpDust(footPos);
           }
+
+          if (_prevVelocityY > 400) {
+            game.triggerShake(duration: 0.08, intensity: 1.5);
+            if (currentBiome == 'DESERT') {
+              game.particlePool.emitDesertLandingImpact(footPos);
+            } else {
+              game.particlePool.emitJumpDust(footPos);
+            }
+          }
+
+          if (_prevVelocityY > 200) {
+            squashX = 1.25;
+            squashY = 0.75;
+          }
+          _jumpCutApplied = false;
         }
         velocityY = 0;
         isOnGround = true;
         jumpsLeft = 2;
+
+        if (_jumpBufferTimer > 0) {
+          _jumpBufferTimer = 0;
+          jump();
+        }
 
         // Continuous biome footstep particles
         if (currentBiome == 'DESERT') {
@@ -201,6 +358,9 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
           }
         }
       } else {
+        if (isOnGround) {
+          _coyoteTimer = 0.090;
+        }
         isOnGround = false;
         // Check if hit lava (let's say lava is 40px below ground)
         if (position.y >= groundY + 30) {
@@ -208,6 +368,9 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
         }
       }
     } else {
+      if (isOnGround) {
+        _coyoteTimer = 0.090;
+      }
       isOnGround = false;
     }
   }
@@ -215,6 +378,13 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
   void _hitLava() {
     if (invincibleTimer > 0) return; // Wait until they can take damage again
     
+    // Break combo on lava hit
+    if (game.combo > 0) {
+      game.comboDisplay.showComboBreak(game.combo);
+      game.combo = 0;
+      game.comboTimer = 0;
+    }
+
     // Lose a life
     if (shieldTimer > 0) {
       shieldTimer = 0;
@@ -317,13 +487,30 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
 
   void jump() {
     if (game.state != GameState.playing) return;
-    if (jumpsLeft > 0) {
-      velocityY = jumpForce;
-      isOnGround = false;
-      jumpsLeft--;
-      game.coinManager.recordJump();
-      game.particlePool.emitJumpDust(Vector2(position.x + (size.x * scale.x) / 2, position.y + size.y * scale.y));
+    
+    if (jumpsLeft <= 0) {
+      _jumpBufferTimer = 0.120;
+      return;
     }
+
+    _jumpCutApplied = false;
+    _coyoteTimer = 0;
+    skin.onJump();
+    velocityY = jumpForce;
+    isOnGround = false;
+    jumpsLeft--;
+    _jumpTime = 0;
+    _isJumpReleased = false;
+
+    squashX = 0.75;
+    squashY = 1.25;
+
+    game.coinManager.recordJump();
+    game.particlePool.emitJumpDust(Vector2(position.x + (size.x * scale.x) / 2, position.y + size.y * scale.y));
+  }
+
+  void onJumpRelease() {
+    _isJumpReleased = true;
   }
 
   void enterSpaceMode() {
@@ -364,6 +551,13 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
     movingLeft = false;
     movingRight = false;
     skin = SkinRegistry.getById(game.coinManager.activeSkinId);
+
+    _jumpCutApplied = false;
+    _coyoteTimer = 0;
+    _jumpBufferTimer = 0;
+    squashX = 1.0;
+    squashY = 1.0;
+    _prevVelocityY = 0;
   }
 
   @override
@@ -372,26 +566,27 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
     if (invincibleTimer > 0 || isDead) return;
 
     if (other is Obstacle && !other.isRemoving) {
+      if (!other.isEntranceComplete) return;
       if (giantTimer > 0) {
         _knockout(other);
         return;
       }
       other.removeFromParent();
-      _handleDamage();
+      _handleDamage(other);
     } else if (other is FallingStone && !other.isRemoving) {
       if (giantTimer > 0) {
         _knockout(other);
         return;
       }
       other.removeFromParent();
-      _handleDamage();
+      _handleDamage(other);
     } else if (other is RollingBall && !other.isRemoved) {
       if (giantTimer > 0) {
         _knockout(other);
         return;
       }
       other.removeFromParent();
-      _handleDamage();
+      _handleDamage(other);
     } else if (other is Collectible) {
       other.onCollect();
     }
@@ -405,20 +600,38 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
     game.triggerShake(duration: 0.15, intensity: 3.0);
   }
 
-  void _handleDamage() {
+  void _handleDamage(PositionComponent? obs) {
+    // Break combo on damage
+    if (game.combo > 0) {
+      game.comboDisplay.showComboBreak(game.combo);
+      game.combo = 0;
+      game.comboTimer = 0;
+    }
+
+    ShakePreset preset = ShakePreset.sideHit;
+    if (obs is Obstacle) {
+      if (obs.type == ObstacleType.ceilingPipe || obs.type == ObstacleType.bird) {
+        preset = ShakePreset.topHit;
+      }
+    } else if (obs is FallingStone) {
+      preset = ShakePreset.topHit;
+    }
+
     if (shieldTimer > 0) {
       shieldTimer = 0;
       invincibleTimer = 1.2;
       game.particlePool.emitShieldBreak(Vector2(position.x + (size.x * scale.x) / 2, position.y + (size.y * scale.y) / 2));
       HapticFeedback.mediumImpact();
-      game.triggerShake(duration: 0.2, intensity: 4.0);
+      game.triggerShake(duration: 0.2, intensity: 4.0, preset: ShakePreset.shieldBreak);
+      game.triggerHitStop();
       return;
     }
 
     lives--;
     game.particlePool.emitCuteDeath(Vector2(position.x + (size.x * scale.x) / 2, position.y + (size.y * scale.y) / 2));
     HapticFeedback.heavyImpact();
-    game.triggerShake(duration: 0.35, intensity: 7.0);
+    game.triggerShake(duration: 0.35, intensity: 7.0, preset: preset);
+    game.triggerHitStop();
 
     if (lives <= 0) {
       die();
@@ -443,7 +656,7 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
       final alpha = (1.0 - (deathTimer / 0.85)).clamp(0.0, 1.0);
       final fadePaint = Paint()..color = Colors.white.withValues(alpha: alpha);
       canvas.saveLayer(Rect.fromLTWH(-20, -30, size.x + 40, size.y + 40), fadePaint);
-      skin.renderJumping(canvas, Size(size.x, size.y), true);
+      skin.renderCharacter(canvas, Size(size.x, size.y), 0, pose: CharacterPose.falling);
 
       // Cute spinning dizzy golden stars above Dino's head
       final starAngle = deathTimer * 12.0;
@@ -459,10 +672,9 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
       }
 
       // Cute pink band-aid plaster on forehead
-      final plasterPaint = Paint()..color = const Color(0xFFFF80AB);
       canvas.drawRRect(
         RRect.fromRectAndRadius(Rect.fromLTWH(size.x * 0.55, size.y * 0.18, 16, 6), const Radius.circular(3)),
-        plasterPaint,
+        _plasterPaint,
       );
 
       canvas.restore(); // for saveLayer
@@ -473,8 +685,103 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
     bool applyGlitch = false;
     // Invincibility flash and glitch
     if (invincibleTimer > 0) {
-      if (_rng.nextDouble() > 0.7) return; // 30% chance to be invisible (blink)
+      if (invincibleTimer <= 0.6) {
+        if (!isPowerupBlinkVisible(invincibleTimer)) return;
+      } else {
+        if (_rng.nextDouble() > 0.7) return; // 30% chance to be invisible (blink)
+      }
       applyGlitch = true;
+    }
+
+    final drawSize = Size(size.x, size.y);
+
+    // Aura pulsing at ~1.2 Hz (scale: 1.0 -> 1.05 -> 1.0, alpha: 0.7 -> 0.9 -> 0.7)
+    final pulseT = 0.5 + 0.5 * math.sin(_totalElapsed * 1.2 * 2 * math.pi);
+    final pulse = 1.0 + 0.05 * pulseT;
+    final alphaPulse = 0.7 + 0.2 * pulseT;
+
+    final showShield = isPowerupBlinkVisible(shieldTimer);
+    final showMagnet = isPowerupBlinkVisible(magnetTimer);
+    final showGiant = isPowerupBlinkVisible(giantTimer);
+    final showInvincible = isPowerupBlinkVisible(invincibleTimer);
+
+    // Subtle pulsing magnet pull radius visualization circle centered on Dino
+    if (showMagnet) {
+      final magnetLvl = game.coinManager.magnetLevel;
+      final pullRadius = 160.0 + (magnetLvl * 30.0);
+      final fieldRadius = (pullRadius / scale.x) * pulse;
+      final fieldCenter = Offset(size.x / 2, size.y / 2);
+
+      _magnetRingPaint
+        ..color = const Color(0xFF00E5FF).withValues(alpha: 0.14 * alphaPulse)
+        ..strokeWidth = 1.5 / scale.x;
+      canvas.drawCircle(fieldCenter, fieldRadius, _magnetRingPaint);
+
+      _magnetFillPaint.color = const Color(0xFF00E5FF).withValues(alpha: 0.03 * alphaPulse);
+      canvas.drawCircle(fieldCenter, fieldRadius, _magnetFillPaint);
+    }
+
+    // 0. Ground Shadow Blob
+    if (!inSpaceMode && !isDead) {
+      final groundY = game.ground.groundY;
+      final distFromGround = groundY - (position.y + size.y * scale.y);
+      if (distFromGround >= -10 && distFromGround < 300) {
+        final shadowScale = (1.0 - (distFromGround / 300.0).clamp(0.0, 1.0)) * 0.6 + 0.4;
+        final distFactor = (1.0 - (distFromGround / 300.0).clamp(0.0, 1.0));
+        int bucket = (distFactor * 7).round();
+        
+        canvas.save();
+        canvas.translate(size.x / 2, size.y + distFromGround);
+        canvas.scale(shadowScale, 0.25);
+        canvas.drawCircle(Offset.zero, size.x * 0.6, _shadowPaints[bucket]);
+        canvas.restore();
+      }
+    }
+
+    // 0.5 Afterimage Trail
+    bool trailActive = false;
+    for (var e in _trail) { if (e.active) trailActive = true; }
+    if (trailActive) {
+      Color trailColor = const Color(0xFF00E5FF);
+      if (invincibleTimer > 0) {
+        trailColor = const Color(0xFFFFD700);
+      } else if (giantTimer > 0) {
+        trailColor = const Color(0xFFFF1744);
+      } else if (shieldTimer > 0) {
+        trailColor = const Color(0xFF00E5FF);
+      }
+      
+      for (int i = 0; i < _trail.length; i++) {
+        int idx = (_trailHead + i) % _trail.length;
+        final entry = _trail[idx];
+        if (!entry.active) continue;
+        
+        final alpha = (1.0 - (entry.age / 0.25)).clamp(0.0, 1.0) * 0.18;
+        _trailPaint.color = trailColor.withValues(alpha: alpha);
+        
+        canvas.save();
+        final offsetX = game.speedManager.currentSpeed * entry.age;
+        canvas.translate(-offsetX + size.x / 2, entry.dy - position.y + size.y);
+        canvas.scale(entry.scaleX, entry.scaleY);
+        if (entry.lean != 0) canvas.rotate(entry.lean);
+        canvas.translate(-size.x / 2, -size.y);
+        
+        // Small horizontal motion streaks, never body-sized opaque blocks.
+        // Keep the effect behind the runner and away from the face.
+        for (int streak = 0; streak < 2; streak++) {
+          canvas.drawRRect(
+            RRect.fromRectAndRadius(
+              Rect.fromLTWH(-size.x * 0.18,
+                  size.y * (0.58 + streak * 0.16),
+                  size.x * (0.25 - streak * 0.06), 2.0),
+              const Radius.circular(1.0),
+            ),
+            _trailPaint,
+          );
+        }
+        
+        canvas.restore();
+      }
     }
 
     if (applyGlitch) {
@@ -482,11 +789,27 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
       canvas.translate((_rng.nextDouble() - 0.5) * 20, 0);
     }
 
-    final drawSize = Size(size.x, size.y);
+    canvas.save();
+    canvas.translate(size.x / 2, size.y);
+    if (!skin.hasArticulatedMotion) {
+      canvas.scale(squashX, squashY);
+      if (_currentLean != 0) canvas.rotate(_currentLean);
+    }
+    canvas.translate(-size.x / 2, -size.y);
+
+    // 0.8 Giant Dino Primal Fire Aura
+    if (showGiant) {
+      _renderGiantAura(canvas, drawSize, pulse, alphaPulse);
+    }
+
+    // 0.9 Invincible Radiant Golden Prismatic Aura
+    if (showInvincible) {
+      _renderInvincibleAura(canvas, drawSize, pulse, alphaPulse);
+    }
 
     // 1. Draw BACK ARC of 3D Magnet Ring (Behind Dino's body)
-    if (magnetTimer > 0) {
-      _renderHulaHoopMagnetBack(canvas, drawSize);
+    if (showMagnet) {
+      _renderHulaHoopMagnetBack(canvas, drawSize, pulse, alphaPulse);
     }
 
     // 2. Draw Jetpack Tanks & Thruster Exhaust (Behind Dino's back)
@@ -496,11 +819,11 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
 
     // 3. Draw Dino Skin
     if (inSpaceMode) {
-      skin.renderSpace(canvas, drawSize, _animFrame);
+      skin.renderCharacter(canvas, drawSize, _animFrame, pose: CharacterPose.space);
     } else if (!isOnGround) {
-      skin.renderJumping(canvas, drawSize, velocityY > 0);
+      skin.renderCharacter(canvas, drawSize, _animFrame, pose: velocityY > 0 ? CharacterPose.falling : CharacterPose.jumping);
     } else {
-      skin.renderRunning(canvas, drawSize, _animFrame);
+      skin.renderCharacter(canvas, drawSize, _animFrame);
     }
 
     // 4. Draw Jetpack Front Harness Straps (Across Dino's chest)
@@ -513,14 +836,16 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
     }
 
     // 5. Draw FRONT ARC of 3D Magnet Ring (In Front of Dino's waist)
-    if (magnetTimer > 0) {
-      _renderHulaHoopMagnetFront(canvas, drawSize);
+    if (showMagnet) {
+      _renderHulaHoopMagnetFront(canvas, drawSize, pulse, alphaPulse);
     }
 
     // 6. Draw Soap Bubble Shield Overlay
-    if (shieldTimer > 0) {
-      _renderSoapBubbleShield(canvas, drawSize);
+    if (showShield) {
+      _renderSoapBubbleShield(canvas, drawSize, pulse, alphaPulse);
     }
+
+    canvas.restore(); // Restore squash/stretch transform
   }
 
   /// 🚀 High-Tech Stylized Sci-Fi Jetpack (Aero-Chassis, Dual Thrusters, Arc Reactor & Plasma Plumes)
@@ -723,9 +1048,9 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
   }
 
   /// 🫧 Cute Iridescent Soap Bubble Shield centered on Dino
-  void _renderSoapBubbleShield(Canvas canvas, Size drawSize) {
+  void _renderSoapBubbleShield(Canvas canvas, Size drawSize, double pulse, double alphaPulse) {
     final center = Offset(drawSize.width * 0.50, drawSize.height * 0.52);
-    final baseRadius = math.max(drawSize.width, drawSize.height) * 0.68;
+    final baseRadius = math.max(drawSize.width, drawSize.height) * 0.68 * pulse;
     // Smooth organic liquid bubble wobble
     final wobble = math.sin(_totalElapsed * 4.0) * 2.0;
     final bubbleRadius = baseRadius + wobble;
@@ -736,11 +1061,11 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
     final bubbleFillShader = RadialGradient(
       center: const Alignment(-0.35, -0.35),
       radius: 0.95,
-      colors: const [
-        Color(0x45E0F7FA), // Translucent cyan center
-        Color(0x2580DEEA),
-        Color(0x35F8BBD0), // Soft pink/magenta refraction
-        Color(0x5500E5FF), // Glowing rim edge
+      colors: [
+        const Color(0x45E0F7FA).withValues(alpha: 0.28 * alphaPulse), // Translucent cyan center
+        const Color(0x2580DEEA).withValues(alpha: 0.16 * alphaPulse),
+        const Color(0x35F8BBD0).withValues(alpha: 0.22 * alphaPulse), // Soft pink/magenta refraction
+        const Color(0x5500E5FF).withValues(alpha: 0.38 * alphaPulse), // Glowing rim edge
       ],
       stops: const [0.0, 0.45, 0.78, 1.0],
     ).createShader(bubbleRect);
@@ -752,12 +1077,12 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
       center: Alignment.center,
       startAngle: _totalElapsed * 1.5,
       endAngle: _totalElapsed * 1.5 + math.pi * 2,
-      colors: const [
-        Color(0xFF00E5FF), // Cyan
-        Color(0xFFFF4081), // Magenta
-        Color(0xFFFFD54F), // Gold
-        Color(0xFF00E676), // Emerald
-        Color(0xFF00E5FF), // Cyan repeat
+      colors: [
+        const Color(0xFF00E5FF).withValues(alpha: 0.95 * alphaPulse), // Cyan
+        const Color(0xFFFF4081).withValues(alpha: 0.95 * alphaPulse), // Magenta
+        const Color(0xFFFFD54F).withValues(alpha: 0.95 * alphaPulse), // Gold
+        const Color(0xFF00E676).withValues(alpha: 0.95 * alphaPulse), // Emerald
+        const Color(0xFF00E5FF).withValues(alpha: 0.95 * alphaPulse), // Cyan repeat
       ],
     ).createShader(bubbleRect);
 
@@ -779,29 +1104,27 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
       math.pi * 0.45,
     );
 
-    canvas.drawPath(
-      sheenPath,
-      Paint()
-        ..color = Colors.white.withValues(alpha: 0.85)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 3.2
-        ..strokeCap = StrokeCap.round,
-    );
+    _shieldSheenPaint.color = Colors.white.withValues(alpha: 0.85 * alphaPulse);
+    _shieldSheenPaint.style = PaintingStyle.stroke;
+    _shieldSheenPaint.strokeWidth = 3.2;
+    _shieldSheenPaint.strokeCap = StrokeCap.round;
+    canvas.drawPath(sheenPath, _shieldSheenPaint);
 
     // Secondary smaller bottom-right reflection dot
+    _shieldDotPaint.color = Colors.white.withValues(alpha: 0.65 * alphaPulse);
     canvas.drawCircle(
       Offset(center.dx + bubbleRadius * 0.55, center.dy + bubbleRadius * 0.55),
       2.5,
-      Paint()..color = Colors.white.withValues(alpha: 0.65),
+      _shieldDotPaint,
     );
   }
 
   /// 🧲 3D Hula Hoop Magnet Ring - BACK ARC (Drawn behind Dino's body)
-  void _renderHulaHoopMagnetBack(Canvas canvas, Size drawSize) {
+  void _renderHulaHoopMagnetBack(Canvas canvas, Size drawSize, double pulse, double alphaPulse) {
     // Perfectly centered at Dino's waist/torso
     final center = Offset(drawSize.width * 0.50, drawSize.height * 0.62);
-    final rx = drawSize.width * 0.58;
-    final ry = 14.0;
+    final rx = drawSize.width * 0.58 * pulse;
+    final ry = 14.0 * pulse;
 
     // Smooth continuous 360-degree rotation
     final hoopAngle = _totalElapsed * 2.8;
@@ -812,34 +1135,24 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
 
     // 1. Back Arc Glow Halo
     final backHaloPath = Path()..addArc(hoopRect, math.pi, math.pi);
-    canvas.drawPath(
-      backHaloPath,
-      Paint()
-        ..color = const Color(0xFF00E5FF).withValues(alpha: 0.18)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 4.0,
-    );
+    _magnetHaloBack.color = const Color(0xFF00E5FF).withValues(alpha: 0.18 * alphaPulse);
+    canvas.drawPath(backHaloPath, _magnetHaloBack);
 
     // 2. Back Arc Ring Gradient (Behind Dino)
     final ringShader = SweepGradient(
       center: Alignment.center,
       startAngle: hoopAngle,
       endAngle: hoopAngle + math.pi * 2,
-      colors: const [
-        Color(0x8000E5FF),
-        Color(0x80E040FB),
-        Color(0x80FFFF8D),
-        Color(0x8000E5FF),
+      colors: [
+        const Color(0x8000E5FF).withValues(alpha: 0.50 * alphaPulse),
+        const Color(0x80E040FB).withValues(alpha: 0.50 * alphaPulse),
+        const Color(0x80FFFF8D).withValues(alpha: 0.50 * alphaPulse),
+        const Color(0x8000E5FF).withValues(alpha: 0.50 * alphaPulse),
       ],
     ).createShader(hoopRect);
 
-    canvas.drawPath(
-      backHaloPath,
-      Paint()
-        ..shader = ringShader
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.4,
-    );
+    _magnetRingBack.shader = ringShader;
+    canvas.drawPath(backHaloPath, _magnetRingBack);
 
     // 3. Back Orbiting Sparkle Nodes (oy < 0)
     for (int i = 0; i < 4; i++) {
@@ -848,16 +1161,10 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
       final oy = math.sin(a) * ry;
 
       if (oy < 0) { // Behind Dino
-        canvas.drawCircle(
-          Offset(ox, oy),
-          2.0,
-          Paint()..color = Colors.white.withValues(alpha: 0.50),
-        );
-        canvas.drawCircle(
-          Offset(ox, oy),
-          3.6,
-          Paint()..color = const Color(0xFF00E5FF).withValues(alpha: 0.30),
-        );
+        _sparklePaint.color = Colors.white.withValues(alpha: 0.50 * alphaPulse);
+        canvas.drawCircle(Offset(ox, oy), 2.0, _sparklePaint);
+        _sparkleGlowPaint.color = const Color(0xFF00E5FF).withValues(alpha: 0.30 * alphaPulse);
+        canvas.drawCircle(Offset(ox, oy), 3.6, _sparkleGlowPaint);
       }
     }
 
@@ -865,11 +1172,11 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
   }
 
   /// 🧲 3D Hula Hoop Magnet Ring - FRONT ARC (Drawn in front of Dino's body)
-  void _renderHulaHoopMagnetFront(Canvas canvas, Size drawSize) {
+  void _renderHulaHoopMagnetFront(Canvas canvas, Size drawSize, double pulse, double alphaPulse) {
     // Perfectly centered at Dino's waist/torso
     final center = Offset(drawSize.width * 0.50, drawSize.height * 0.62);
-    final rx = drawSize.width * 0.58;
-    final ry = 14.0;
+    final rx = drawSize.width * 0.58 * pulse;
+    final ry = 14.0 * pulse;
 
     // Smooth continuous 360-degree rotation
     final hoopAngle = _totalElapsed * 2.8;
@@ -880,34 +1187,24 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
 
     // 1. Front Arc Glow Halo
     final frontArcPath = Path()..addArc(hoopRect, 0, math.pi);
-    canvas.drawPath(
-      frontArcPath,
-      Paint()
-        ..color = const Color(0xFF00E5FF).withValues(alpha: 0.25)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 4.5,
-    );
+    _magnetHaloFront.color = const Color(0xFF00E5FF).withValues(alpha: 0.25 * alphaPulse);
+    canvas.drawPath(frontArcPath, _magnetHaloFront);
 
     // 2. Front Arc Ring Gradient (In front of Dino's belly)
     final ringShader = SweepGradient(
       center: Alignment.center,
       startAngle: hoopAngle,
       endAngle: hoopAngle + math.pi * 2,
-      colors: const [
-        Color(0xCC00E5FF),
-        Color(0xCCE040FB),
-        Color(0xCCFFFF8D),
-        Color(0xCC00E5FF),
+      colors: [
+        const Color(0xCC00E5FF).withValues(alpha: 0.80 * alphaPulse),
+        const Color(0xCCE040FB).withValues(alpha: 0.80 * alphaPulse),
+        const Color(0xCCFFFF8D).withValues(alpha: 0.80 * alphaPulse),
+        const Color(0xCC00E5FF).withValues(alpha: 0.80 * alphaPulse),
       ],
     ).createShader(hoopRect);
 
-    canvas.drawPath(
-      frontArcPath,
-      Paint()
-        ..shader = ringShader
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.8,
-    );
+    _magnetRingFront.shader = ringShader;
+    canvas.drawPath(frontArcPath, _magnetRingFront);
 
     // 3. Front Orbiting Sparkle Nodes (oy >= 0)
     for (int i = 0; i < 4; i++) {
@@ -916,19 +1213,72 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
       final oy = math.sin(a) * ry;
 
       if (oy >= 0) { // In front of Dino
-        canvas.drawCircle(
-          Offset(ox, oy),
-          3.0,
-          Paint()..color = Colors.white,
-        );
-        canvas.drawCircle(
-          Offset(ox, oy),
-          5.5,
-          Paint()..color = const Color(0xFF00E5FF).withValues(alpha: 0.55),
-        );
+        _sparklePaint.color = Colors.white.withValues(alpha: alphaPulse);
+        canvas.drawCircle(Offset(ox, oy), 3.0, _sparklePaint);
+        _sparkleGlowPaint.color = const Color(0xFF00E5FF).withValues(alpha: 0.55 * alphaPulse);
+        canvas.drawCircle(Offset(ox, oy), 5.5, _sparkleGlowPaint);
       }
     }
 
     canvas.restore();
+  }
+
+  /// 🔥 Giant Dino Primal Energy Aura
+  void _renderGiantAura(Canvas canvas, Size drawSize, double pulse, double alphaPulse) {
+    final center = Offset(drawSize.width * 0.5, drawSize.height * 0.52);
+    final radius = math.max(drawSize.width, drawSize.height) * 0.65 * pulse;
+    final rect = Rect.fromCircle(center: center, radius: radius);
+
+    final auraShader = RadialGradient(
+      center: Alignment.center,
+      radius: 0.95,
+      colors: [
+        const Color(0xFFFF1744).withValues(alpha: 0.0),
+        const Color(0xFFFF5252).withValues(alpha: 0.16 * alphaPulse),
+        const Color(0xFFFFD600).withValues(alpha: 0.26 * alphaPulse),
+        const Color(0xFFFF1744).withValues(alpha: 0.0),
+      ],
+      stops: const [0.0, 0.45, 0.80, 1.0],
+    ).createShader(rect);
+
+    _giantAuraPaint.shader = auraShader;
+    canvas.drawCircle(center, radius, _giantAuraPaint);
+
+    _giantStrokePaint.color = const Color(0xFFFF5252).withValues(alpha: 0.35 * alphaPulse);
+    canvas.drawCircle(center, radius * 0.90, _giantStrokePaint);
+  }
+
+  /// ⭐ Invincible Prismatic Radiant Aura
+  void _renderInvincibleAura(Canvas canvas, Size drawSize, double pulse, double alphaPulse) {
+    final center = Offset(drawSize.width * 0.5, drawSize.height * 0.52);
+    final radius = math.max(drawSize.width, drawSize.height) * 0.60 * pulse;
+    final rect = Rect.fromCircle(center: center, radius: radius);
+
+    final sweepShader = SweepGradient(
+      center: Alignment.center,
+      startAngle: _totalElapsed * 3.0,
+      endAngle: _totalElapsed * 3.0 + math.pi * 2,
+      colors: [
+        const Color(0xFFFFD700).withValues(alpha: 0.40 * alphaPulse),
+        const Color(0xFFFFF9C4).withValues(alpha: 0.20 * alphaPulse),
+        const Color(0xFFFFAB00).withValues(alpha: 0.40 * alphaPulse),
+        const Color(0xFFFFD700).withValues(alpha: 0.40 * alphaPulse),
+      ],
+    ).createShader(rect);
+
+    _invincibleAuraPaint.shader = sweepShader;
+    canvas.drawCircle(center, radius, _invincibleAuraPaint);
+
+    _invincibleGlowPaint.color = const Color(0xFFFFD700).withValues(alpha: 0.08 * alphaPulse);
+    canvas.drawCircle(center, radius * 0.95, _invincibleGlowPaint);
+  }
+
+  /// 0.6s expiry telegraph: 3 blinks (0.1s on, 0.1s off).
+  static bool isPowerupBlinkVisible(double timer) {
+    if (timer <= 0) return false;
+    if (timer <= 0.6) {
+      return (timer / 0.1).floor() % 2 == 0;
+    }
+    return true;
   }
 }

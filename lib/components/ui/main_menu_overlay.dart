@@ -4,7 +4,9 @@ import 'package:flutter/services.dart';
 import '../../game/dino_game.dart';
 import '../../skins/skin_registry.dart';
 import '../../skins/skin.dart';
+import 'adventure_panels.dart';
 import '../../managers/audio_manager.dart';
+import '../../game/game_state.dart';
 
 /// 🌌 The Next-Gen Futuristic Main Menu Overlay for Dino Run Epochs.
 /// Layered seamlessly over Flame canvas with real-time runner preview,
@@ -19,6 +21,7 @@ class MainMenuOverlay extends StatefulWidget {
 }
 
 class _MainMenuOverlayState extends State<MainMenuOverlay> with TickerProviderStateMixin {
+  final ScrollController _epochScroll = ScrollController();
   late AnimationController _pulseController;
   late AnimationController _runnerAnimController;
   late Animation<double> _pulseAnimation;
@@ -26,6 +29,7 @@ class _MainMenuOverlayState extends State<MainMenuOverlay> with TickerProviderSt
 
   int _selectedRealmIndex = 0;
   int _selectedSkinIndex = 0;
+  int _mobileTab = 0;
 
   final List<Map<String, dynamic>> _realms = [
     {
@@ -106,7 +110,7 @@ class _MainMenuOverlayState extends State<MainMenuOverlay> with TickerProviderSt
 
     // Sync selected skin with current active skin
     final currentSkinId = widget.game.coinManager.activeSkinId;
-    final allSkins = SkinRegistry.all;
+    final allSkins = SkinRegistry.playable;
     final idx = allSkins.indexWhere((s) => s.id == currentSkinId);
     if (idx != -1) {
       _selectedSkinIndex = idx;
@@ -115,6 +119,7 @@ class _MainMenuOverlayState extends State<MainMenuOverlay> with TickerProviderSt
 
   @override
   void dispose() {
+    _epochScroll.dispose();
     _pulseController.dispose();
     _runnerAnimController.dispose();
     _focusNode.dispose();
@@ -123,6 +128,7 @@ class _MainMenuOverlayState extends State<MainMenuOverlay> with TickerProviderSt
 
   void _onStartExpedition() {
     AudioManager.playJump();
+    widget.game.overlays.remove('MainMenuOverlay');
     final stage = _realms[_selectedRealmIndex]['stage'] as int;
     widget.game.startGame(startingStage: stage);
   }
@@ -147,7 +153,7 @@ class _MainMenuOverlayState extends State<MainMenuOverlay> with TickerProviderSt
   }
 
   void _nextSkin() {
-    final allSkins = SkinRegistry.all;
+    final allSkins = SkinRegistry.playable;
     setState(() {
       _selectedSkinIndex = (_selectedSkinIndex + 1) % allSkins.length;
       final newSkin = allSkins[_selectedSkinIndex];
@@ -157,7 +163,7 @@ class _MainMenuOverlayState extends State<MainMenuOverlay> with TickerProviderSt
   }
 
   void _prevSkin() {
-    final allSkins = SkinRegistry.all;
+    final allSkins = SkinRegistry.playable;
     setState(() {
       _selectedSkinIndex = (_selectedSkinIndex - 1 + allSkins.length) % allSkins.length;
       final newSkin = allSkins[_selectedSkinIndex];
@@ -179,7 +185,7 @@ class _MainMenuOverlayState extends State<MainMenuOverlay> with TickerProviderSt
     showDialog(
       context: context,
       barrierColor: Colors.black87,
-      builder: (ctx) => _UpgradesDialog(game: widget.game),
+      builder: (ctx) => AdventureUpgrades(game: widget.game),
     ).then((_) => setState(() {}));
   }
 
@@ -188,17 +194,7 @@ class _MainMenuOverlayState extends State<MainMenuOverlay> with TickerProviderSt
     showDialog(
       context: context,
       barrierColor: Colors.black87,
-      builder: (ctx) => _SkinsDialog(
-        game: widget.game,
-        onSkinSelected: (skin) {
-          final idx = SkinRegistry.all.indexWhere((s) => s.id == skin.id);
-          if (idx != -1) {
-            setState(() {
-              _selectedSkinIndex = idx;
-            });
-          }
-        },
-      ),
+      builder: (ctx) => AdventureWardrobe(game: widget.game),
     ).then((_) => setState(() {}));
   }
 
@@ -218,6 +214,20 @@ class _MainMenuOverlayState extends State<MainMenuOverlay> with TickerProviderSt
       barrierColor: Colors.black87,
       builder: (ctx) => const _TutorialDialog(),
     );
+  }
+
+  void _scrollEpochs(int direction) {
+    if (!_epochScroll.hasClients) return;
+    _epochScroll.animateTo((_epochScroll.offset + direction * 296).clamp(0.0, _epochScroll.position.maxScrollExtent),
+      duration: const Duration(milliseconds: 280), curve: Curves.easeOutCubic);
+  }
+
+  void _openEvents() {
+    showDialog<void>(context: context, builder: (context) => AdventurePanel(
+      title: 'Adventure journal', subtitle: 'Small challenges. Happy discoveries.',
+      child: AnimatedBuilder(animation: _runnerAnimController, builder: (context, child) =>
+        _buildRightPanel(widget.game.coinManager.coins, widget.game.coinManager.highScore)),
+    ));
   }
 
   void _openSettings() {
@@ -241,7 +251,7 @@ class _MainMenuOverlayState extends State<MainMenuOverlay> with TickerProviderSt
             ),
           ],
         ),
-        backgroundColor: const Color(0xFF1E293B),
+        backgroundColor: const Color(0xFF244A59),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
@@ -255,13 +265,21 @@ class _MainMenuOverlayState extends State<MainMenuOverlay> with TickerProviderSt
 
   @override
   Widget build(BuildContext context) {
+    if (widget.game.state != GameState.menu) {
+      return const SizedBox.shrink();
+    }
+
     final coinManager = widget.game.coinManager;
     final coins = coinManager.coins;
     final hiScore = coinManager.highScore;
-    final allSkins = SkinRegistry.all;
+    final allSkins = SkinRegistry.playable;
     final currentSkin = allSkins.isNotEmpty ? allSkins[_selectedSkinIndex] : SkinRegistry.defaultSkin;
-    final isMobile = MediaQuery.of(context).size.width < 800;
-    final isPortrait = MediaQuery.of(context).size.height > MediaQuery.of(context).size.width;
+    final size = MediaQuery.of(context).size;
+    final isMobile = size.height < 520 || size.width < 800;
+
+    if (size.width > 0) {
+      return _landscapeHome(currentSkin, coins, hiScore);
+    }
 
     return KeyboardListener(
       focusNode: _focusNode,
@@ -304,21 +322,29 @@ class _MainMenuOverlayState extends State<MainMenuOverlay> with TickerProviderSt
               child: Column(
                 children: [
                   // 1. Top Header Bar
-                  _buildTopBar(coins),
+                  _buildTopBar(coins, isMobile: isMobile),
 
-                  // 2. Main 3-Column Content Body
+                  // 2. Main Body (Mobile 2-column or Desktop 3-column)
                   Expanded(
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
-                      child: LayoutBuilder(
-                        builder: (context, constraints) {
-                          final isPortrait = constraints.maxHeight > constraints.maxWidth;
-                          if (constraints.maxWidth < 800) {
-                            // On mobile, just return the center stage so it takes exact remaining space.
-                            // The left panel (Claimable widget) is already floating via a Stack.
-                            return _buildCenterStage(currentSkin);
-                          } else {
-                            return Row(
+                      padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 4.0),
+                      child: isMobile
+                          ? Row(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                // Mobile Left Column (Tabs: Epochs / Missions)
+                                SizedBox(
+                                  width: size.width > 700 ? 310 : 260,
+                                  child: _buildMobileLeftColumn(coins, hiScore),
+                                ),
+                                const SizedBox(width: 12),
+                                // Mobile Right Column (Runner Showcase & Play Action)
+                                Expanded(
+                                  child: _buildCenterStage(currentSkin, isMobile: true),
+                                ),
+                              ],
+                            )
+                          : Row(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
                                 // Left Panel (Expeditions & Realm Selector)
@@ -329,7 +355,7 @@ class _MainMenuOverlayState extends State<MainMenuOverlay> with TickerProviderSt
                                 const SizedBox(width: 12),
                                 // Center Stage (Runner Preview & Start Action)
                                 Expanded(
-                                  child: _buildCenterStage(currentSkin),
+                                  child: _buildCenterStage(currentSkin, isMobile: false),
                                 ),
                                 const SizedBox(width: 12),
                                 // Right Panel (Active Missions & Records)
@@ -338,84 +364,121 @@ class _MainMenuOverlayState extends State<MainMenuOverlay> with TickerProviderSt
                                   child: _buildRightPanel(coins, hiScore),
                                 ),
                               ],
-                            );
-                          }
-                        },
-                      ),
+                            ),
                     ),
                   ),
 
                   // 3. Footer Keybind Hints
-                  _buildFooter(),
+                  _buildFooter(isMobile),
                 ],
               ),
             ),
-
-            // Floating Claimable widget on Mobile
-            if (isMobile)
-              Positioned(
-                top: 80,
-                left: 16,
-                child: SizedBox(
-                  width: 220,
-                  child: _buildLeftPanel(),
-                ),
-              ),
-
-            // Floating Start Button on Mobile
-            if (isMobile)
-              Positioned(
-                bottom: 24,
-                right: 24,
-                child: MouseRegion(
-                  cursor: SystemMouseCursors.click,
-                  child: GestureDetector(
-                    onTap: _onStartExpedition,
-                    child: AnimatedBuilder(
-                      animation: _pulseAnimation,
-                      builder: (context, child) {
-                        return Container(
-                          width: 32,
-                          height: 32,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF6EE7B7), Color(0xFF10B981)],
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFF10B981).withValues(alpha: 0.5 + _pulseAnimation.value * 0.3),
-                                blurRadius: 10 + _pulseAnimation.value * 6,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: const Icon(Icons.play_arrow_rounded, color: Colors.black87, size: 18),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-              ),
           ],
         ),
       ),
     );
   }
 
+  Widget _landscapeHome(CharacterSkin skin, int coins, int best) {
+    Widget action(IconData icon, String label, VoidCallback tap) => FilledButton.tonalIcon(
+      onPressed: tap, icon: Icon(icon, size: 18), label: Text(label),
+      style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 12),
+        textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800)));
+    const art = ['desert_fossil_canyon.png', 'rain_painted_v1.png', 'forest_painted_v1.png', 'ice_painted_v1.png', 'cosmos_painted_v1.png', 'volcano_painted_v1.png'];
+    return Material(color: Colors.transparent, child: DecoratedBox(
+      decoration: const BoxDecoration(gradient: LinearGradient(
+        colors: [Color(0x44152C40), Color(0xDD152C40)],
+        begin: Alignment.centerLeft, end: Alignment.centerRight)),
+      child: SafeArea(child: Column(children: [
+        Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          child: Row(children: [
+            ClipRRect(borderRadius: BorderRadius.circular(10), child: Image.asset('assets/images/app_icon.png', width: 36, height: 36)),
+            const SizedBox(width: 10),
+            const Expanded(child: Text('DINO RUN  ·  EPOCHS', style: TextStyle(color: Color(0xFFFFE5A3), fontWeight: FontWeight.w900, fontSize: 16))),
+            Chip(avatar: const Icon(Icons.monetization_on_rounded, color: Color(0xFFFFCF62)), label: Text('$coins')),
+            IconButton(tooltip: 'Settings', onPressed: _openSettings, icon: const Icon(Icons.settings_rounded, color: Colors.white)),
+          ])),
+        Expanded(child: Padding(padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+          child: Row(children: [
+            Expanded(flex: 4, child: Column(children: [
+              Expanded(child: LayoutBuilder(builder: (context, constraints) {
+                final height = math.min(constraints.maxHeight, 300.0);
+                return Stack(alignment: Alignment.center, children: [
+                  Container(decoration: const BoxDecoration(shape: BoxShape.circle,
+                    gradient: RadialGradient(colors: [Color(0x66FFCF62), Colors.transparent]))),
+                  SizedBox(width: height * .83, height: height,
+                    child: _SkinPreviewWidget(skin: skin, ticker: _runnerAnimController)),
+                ]);
+              })),
+              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+
+                Expanded(child: Text(skin.displayName, textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 18))),
+
+              ]),
+            ])),
+            const SizedBox(width: 16),
+            Expanded(flex: 6, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              Expanded(child: SingleChildScrollView(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                Wrap(spacing: 6, runSpacing: 6, children: [
+                  action(Icons.checkroom_rounded, 'Wardrobe', _openSkins),
+                  action(Icons.auto_awesome_rounded, 'Upgrades', _openUpgrades),
+                  action(Icons.auto_stories_rounded, 'Journal', _openEvents),
+                ]),
+                const SizedBox(height: 12),
+                Row(children: [
+                  const Expanded(child: Text('PICK AN EPOCH', style: TextStyle(color: Color(0xFFFFE5A3), fontWeight: FontWeight.w900, fontSize: 12, letterSpacing: 1))),
+                  IconButton(tooltip: 'Earlier epochs', onPressed: () => _scrollEpochs(-1), icon: const Icon(Icons.chevron_left_rounded)),
+                  IconButton(tooltip: 'More epochs', onPressed: () => _scrollEpochs(1), icon: const Icon(Icons.chevron_right_rounded)),
+                ]),
+                const SizedBox(height: 8),
+                SizedBox(height: 90, child: ListView.separated(controller: _epochScroll, scrollDirection: Axis.horizontal,
+                  itemCount: _realms.length, separatorBuilder: (context, index) => const SizedBox(width: 8),
+                  itemBuilder: (context, index) {
+                    final selected = index == _selectedRealmIndex;
+                    return Semantics(
+                      selected: selected,
+                      button: true,
+                      label: _realms[index]['name'] as String,
+                      child: InkWell(onTap: () => _selectRealm(index),
+                      borderRadius: BorderRadius.circular(16), child: Container(width: 140,
+                        decoration: BoxDecoration(borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: selected ? const Color(0xFFFFCF62) : Colors.white24, width: selected ? 3 : 1),
+                          image: DecorationImage(image: AssetImage('assets/images/biomes/${art[index]}'), fit: BoxFit.cover)),
+                        child: Container(alignment: Alignment.bottomLeft, padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(borderRadius: BorderRadius.circular(14), gradient: const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Color(0xEE102334)])),
+                          child: Text('${selected ? "✓ " : ""}${_realms[index]['name']}', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w800))),
+                      )));
+                  })),
+                const SizedBox(height: 12),
+                _buildDailySupplyCard(),
+                const SizedBox(height: 12),
+
+              ]))),
+              const SizedBox(height: 8),
+              SizedBox(height: 50, child: FilledButton.icon(onPressed: _onStartExpedition,
+                icon: const Icon(Icons.play_arrow_rounded, size: 28),
+                label: Text('PLAY · ${_realms[_selectedRealmIndex]['name']}', maxLines: 1, overflow: TextOverflow.ellipsis),
+                style: FilledButton.styleFrom(backgroundColor: const Color(0xFFFFCF62), foregroundColor: const Color(0xFF413020), textStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15)))),
+            ])),
+          ]))),
+      ])),
+    ));
+  }
+
   // -------------------------------------------------------------
   // TOP BAR
   // -------------------------------------------------------------
-  Widget _buildTopBar(int coins) {
+  Widget _buildTopBar(int coins, {required bool isMobile}) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
+      padding: EdgeInsets.symmetric(horizontal: isMobile ? 12.0 : 20.0, vertical: isMobile ? 4.0 : 8.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           // Logo & Title
           Row(
             children: [
-              Container(
+              SizedBox(
                 width: 38,
                 height: 38,
                 child: Center(
@@ -448,7 +511,7 @@ class _MainMenuOverlayState extends State<MainMenuOverlay> with TickerProviderSt
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF7C3AED),
+                          color: const Color(0xFFFFCF62),
                           borderRadius: BorderRadius.circular(6),
                           border: Border.all(color: const Color(0xFFA78BFA), width: 0.8),
                         ),
@@ -485,7 +548,7 @@ class _MainMenuOverlayState extends State<MainMenuOverlay> with TickerProviderSt
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1E293B).withValues(alpha: 0.85),
+                  color: const Color(0xFF244A59).withValues(alpha: 0.85),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.6), width: 1.2),
                   boxShadow: const [
@@ -510,57 +573,115 @@ class _MainMenuOverlayState extends State<MainMenuOverlay> with TickerProviderSt
               const SizedBox(width: 10),
 
               // Upgrades Button
-              MouseRegion(
-                cursor: SystemMouseCursors.click,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: _openUpgrades,
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1E293B).withValues(alpha: 0.8),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: const Color(0xFF475569), width: 1),
+              Semantics(
+                button: true,
+                label: 'Upgrades',
+                child: MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: _openUpgrades,
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF244A59).withValues(alpha: 0.8),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFF475569), width: 1),
+                      ),
+                      child: const Icon(Icons.bolt, color: Color(0xFFCBD5E1), size: 16),
                     ),
-                    child: const Icon(Icons.bolt, color: Color(0xFFCBD5E1), size: 16),
                   ),
                 ),
               ),
               const SizedBox(width: 10),
 
               // Skins Button
-              MouseRegion(
-                cursor: SystemMouseCursors.click,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: _openSkins,
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1E293B).withValues(alpha: 0.8),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: const Color(0xFF475569), width: 1),
+              Semantics(
+                button: true,
+                label: 'Skins',
+                child: MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: _openSkins,
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF244A59).withValues(alpha: 0.8),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFF475569), width: 1),
+                      ),
+                      child: const Icon(Icons.checkroom, color: Color(0xFFCBD5E1), size: 16),
                     ),
-                    child: const Icon(Icons.checkroom, color: Color(0xFFCBD5E1), size: 16),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+
+              // Codex Button
+              Semantics(
+                button: true,
+                label: 'Time Codex',
+                child: MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: _openTimeCodex,
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF244A59).withValues(alpha: 0.8),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFF475569), width: 1),
+                      ),
+                      child: const Icon(Icons.menu_book, color: Color(0xFFCBD5E1), size: 16),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+
+              // Tutorial Button
+              Semantics(
+                button: true,
+                label: 'Tutorial',
+                child: MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: _openTutorial,
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF244A59).withValues(alpha: 0.8),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFF475569), width: 1),
+                      ),
+                      child: const Icon(Icons.help_outline, color: Color(0xFFCBD5E1), size: 16),
+                    ),
                   ),
                 ),
               ),
               const SizedBox(width: 10),
 
               // Settings Gear Icon
-              MouseRegion(
-                cursor: SystemMouseCursors.click,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: _openSettings,
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1E293B).withValues(alpha: 0.8),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: const Color(0xFF475569), width: 1),
+              Semantics(
+                button: true,
+                label: 'Settings',
+                child: MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: _openSettings,
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF244A59).withValues(alpha: 0.8),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFF475569), width: 1),
+                      ),
+                      child: const Icon(Icons.settings, color: Color(0xFFCBD5E1), size: 16),
                     ),
-                    child: const Icon(Icons.settings, color: Color(0xFFCBD5E1), size: 16),
                   ),
                 ),
               ),
@@ -572,95 +693,352 @@ class _MainMenuOverlayState extends State<MainMenuOverlay> with TickerProviderSt
   }
 
   // -------------------------------------------------------------
-  // LEFT PANEL (Expeditions & Realm Selector)
+  // LEFT PANEL (Expeditions, Daily Supply & Realm Selector)
   // -------------------------------------------------------------
-  Widget _buildLeftPanel() {
+  Widget _buildDailySupplyCard() {
     final canClaimDaily = widget.game.coinManager.canClaimDailyReward;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Daily Supply Drop Card
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF0369A1), Color(0xFF0284C7)],
-            ),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: const Color(0xFF38BDF8), width: 1),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x330284C7),
-                blurRadius: 8,
-                offset: Offset(0, 2),
-              ),
-            ],
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF0369A1), Color(0xFF0284C7)],
+        ),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFF38BDF8), width: 1),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x330284C7),
+            blurRadius: 8,
+            offset: Offset(0, 2),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(5),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.shield, color: Colors.white, size: 13),
+          ),
+          const SizedBox(width: 8),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'DAILY SUPPLY DROP',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 9.0,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.5,
+                  ),
                 ),
-                child: const Icon(Icons.shield, color: Colors.white, size: 14),
-              ),
-              const SizedBox(width: 8),
-              const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'DAILY SUPPLY DROP',
+                Text(
+                  '+150 Coins',
+                  style: TextStyle(
+                    color: Color(0xFFBAE6FD),
+                    fontSize: 8.0,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 6),
+          Semantics(
+            button: true,
+            label: canClaimDaily ? 'Claim Daily Supply Drop' : 'Daily Supply Drop Claimed',
+            child: MouseRegion(
+              cursor: canClaimDaily ? SystemMouseCursors.click : SystemMouseCursors.basic,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: canClaimDaily ? _claimDailyReward : null,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: canClaimDaily ? const Color(0xFFFEF08A) : const Color(0xFF10B981),
+                    borderRadius: BorderRadius.circular(6),
+                    boxShadow: const [
+                      BoxShadow(color: Color(0x44000000), blurRadius: 4),
+                    ],
+                  ),
+                  child: Text(
+                    canClaimDaily ? 'CLAIM' : 'CLAIMED',
                     style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 9.5,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.5,
+                      color: canClaimDaily ? const Color(0xFF78350F) : Colors.white,
+                      fontSize: 8.5,
+                      fontWeight: FontWeight.w900,
                     ),
                   ),
-                  Text(
-                    '+150 Coins & +8 Diamonds',
-                    style: TextStyle(
-                      color: Color(0xFFBAE6FD),
-                      fontSize: 8,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
+                ),
               ),
-              const SizedBox(width: 12),
-              MouseRegion(
-                cursor: canClaimDaily ? SystemMouseCursors.click : SystemMouseCursors.basic,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: canClaimDaily ? _claimDailyReward : null,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: canClaimDaily ? const Color(0xFFFEF08A) : const Color(0xFF10B981),
-                      borderRadius: BorderRadius.circular(6),
-                      boxShadow: const [
-                        BoxShadow(color: Color(0x44000000), blurRadius: 4),
-                      ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEpochList() {
+    return ListView.builder(
+      padding: EdgeInsets.zero,
+      itemCount: _realms.length,
+      itemBuilder: (context, index) {
+        final realm = _realms[index];
+        final isSelected = _selectedRealmIndex == index;
+        final color = realm['color'] as Color;
+
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 5.0),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(10),
+              onTap: () => _selectRealm(index),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? color.withValues(alpha: 0.22)
+                      : const Color(0xFF183848).withValues(alpha: 0.8),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: isSelected ? color : const Color(0xFF334155).withValues(alpha: 0.7),
+                    width: isSelected ? 1.8 : 1.0,
+                  ),
+                  boxShadow: isSelected
+                      ? [
+                          BoxShadow(
+                            color: color.withValues(alpha: 0.35),
+                            blurRadius: 8,
+                            spreadRadius: 1,
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(5),
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(realm['icon'] as IconData, color: color, size: 15),
                     ),
-                    child: Text(
-                      canClaimDaily ? 'CLAIM' : 'CLAIMED',
-                      style: TextStyle(
-                        color: canClaimDaily ? const Color(0xFF78350F) : Colors.white,
-                        fontSize: 9,
-                        fontWeight: FontWeight.w900,
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  realm['name'] as String,
+                                  style: TextStyle(
+                                    color: isSelected ? Colors.white : const Color(0xFFE2E8F0),
+                                    fontSize: 10.5,
+                                    fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              if (realm['badge'] != null) ...[
+                                const SizedBox(width: 4),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                  decoration: BoxDecoration(
+                                    color: color.withValues(alpha: 0.3),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    realm['badge'] as String,
+                                    style: TextStyle(
+                                      color: color,
+                                      fontSize: 7.0,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                          Text(
+                            realm['bonus'] as String,
+                            style: TextStyle(
+                              color: isSelected ? color : const Color(0xFF94A3B8),
+                              fontSize: 8.0,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
+                    if (isSelected)
+                      Icon(Icons.check_circle, color: color, size: 16),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildLeftPanel() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildDailySupplyCard(),
+        const SizedBox(height: 6),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: const Color(0xFF183848).withValues(alpha: 0.85),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: const Color(0xFF334155)),
+          ),
+          child: const Row(
+            children: [
+              Icon(Icons.public, color: Color(0xFF38BDF8), size: 13),
+              SizedBox(width: 6),
+              Text(
+                'STARTING EPOCH',
+                style: TextStyle(
+                  color: Color(0xFFF1F5F9),
+                  fontSize: 9.5,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.8,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 6),
+        Expanded(
+          child: _buildEpochList(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMobileLeftColumn(int coins, int hiScore) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Tab switcher (Epochs / Missions)
+        Container(
+          height: 32,
+          padding: const EdgeInsets.all(2.5),
+          decoration: BoxDecoration(
+            color: const Color(0xFF183848).withValues(alpha: 0.9),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: const Color(0xFF334155)),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () {
+                    setState(() => _mobileTab = 0);
+                    AudioManager.playButton();
+                  },
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: _mobileTab == 0 ? const Color(0xFF10B981) : Colors.transparent,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    alignment: Alignment.center,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.public,
+                          size: 12,
+                          color: _mobileTab == 0 ? Colors.black87 : const Color(0xFF94A3B8),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'EPOCHS',
+                          style: TextStyle(
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w900,
+                            color: _mobileTab == 0 ? Colors.black87 : const Color(0xFF94A3B8),
+                            letterSpacing: 0.6,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 3),
+              Expanded(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () {
+                    setState(() => _mobileTab = 1);
+                    AudioManager.playButton();
+                  },
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: _mobileTab == 1 ? const Color(0xFF0284C7) : Colors.transparent,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    alignment: Alignment.center,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.military_tech,
+                          size: 12,
+                          color: _mobileTab == 1 ? Colors.white : const Color(0xFF94A3B8),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'MISSIONS',
+                          style: TextStyle(
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w900,
+                            color: _mobileTab == 1 ? Colors.white : const Color(0xFF94A3B8),
+                            letterSpacing: 0.6,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ],
           ),
+        ),
+        const SizedBox(height: 6),
+        Expanded(
+          child: _mobileTab == 0
+              ? _buildEpochList()
+              : SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      _buildDailySupplyCard(),
+                      const SizedBox(height: 6),
+                      SizedBox(
+                        height: 220,
+                        child: _buildRightPanel(coins, hiScore),
+                      ),
+                    ],
+                  ),
+                ),
         ),
       ],
     );
@@ -669,22 +1047,19 @@ class _MainMenuOverlayState extends State<MainMenuOverlay> with TickerProviderSt
   // -------------------------------------------------------------
   // CENTER STAGE (Runner Preview & Start Action)
   // -------------------------------------------------------------
-  Widget _buildCenterStage(CharacterSkin currentSkin) {
+  Widget _buildCenterStage(CharacterSkin currentSkin, {required bool isMobile}) {
     final skinName = currentSkin.displayName.toUpperCase();
     final isUnlocked = widget.game.coinManager.isSkinUnlocked(currentSkin.id);
     final selectedRealm = _realms[_selectedRealmIndex];
     final selectedRealmColor = selectedRealm['color'] as Color;
-    final isMobile = MediaQuery.of(context).size.width < 800;
-    final isPortrait = MediaQuery.of(context).size.height > MediaQuery.of(context).size.width;
 
     return Column(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        // Top Banner: Active Epoch Selector Indicator & Runner Badge
+        // Top Banner: Active Epoch Selector Indicator
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Active Epoch Pill (Tappable to cycle realms easily)
             Material(
               color: Colors.transparent,
               child: InkWell(
@@ -693,11 +1068,11 @@ class _MainMenuOverlayState extends State<MainMenuOverlay> with TickerProviderSt
                   _selectRealm((_selectedRealmIndex + 1) % _realms.length);
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
                   decoration: BoxDecoration(
                     color: selectedRealmColor.withValues(alpha: 0.22),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: selectedRealmColor, width: 1.6),
+                    border: Border.all(color: selectedRealmColor, width: 1.5),
                     boxShadow: [
                       BoxShadow(
                         color: selectedRealmColor.withValues(alpha: 0.4),
@@ -708,13 +1083,13 @@ class _MainMenuOverlayState extends State<MainMenuOverlay> with TickerProviderSt
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(selectedRealm['icon'] as IconData, color: selectedRealmColor, size: 14),
+                      Icon(selectedRealm['icon'] as IconData, color: selectedRealmColor, size: 13),
                       const SizedBox(width: 6),
                       Text(
                         'EPOCH: ${(selectedRealm['name'] as String).toUpperCase()} ❯',
                         style: TextStyle(
                           color: selectedRealmColor,
-                          fontSize: 10,
+                          fontSize: 9.5,
                           fontWeight: FontWeight.w900,
                           letterSpacing: 1.0,
                         ),
@@ -724,11 +1099,10 @@ class _MainMenuOverlayState extends State<MainMenuOverlay> with TickerProviderSt
                 ),
               ),
             ),
-
           ],
         ),
 
-        // Character Showcase Stage
+        // Character Showcase Stage with Skin Switcher Arrows
         Expanded(
           child: FittedBox(
             fit: BoxFit.scaleDown,
@@ -736,313 +1110,322 @@ class _MainMenuOverlayState extends State<MainMenuOverlay> with TickerProviderSt
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // Previous Skin Button
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white70, size: 18),
+                      tooltip: 'Previous Skin',
+                      onPressed: _prevSkin,
+                    ),
+                    const SizedBox(width: 6),
 
-
-              // Pedestal Platform & Live Animated Character
-              Stack(
-                clipBehavior: Clip.none,
-                alignment: Alignment.center,
-                children: [
-                  // 1. Epic Starburst / Aura Effect (Behind Dino)
-                  AnimatedBuilder(
-                    animation: _pulseAnimation,
-                    builder: (context, child) {
-                      return Transform.translate(
-                        offset: const Offset(0, -20),
-                        child: Container(
-                          width: 140 + _pulseAnimation.value * 20,
-                          height: 280,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: RadialGradient(
-                              colors: [
-                                currentSkin.primaryColor.withValues(alpha: 0.6 + _pulseAnimation.value * 0.4),
-                                currentSkin.primaryColor.withValues(alpha: 0.2 + _pulseAnimation.value * 0.1),
-                                Colors.transparent,
-                              ],
-                              stops: const [0.0, 0.4, 1.0],
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: currentSkin.primaryColor.withValues(alpha: 0.5),
-                                blurRadius: 40 + _pulseAnimation.value * 20,
-                                spreadRadius: 10,
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-
-                  // 2. Rotating Tech/Magic Ring (Cooler and Thicker)
-                  AnimatedBuilder(
-                    animation: _runnerAnimController,
-                    builder: (context, child) {
-                      return Transform.translate(
-                        offset: const Offset(0, 45),
-                        child: Transform(
-                          alignment: Alignment.center,
-                          transform: Matrix4.identity()
-                            ..setEntry(3, 2, 0.002) // Perspective 3D
-                            ..rotateX(1.3) // Tilt like a platform
-                            ..rotateZ(_runnerAnimController.value * math.pi * 2), // Rotate constantly
-                          child: Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              Container(
-                                width: 180,
-                                height: 180,
+                    // Pedestal Platform & Live Animated Character
+                    Stack(
+                      clipBehavior: Clip.none,
+                      alignment: Alignment.center,
+                      children: [
+                        // 1. Aura Effect
+                        AnimatedBuilder(
+                          animation: _pulseAnimation,
+                          builder: (context, child) {
+                            return Transform.translate(
+                              offset: const Offset(0, -10),
+                              child: Container(
+                                width: (isMobile ? 110 : 140) + _pulseAnimation.value * 15,
+                                height: isMobile ? 180 : 250,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: currentSkin.primaryColor,
-                                    width: 8.0,
+                                  gradient: RadialGradient(
+                                    colors: [
+                                      currentSkin.primaryColor.withValues(alpha: 0.6 + _pulseAnimation.value * 0.4),
+                                      currentSkin.primaryColor.withValues(alpha: 0.2 + _pulseAnimation.value * 0.1),
+                                      Colors.transparent,
+                                    ],
+                                    stops: const [0.0, 0.4, 1.0],
                                   ),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: currentSkin.primaryColor,
-                                      blurRadius: 15,
-                                      spreadRadius: 2,
-                                    )
-                                  ]
+                                      color: currentSkin.primaryColor.withValues(alpha: 0.5),
+                                      blurRadius: 35 + _pulseAnimation.value * 15,
+                                      spreadRadius: 8,
+                                    ),
+                                  ],
                                 ),
                               ),
-                              // Draw an arc/dash to make rotation obvious
-                              SizedBox(
-                                width: 180,
-                                height: 180,
-                                child: CircularProgressIndicator(
-                                  value: 0.85,
-                                  strokeWidth: 10,
-                                  color: Colors.white,
+                            );
+                          },
+                        ),
+
+                        // 2. Rotating Platform Ring
+                        AnimatedBuilder(
+                          animation: _runnerAnimController,
+                          builder: (context, child) {
+                            final ringSize = isMobile ? 120.0 : 160.0;
+                            return Transform.translate(
+                              offset: Offset(0, isMobile ? 32 : 42),
+                              child: Transform(
+                                alignment: Alignment.center,
+                                transform: Matrix4.identity()
+                                  ..setEntry(3, 2, 0.002)
+                                  ..rotateX(1.3)
+                                  ..rotateZ(_runnerAnimController.value * math.pi * 2),
+                                child: Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    Container(
+                                      width: ringSize,
+                                      height: ringSize,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: currentSkin.primaryColor,
+                                          width: isMobile ? 5.0 : 7.0,
+                                        ),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: currentSkin.primaryColor,
+                                            blurRadius: 12,
+                                            spreadRadius: 2,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    SizedBox(
+                                      width: ringSize,
+                                      height: ringSize,
+                                      child: CircularProgressIndicator(
+                                        value: 0.85,
+                                        strokeWidth: isMobile ? 7 : 9,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                            ],
-                          ),
+                            );
+                          },
                         ),
-                      );
-                    },
-                  ),
 
-                  // 3. Epic Core Glow Platform
-                  AnimatedBuilder(
-                    animation: _pulseAnimation,
-                    builder: (context, child) {
-                      return Transform.translate(
-                        offset: const Offset(0, 45),
-                        child: Container(
-                          width: 150 + _pulseAnimation.value * 20,
-                          height: 40 + _pulseAnimation.value * 10,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: RadialGradient(
-                              colors: [
-                                Colors.white,
-                                currentSkin.primaryColor,
-                                currentSkin.primaryColor.withValues(alpha: 0.3),
-                                Colors.transparent,
-                              ],
-                              stops: const [0.0, 0.3, 0.7, 1.0],
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: currentSkin.primaryColor.withValues(alpha: 0.8),
-                                blurRadius: 50,
-                                spreadRadius: 25,
+                        // 3. Platform Glow Core
+                        AnimatedBuilder(
+                          animation: _pulseAnimation,
+                          builder: (context, child) {
+                            return Transform.translate(
+                              offset: Offset(0, isMobile ? 32 : 42),
+                              child: Container(
+                                width: (isMobile ? 100 : 135) + _pulseAnimation.value * 15,
+                                height: (isMobile ? 26 : 35) + _pulseAnimation.value * 8,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  gradient: RadialGradient(
+                                    colors: [
+                                      Colors.white,
+                                      currentSkin.primaryColor,
+                                      currentSkin.primaryColor.withValues(alpha: 0.3),
+                                      Colors.transparent,
+                                    ],
+                                    stops: const [0.0, 0.3, 0.7, 1.0],
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: currentSkin.primaryColor.withValues(alpha: 0.8),
+                                      blurRadius: 40,
+                                      spreadRadius: 18,
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ],
-                          ),
+                            );
+                          },
                         ),
-                      );
-                    },
-                  ),
 
-                  // Animated Dinosaur Preview on Pedestal
-                  Transform.translate(
-                    offset: const Offset(0, -15),
-                    child: MouseRegion(
-                      cursor: SystemMouseCursors.click,
-                      child: GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: _triggerDinoRoarEasterEgg,
-                        child: Tooltip(
-                          message: 'Tap Dino for a surprise!',
-                          child: SizedBox(
-                            width: 80,
-                            height: 96,
-                            child: _SkinPreviewWidget(
-                              skin: currentSkin,
-                              ticker: _runnerAnimController,
+                        // Animated Dinosaur Preview on Pedestal
+                        Transform.translate(
+                          offset: Offset(0, isMobile ? -10 : -15),
+                          child: MouseRegion(
+                            cursor: SystemMouseCursors.click,
+                            child: GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onTap: _triggerDinoRoarEasterEgg,
+                              child: Tooltip(
+                                message: 'Tap Dino for a surprise!',
+                                child: SizedBox(
+                                  width: isMobile ? 65 : 80,
+                                  height: isMobile ? 78 : 96,
+                                  child: _SkinPreviewWidget(
+                                    skin: currentSkin,
+                                    ticker: _runnerAnimController,
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              // Character Stats below
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  // Runner Name Badge
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0F172A).withValues(alpha: 0.9),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: currentSkin.primaryColor, width: 1.5),
-                      boxShadow: [
-                        BoxShadow(
-                          color: currentSkin.primaryColor.withValues(alpha: 0.35),
-                          blurRadius: 8,
-                        ),
                       ],
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            color: currentSkin.primaryColor,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          skinName,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 1.2,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  // Status Badge (EQUIPPED / LOCKED)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: isUnlocked ? const Color(0xFF065F46) : const Color(0xFF78350F),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: isUnlocked ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
-                        width: 1.2,
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (!isUnlocked)
-                          const Icon(Icons.monetization_on, color: Color(0xFFFDE68A), size: 14),
-                        if (!isUnlocked)
-                          const SizedBox(width: 6),
-                        Text(
-                          isUnlocked ? 'EQUIPPED RUNNER' : '${currentSkin.price} TO UNLOCK',
-                          style: TextStyle(
-                            color: isUnlocked ? const Color(0xFF6EE7B7) : const Color(0xFFFDE68A),
-                            fontSize: 10,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 1.0,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
 
+                    const SizedBox(width: 6),
+                    // Next Skin Button
+                    IconButton(
+                      icon: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white70, size: 18),
+                      tooltip: 'Next Skin',
+                      onPressed: _nextSkin,
+                    ),
+                  ],
+                ),
 
-            ],
-          ),
-        ),
-        ), // Close Expanded
+                const SizedBox(height: 8),
 
-        // Action Section (Big Start Button + Sub Buttons)
-        Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Big START EXPEDITION Button with Selected Realm Theme
-            if (!isMobile)
-              AnimatedBuilder(
-                animation: _pulseAnimation,
-                builder: (context, child) {
-                  return MouseRegion(
-                  cursor: SystemMouseCursors.click,
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: _onStartExpedition,
-                    child: Container(
-                      width: 340,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                // Character Stats & Badges
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Runner Name Badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            selectedRealmColor,
-                            const Color(0xFFEA580C),
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(
-                          color: const Color(0xFFFFFFFF),
-                          width: 1.5,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: selectedRealmColor.withValues(alpha: 0.5 + _pulseAnimation.value * 0.3),
-                            blurRadius: 16 + _pulseAnimation.value * 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
+                        color: const Color(0xFF183848).withValues(alpha: 0.9),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: currentSkin.primaryColor, width: 1.2),
                       ),
                       child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.play_arrow_rounded, color: Colors.black87, size: 22),
-                          const SizedBox(width: 6),
-                          Text(
-                            'PLAY: ${(selectedRealm['name'] as String).toUpperCase()}',
-                            style: const TextStyle(
-                              color: Colors.black87,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 1.5,
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: BoxDecoration(
+                              color: currentSkin.primaryColor,
+                              shape: BoxShape.circle,
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          if (!isMobile)
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: Colors.black.withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: const Text(
-                                'SPACE',
-                                style: TextStyle(
-                                  color: Colors.black87,
-                                  fontSize: 8.5,
-                                  fontWeight: FontWeight.w900,
-                                ),
-                              ),
+                          const SizedBox(width: 6),
+                          Text(
+                            skinName,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1.0,
                             ),
+                          ),
                         ],
                       ),
                     ),
-                  ),
-                );
-              },
+                    const SizedBox(width: 8),
+                    // Status Badge (EQUIPPED / LOCKED)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: isUnlocked ? const Color(0xFF065F46) : const Color(0xFF78350F),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isUnlocked ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
+                          width: 1.0,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (!isUnlocked) ...[
+                            const Icon(Icons.monetization_on, color: Color(0xFFFDE68A), size: 11),
+                            const SizedBox(width: 4),
+                          ],
+                          Text(
+                            isUnlocked ? 'EQUIPPED' : '${currentSkin.price} TO UNLOCK',
+                            style: TextStyle(
+                              color: isUnlocked ? const Color(0xFF6EE7B7) : const Color(0xFFFDE68A),
+                              fontSize: 9.0,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.8,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
+          ),
+        ),
 
-          ],
+        // Action Section (PROMINENT START EXPEDITION BUTTON)
+        Padding(
+          padding: const EdgeInsets.only(top: 4.0),
+          child: AnimatedBuilder(
+            animation: _pulseAnimation,
+            builder: (context, child) {
+              return MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: _onStartExpedition,
+                  child: Container(
+                    width: isMobile ? 290 : 340,
+                    padding: EdgeInsets.symmetric(vertical: isMobile ? 10 : 13),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          selectedRealmColor,
+                          const Color(0xFFEA580C),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(
+                        color: const Color(0xFFFFFFFF),
+                        width: 1.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: selectedRealmColor.withValues(alpha: 0.5 + _pulseAnimation.value * 0.3),
+                          blurRadius: 14 + _pulseAnimation.value * 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.play_arrow_rounded, color: Colors.black87, size: 24),
+                        const SizedBox(width: 6),
+                        Text(
+                          'PLAY: ${(selectedRealm['name'] as String).toUpperCase()}',
+                          style: const TextStyle(
+                            color: Colors.black87,
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.5,
+                          ),
+                        ),
+                        if (!isMobile) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Text(
+                              'SPACE',
+                              style: TextStyle(
+                                color: Colors.black87,
+                                fontSize: 8.5,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
         ),
       ],
     );
@@ -1064,12 +1447,13 @@ class _MainMenuOverlayState extends State<MainMenuOverlay> with TickerProviderSt
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           decoration: BoxDecoration(
-            color: const Color(0xFF0F172A).withValues(alpha: 0.85),
+            color: const Color(0xFF183848).withValues(alpha: 0.85),
             borderRadius: BorderRadius.circular(10),
             border: Border.all(color: const Color(0xFF334155)),
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          child: Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            runSpacing: 6,
             children: [
               const Row(
                 children: [
@@ -1175,7 +1559,7 @@ class _MainMenuOverlayState extends State<MainMenuOverlay> with TickerProviderSt
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: const Color(0xFF0F172A).withValues(alpha: 0.8),
+        color: const Color(0xFF183848).withValues(alpha: 0.8),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: canClaim ? const Color(0xFFF59E0B) : const Color(0xFF334155).withValues(alpha: 0.6),
@@ -1207,7 +1591,7 @@ class _MainMenuOverlayState extends State<MainMenuOverlay> with TickerProviderSt
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
                     decoration: BoxDecoration(
                       color: isClaimed
-                          ? const Color(0xFF1E293B)
+                          ? const Color(0xFF244A59)
                           : (canClaim ? const Color(0xFFF59E0B) : const Color(0xFF334155)),
                       borderRadius: BorderRadius.circular(4),
                     ),
@@ -1245,7 +1629,7 @@ class _MainMenuOverlayState extends State<MainMenuOverlay> with TickerProviderSt
                   borderRadius: BorderRadius.circular(3),
                   child: LinearProgressIndicator(
                     value: progress,
-                    backgroundColor: const Color(0xFF1E293B),
+                    backgroundColor: const Color(0xFF244A59),
                     valueColor: AlwaysStoppedAnimation<Color>(
                       isClaimed ? const Color(0xFF10B981) : const Color(0xFF38BDF8),
                     ),
@@ -1272,8 +1656,7 @@ class _MainMenuOverlayState extends State<MainMenuOverlay> with TickerProviderSt
   // -------------------------------------------------------------
   // FOOTER (Keybinds)
   // -------------------------------------------------------------
-  Widget _buildFooter() {
-    final isMobile = MediaQuery.of(context).size.width < 800;
+  Widget _buildFooter(bool isMobile) {
     if (isMobile) return const SizedBox.shrink();
 
     return Padding(
@@ -1324,12 +1707,12 @@ class _SkinPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    skin.renderRunning(canvas, size, frame);
+    skin.renderCharacter(canvas, size, frame);
   }
 
   @override
   bool shouldRepaint(covariant _SkinPainter oldDelegate) {
-    return oldDelegate.skin.id != skin.id || oldDelegate.frame != frame;
+    return true; // Repaint continuous rig animation and cosmetic changes.
   }
 }
 
@@ -1337,964 +1720,21 @@ class _SkinPainter extends CustomPainter {
 // DIALOGS: UPGRADES, SKINS, TIME CODEX, TUTORIAL
 // -----------------------------------------------------------------
 
-class _UpgradesDialog extends StatefulWidget {
-  final DinoGame game;
-  const _UpgradesDialog({required this.game});
-
-  @override
-  State<_UpgradesDialog> createState() => _UpgradesDialogState();
-}
-
-class _UpgradesDialogState extends State<_UpgradesDialog> {
-  void _buyUpgrade(String upgradeId, int cost) {
-    if (widget.game.coinManager.upgradePowerup(upgradeId, cost)) {
-      AudioManager.playUpgrade();
-      setState(() {});
-    } else {
-      AudioManager.playHit();
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final coinManager = widget.game.coinManager;
-    final coins = coinManager.coins;
-    final size = MediaQuery.of(context).size;
-    final isMobile = size.width < 800;
-
-    return Material(
-      color: Colors.transparent,
-      child: Container(
-        width: size.width,
-        height: size.height,
-        decoration: const BoxDecoration(
-          gradient: RadialGradient(
-            center: Alignment.topRight,
-            radius: 1.5,
-            colors: [
-              Color(0xFF1E1B4B),
-              Color(0xFF020617),
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Header
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF6366F1).withValues(alpha: 0.2),
-                            shape: BoxShape.circle,
-                            border: Border.all(color: const Color(0xFF818CF8), width: 1.5),
-                          ),
-                          child: const Icon(Icons.bolt, color: Color(0xFFC4B5FD), size: 28),
-                        ),
-                        const SizedBox(width: 16),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'POWER-UP LAB',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: isMobile ? 20 : 28,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 1.5,
-                              ),
-                            ),
-                            const Text(
-                              'ENHANCE YOUR ABILITIES',
-                              style: TextStyle(
-                                color: Color(0xFF94A3B8),
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 2.0,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF0F172A).withValues(alpha: 0.8),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: const Color(0xFFF59E0B), width: 1.5),
-                            boxShadow: const [
-                              BoxShadow(color: Color(0x33F59E0B), blurRadius: 10),
-                            ],
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.monetization_on, color: Color(0xFFFCD34D), size: 20),
-                              const SizedBox(width: 8),
-                              Text(
-                                '$coins',
-                                style: const TextStyle(color: Color(0xFFFCD34D), fontWeight: FontWeight.w900, fontSize: 18),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        MouseRegion(
-                          cursor: SystemMouseCursors.click,
-                          child: GestureDetector(
-                            onTap: () => Navigator.of(context).pop(),
-                            child: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.1),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(Icons.close, color: Colors.white, size: 28),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const Divider(color: Colors.white12, height: 1, thickness: 1),
-              
-              Expanded(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 32, vertical: 24),
-                  child: GridView.count(
-                    crossAxisCount: isMobile ? 1 : 4,
-                    mainAxisSpacing: 24,
-                    crossAxisSpacing: 24,
-                    childAspectRatio: isMobile ? 2.5 : 0.75,
-                    children: [
-                      _buildUpgradeCard(
-                        upgradeId: 'magnet',
-                        iconWidget: CustomPaint(size: const Size(50, 50), painter: _PowerupPainter('magnet')),
-                        title: 'COIN MAGNET',
-                        subtitle: 'Increases magnetic pull radius & duration.',
-                        level: coinManager.magnetLevel,
-                        context: context,
-                        isMobile: isMobile,
-                      ),
-                      _buildUpgradeCard(
-                        upgradeId: 'shield',
-                        iconWidget: CustomPaint(size: const Size(50, 50), painter: _PowerupPainter('shield')),
-                        title: 'ENERGY SHIELD',
-                        subtitle: 'Longer duration & invincibility frames.',
-                        level: coinManager.shieldLevel,
-                        context: context,
-                        isMobile: isMobile,
-                      ),
-                      _buildUpgradeCard(
-                        upgradeId: 'cosmic',
-                        iconWidget: CustomPaint(size: const Size(50, 50), painter: _PowerupPainter('cosmic')),
-                        title: 'ROCKET THRUSTER',
-                        subtitle: 'Higher points & bonus cosmic coins.',
-                        level: coinManager.cosmicLevel,
-                        context: context,
-                        isMobile: isMobile,
-                      ),
-                      _buildUpgradeCard(
-                        upgradeId: 'multiplier',
-                        iconWidget: CustomPaint(size: const Size(50, 50), painter: _PowerupPainter('multiplier')),
-                        title: 'LUCKY MULTIPLIER',
-                        subtitle: 'Higher chance of double coin spawns.',
-                        level: coinManager.multiplierLevel,
-                        context: context,
-                        isMobile: isMobile,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildUpgradeCard({
-    required String upgradeId,
-    required Widget iconWidget,
-    required String title,
-    required String subtitle,
-    required int level,
-    required BuildContext context,
-    required bool isMobile,
-  }) {
-    final costs = [500, 1000, 2500, 5000, 10000];
-    final isMax = level >= 5;
-    final nextCost = isMax ? 0 : costs[level];
-    final canAfford = !isMax && widget.game.coinManager.coins >= nextCost;
-
-    if (isMobile) {
-      // Horizontal layout for mobile
-      return Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: const Color(0xFF0F172A).withValues(alpha: 0.6),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFF334155), width: 1.5),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 64,
-              height: 64,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: const Color(0xFF1E293B),
-                shape: BoxShape.circle,
-                border: Border.all(color: const Color(0xFF475569), width: 1.5),
-              ),
-              child: iconWidget,
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: List.generate(5, (index) {
-                      final isActive = index < level;
-                      return Expanded(
-                        child: Container(
-                          height: 4,
-                          margin: const EdgeInsets.only(right: 4),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(2),
-                            color: isActive ? const Color(0xFF10B981) : const Color(0xFF334155),
-                            boxShadow: isActive ? const [BoxShadow(color: Color(0x6610B981), blurRadius: 4)] : null,
-                          ),
-                        ),
-                      );
-                    }),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 16),
-            SizedBox(
-              width: 80,
-              height: 44,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: isMax
-                      ? const Color(0xFF064E3B)
-                      : (canAfford ? const Color(0xFFF59E0B) : const Color(0xFF1E293B)),
-                  foregroundColor: isMax
-                      ? const Color(0xFF34D399)
-                      : (canAfford ? Colors.black87 : Colors.white54),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(
-                      color: isMax ? const Color(0xFF059669) : (canAfford ? Colors.transparent : const Color(0xFF334155)),
-                    ),
-                  ),
-                  padding: EdgeInsets.zero,
-                  elevation: canAfford && !isMax ? 4 : 0,
-                ),
-                onPressed: canAfford ? () => _buyUpgrade(upgradeId, nextCost) : null,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      isMax ? 'MAX' : 'UPGRADE',
-                      style: TextStyle(
-                        fontSize: isMax ? 11 : 9,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                    if (!isMax) ...[
-                      const SizedBox(height: 2),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.monetization_on, size: 12),
-                          const SizedBox(width: 4),
-                          Text(
-                            '$nextCost',
-                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    // Vertical layout for desktop/tablet
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: const Color(0xFF0F172A).withValues(alpha: 0.6),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFF334155), width: 1.5),
-        boxShadow: const [
-          BoxShadow(color: Color(0x33000000), blurRadius: 16, offset: Offset(0, 8)),
-        ],
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Container(
-            width: 80,
-            height: 80,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: const Color(0xFF1E293B),
-              shape: BoxShape.circle,
-              border: Border.all(color: const Color(0xFF475569), width: 1.5),
-              boxShadow: [
-                BoxShadow(color: const Color(0xFF6366F1).withValues(alpha: 0.2), blurRadius: 20),
-              ],
-            ),
-            child: iconWidget,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            title,
-            style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: 1.2),
-            textAlign: TextAlign.center,
-            maxLines: 1,
-          ),
-          const SizedBox(height: 8),
-          Expanded(
-            child: Text(
-              subtitle,
-              style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12, height: 1.4),
-              textAlign: TextAlign.center,
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(5, (index) {
-              final isActive = index < level;
-              return Expanded(
-                child: Container(
-                  height: 6,
-                  margin: const EdgeInsets.symmetric(horizontal: 2),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(3),
-                    color: isActive ? const Color(0xFF10B981) : const Color(0xFF334155),
-                    boxShadow: isActive ? const [BoxShadow(color: Color(0x6610B981), blurRadius: 6)] : null,
-                  ),
-                ),
-              );
-            }),
-          ),
-          const SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            height: 48,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isMax
-                    ? const Color(0xFF064E3B)
-                    : (canAfford ? const Color(0xFFF59E0B) : const Color(0xFF1E293B)),
-                foregroundColor: isMax
-                    ? const Color(0xFF34D399)
-                    : (canAfford ? Colors.black87 : Colors.white54),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  side: BorderSide(
-                    color: isMax ? const Color(0xFF059669) : (canAfford ? Colors.transparent : const Color(0xFF334155)),
-                  ),
-                ),
-                elevation: canAfford && !isMax ? 8 : 0,
-                padding: EdgeInsets.zero,
-              ),
-              onPressed: canAfford ? () => _buyUpgrade(upgradeId, nextCost) : null,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    isMax ? 'MAXIMUM LEVEL' : 'UPGRADE',
-                    style: TextStyle(
-                      fontSize: isMax ? 13 : 14,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.0,
-                    ),
-                  ),
-                  if (!isMax) ...[
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.monetization_on, size: 14, color: canAfford ? Colors.black87 : const Color(0xFFFCD34D)),
-                          const SizedBox(width: 4),
-                          Text(
-                            '$nextCost',
-                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w900),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SkinsDialog extends StatefulWidget {
-  final DinoGame game;
-  final Function(CharacterSkin) onSkinSelected;
-
-  const _SkinsDialog({required this.game, required this.onSkinSelected});
-
-  @override
-  State<_SkinsDialog> createState() => _SkinsDialogState();
-}
-
-class _SkinsDialogState extends State<_SkinsDialog> {
-  void _buySkin(CharacterSkin skin) {
-    if (widget.game.coinManager.tryPurchaseSkin(skin.id, skin.price)) {
-      widget.game.player.setSkin(skin);
-      widget.onSkinSelected(skin);
-      AudioManager.playUpgrade();
-      setState(() {});
-    } else {
-      AudioManager.playHit();
-    }
-  }
-
-  void _equipSkin(CharacterSkin skin) {
-    widget.game.player.setSkin(skin);
-    widget.onSkinSelected(skin);
-    AudioManager.playButton();
-    setState(() {});
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final skins = SkinRegistry.all;
-    final coinManager = widget.game.coinManager;
-    final coins = coinManager.coins;
-
-    return Material(
-      color: Colors.black.withValues(alpha: 0.70),
-      child: Center(
-        child: Container(
-          width: 580,
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: const Color(0xFF1A1F26),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFF7C3AED).withValues(alpha: 0.8), width: 1.5),
-            boxShadow: [
-              BoxShadow(color: const Color(0xFF7C3AED).withValues(alpha: 0.25), blurRadius: 20),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Row(
-                    children: [
-                      Icon(Icons.checkroom, color: Color(0xFF38BDF8), size: 20),
-                      SizedBox(width: 8),
-                      Text(
-                        'CHARACTER SKINS',
-                        style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900),
-                      ),
-                    ],
-                  ),
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF1E293B),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFF59E0B), width: 1),
-                        ),
-                        child: Text(
-                          '🪙 $coins',
-                          style: const TextStyle(color: Color(0xFFFCD34D), fontWeight: FontWeight.w800),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      IconButton(
-                        icon: const Icon(Icons.close, color: Colors.white70, size: 28),
-                        onPressed: () => Navigator.of(context).pop(), // If it's a dialog
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Flexible(
-                child: SingleChildScrollView(
-                  child: Wrap(
-                    spacing: 10,
-                    runSpacing: 10,
-                    children: skins.map((s) {
-                      final isEquipped = widget.game.player.skin.id == s.id;
-                      final isUnlocked = coinManager.isSkinUnlocked(s.id);
-                      final canAfford = coins >= s.price;
-
-                      return Container(
-                        width: 170,
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF1E293B),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: isEquipped ? const Color(0xFF38BDF8) : const Color(0xFF475569),
-                            width: isEquipped ? 2 : 1,
-                          ),
-                        ),
-                        child: Column(
-                          children: [
-                            // Rarity badge
-                            Align(
-                              alignment: Alignment.topLeft,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                                decoration: BoxDecoration(
-                                  color: s.primaryColor.withValues(alpha: 0.2),
-                                  borderRadius: BorderRadius.circular(4),
-                                  border: Border.all(color: s.primaryColor, width: 0.6),
-                                ),
-                                child: Text(
-                                  s.rarity,
-                                  style: TextStyle(color: s.primaryColor, fontSize: 7, fontWeight: FontWeight.bold),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-
-                            // Skin Preview Canvas
-                            SizedBox(
-                              width: 50,
-                              height: 60,
-                              child: CustomPaint(
-                                painter: _SkinPainter(skin: s, frame: 0),
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-
-                            Text(
-                              s.displayName,
-                              style: const TextStyle(color: Colors.white, fontSize: 10.5, fontWeight: FontWeight.w800),
-                            ),
-                            const SizedBox(height: 6),
-
-                            if (s.id != 'rive_dino')
-                              ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF334155),
-                                  foregroundColor: const Color(0xFF64748B),
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                  minimumSize: Size.zero,
-                                ),
-                                onPressed: null,
-                                child: const Text('LOCKED', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900)),
-                              )
-                            else if (isUnlocked)
-                              ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: isEquipped ? const Color(0xFF0284C7) : const Color(0xFF334155),
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                  minimumSize: Size.zero,
-                                ),
-                                onPressed: isEquipped ? null : () => _equipSkin(s),
-                                child: Text(
-                                  isEquipped ? 'EQUIPPED' : 'EQUIP',
-                                  style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold),
-                                ),
-                              )
-                            else
-                              ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: canAfford ? const Color(0xFFF59E0B) : const Color(0xFF334155),
-                                  foregroundColor: canAfford ? Colors.black87 : const Color(0xFF64748B),
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                  minimumSize: Size.zero,
-                                ),
-                                onPressed: canAfford ? () => _buySkin(s) : null,
-                                child: Text(
-                                  '🪙 ${s.price}',
-                                  style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w900),
-                                ),
-                              ),
-                          ],
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _TimeCodexDialog extends StatelessWidget {
   const _TimeCodexDialog();
-
   @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Container(
-        width: 520,
-        padding: const EdgeInsets.all(22),
-        decoration: BoxDecoration(
-          color: const Color(0xFF0F172A),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFF59E0B), width: 1.5),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Row(
-              children: [
-                Icon(Icons.menu_book, color: Color(0xFFF59E0B), size: 20),
-                SizedBox(width: 8),
-                Text(
-                  'THE TIME CODEX — EPOCHS OF EARTH',
-                  style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w900),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Run across millions of years in Dino Run Epochs! Every 4,500 points traveled seamlessly shifts your world across eras:\n\n'
-              '• 🏜️ Ancient Desert: Stepped stone pyramids, ancient sphinx monuments & gold dust\n'
-              '• 🌧️ Jurassic Monsoon: Torrential rainstorms & water hazards\n'
-              '• 🌲 Primeval Forest: Ancient megaflora & towering canopies\n'
-              '• ❄️ Glacial Tundra: Ice age blizzards & razor glacier spikes\n'
-              '• 🌋 Volcano Inferno: Magma flows & volcanic falling rocks\n'
-              '• 🌌 Cosmic Orbit: Zero-G rocket powerups in the outer atmosphere',
-              style: TextStyle(color: Color(0xFFCBD5E1), fontSize: 10.5, height: 1.45),
-            ),
-            const SizedBox(height: 16),
-            Center(
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFF59E0B),
-                  foregroundColor: Colors.black87,
-                ),
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('CLOSE CODEX', style: TextStyle(fontWeight: FontWeight.w900)),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => AdventurePanel(title: 'A world of adventures', subtitle: 'Six epochs to explore with Dino.',
+    child: ListView(children: const [
+      Text('Ancient Desert · Jurassic Monsoon · Primeval Forest\n\nGlacial Tundra · Cosmic Orbit · Volcano Inferno',
+        style: TextStyle(color: Color(0xFF173B48), fontSize: 18, height: 1.6)),
+    ]));
 }
-
 class _TutorialDialog extends StatelessWidget {
   const _TutorialDialog();
-
   @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Container(
-        width: 460,
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: const Color(0xFF0F172A),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFF38BDF8), width: 1.5),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Row(
-              children: [
-                Icon(Icons.school, color: Color(0xFF38BDF8), size: 20),
-                SizedBox(width: 8),
-                Text(
-                  'HOW TO PLAY',
-                  style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              '• Jump: Tap Screen or Press [SPACE / UP]\n'
-              '• Double Jump: Press Jump again while in mid-air\n'
-              '• Pause: Press [P / ESC] or tap top Pause bar\n'
-              '• Collect 🪙 Coins to purchase power-up upgrades & unlock skins\n'
-              '• Grab 🧲 Magnets to pull in nearby treasures\n'
-              '• Grab 🛡️ Shields to survive collision hazards\n'
-              '• Grab 🚀 Rockets to enter Zero-G Space Bonus Mode!\n'
-              '• Grab ⚡ Giant Dino to grow massive & smash obstacles!',
-              style: TextStyle(color: Color(0xFFCBD5E1), fontSize: 11, height: 1.5),
-            ),
-            const SizedBox(height: 16),
-            Center(
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0284C7),
-                  foregroundColor: Colors.white,
-                ),
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('GOT IT!', style: TextStyle(fontWeight: FontWeight.w800)),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _PowerupPainter extends CustomPainter {
-  final String upgradeId;
-  _PowerupPainter(this.upgradeId);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final cx = size.width / 2;
-    final cy = size.height / 2;
-    final floatOffset = 1.0; // Static offset for rendering
-
-    if (upgradeId == 'magnet') {
-      // 1. Magnetic Field Glow
-      canvas.drawCircle(
-        Offset(cx, cy),
-        22,
-        Paint()..color = const Color(0xFFAB47BC).withValues(alpha: 0.30),
-      );
-
-      // 2. Circular Purple Container Badge
-      final badgeRect = Rect.fromCircle(center: Offset(cx, cy), radius: 19);
-      canvas.drawCircle(Offset(cx, cy), 19, Paint()..shader = const RadialGradient(colors: [Color(0xFF8E24AA), Color(0xFF4A148C)]).createShader(badgeRect));
-      canvas.drawCircle(Offset(cx, cy), 19, Paint()..color = Colors.white.withValues(alpha: 0.8)..style = PaintingStyle.stroke..strokeWidth = 1.8);
-
-      // 3. Horseshoe Magnet U-Shape
-      final uPath = Path()
-        ..moveTo(cx - 10, cy - 8)
-        ..lineTo(cx - 10, cy + 3)
-        ..cubicTo(cx - 10, cy + 13, cx + 10, cy + 13, cx + 10, cy + 3)
-        ..lineTo(cx + 10, cy - 8)
-        ..lineTo(cx + 5, cy - 8)
-        ..lineTo(cx + 5, cy + 3)
-        ..cubicTo(cx + 5, cy + 8, cx - 5, cy + 8, cx - 5, cy + 3)
-        ..lineTo(cx - 5, cy - 8)
-        ..close();
-
-      // Red North Arm (Left)
-      canvas.save();
-      canvas.clipRect(Rect.fromLTWH(cx - 12, cy - 10, 12, 25));
-      canvas.drawPath(uPath, Paint()..color = const Color(0xFFE53935));
-      canvas.restore();
-
-      // Blue South Arm (Right)
-      canvas.save();
-      canvas.clipRect(Rect.fromLTWH(cx, cy - 10, 12, 25));
-      canvas.drawPath(uPath, Paint()..color = const Color(0xFF1E88E5));
-      canvas.restore();
-
-      // Silver Pole Tips
-      final tipPaint = Paint()..color = const Color(0xFFECEFF1);
-      canvas.drawRect(Rect.fromLTWH(cx - 10, cy - 9, 5, 4), tipPaint);
-      canvas.drawRect(Rect.fromLTWH(cx + 5, cy - 9, 5, 4), tipPaint);
-
-      // Magnetic Force Spark Arcs between tips
-      final arcPaint = Paint()
-        ..color = const Color(0xFF00E5FF)
-        ..strokeWidth = 1.5
-        ..style = PaintingStyle.stroke;
-      final arcPath = Path()
-        ..moveTo(cx - 7, cy - 11)
-        ..quadraticBezierTo(cx, cy - 15 + math.sin(floatOffset * 8) * 2, cx + 7, cy - 11);
-      canvas.drawPath(arcPath, arcPaint);
-    } else if (upgradeId == 'shield') {
-      // 1. Protective Cyan Energy Glow
-      canvas.drawCircle(
-        Offset(cx, cy),
-        22,
-        Paint()..color = const Color(0xFF29B6F6).withValues(alpha: 0.30),
-      );
-
-      // 2. Shield Body Path
-      final shieldPath = Path()
-        ..moveTo(cx, cy - 16)
-        ..lineTo(cx + 14, cy - 16)
-        ..quadraticBezierTo(cx + 15, cy + 2, cx, cy + 17)
-        ..quadraticBezierTo(cx - 15, cy + 2, cx - 14, cy - 16)
-        ..close();
-
-      final shieldGradient = const LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [Color(0xFF0288D1), Color(0xFF01579B)],
-      );
-      final shieldRect = Rect.fromLTWH(cx - 15, cy - 16, 30, 33);
-      canvas.drawPath(shieldPath, Paint()..shader = shieldGradient.createShader(shieldRect));
-
-      // Golden Rim Border
-      final borderPaint = Paint()
-        ..color = const Color(0xFFFFD700)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.2;
-      canvas.drawPath(shieldPath, borderPaint);
-
-      // Golden Star Emblem in Center
-      final starPath = Path();
-      for (int i = 0; i < 5; i++) {
-        final aOuter = (i * 72 - 90) * math.pi / 180;
-        final aInner = ((i + 0.5) * 72 - 90) * math.pi / 180;
-        final rO = 6.5;
-        final rI = 2.8;
-        if (i == 0) {
-          starPath.moveTo(cx + math.cos(aOuter) * rO, cy - 1 + math.sin(aOuter) * rO);
-        } else {
-          starPath.lineTo(cx + math.cos(aOuter) * rO, cy - 1 + math.sin(aOuter) * rO);
-        }
-        starPath.lineTo(cx + math.cos(aInner) * rI, cy - 1 + math.sin(aInner) * rI);
-      }
-      starPath.close();
-      canvas.drawPath(starPath, Paint()..color = const Color(0xFFFFD700));
-    } else if (upgradeId == 'cosmic') {
-      // 1. Pulsing thruster energy aura glow
-      final auraRadius = 20.0 + math.sin(floatOffset * 3) * 2.0;
-      canvas.drawCircle(
-        Offset(cx, cy),
-        auraRadius + 5,
-        Paint()..color = const Color(0xFF00E5FF).withValues(alpha: 0.30),
-      );
-
-      // 2. Circular Cyan/Blue Powerup Container Badge
-      final badgeGradient = const RadialGradient(
-        colors: [Color(0xFF00E5FF), Color(0xFF00838F), Color(0xFF004D40)],
-      );
-      canvas.drawCircle(Offset(cx, cy), 19, Paint()..shader = badgeGradient.createShader(Rect.fromCircle(center: Offset(cx, cy), radius: 19)));
-      canvas.drawCircle(Offset(cx, cy), 19, Paint()..color = Colors.white.withValues(alpha: 0.8)..style = PaintingStyle.stroke..strokeWidth = 1.8);
-
-      // 3. Rocket Thruster Exhaust Flame (Bottom)
-      final flamePath = Path()
-        ..moveTo(cx - 5, cy + 8)
-        ..quadraticBezierTo(cx, cy + 17 + math.sin(floatOffset * 10) * 3, cx + 5, cy + 8)
-        ..close();
-      canvas.drawPath(flamePath, Paint()..color = const Color(0xFFFF9100));
-      canvas.drawCircle(Offset(cx, cy + 10), 3.0, Paint()..color = const Color(0xFFFFFF00));
-
-      // 4. Sleek Metallic Rocket Body
-      final rocketPath = Path()
-        ..moveTo(cx, cy - 14)
-        ..cubicTo(cx + 9, cy - 8, cx + 8, cy + 8, cx + 6, cy + 10)
-        ..lineTo(cx - 6, cy + 10)
-        ..cubicTo(cx - 8, cy + 8, cx - 9, cy - 8, cx, cy - 14)
-        ..close();
-
-      final rocketGradient = const LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [Color(0xFFFFFFFF), Color(0xFFCFD8DC), Color(0xFF78909C)],
-      );
-      canvas.drawPath(rocketPath, Paint()..shader = rocketGradient.createShader(Rect.fromLTWH(cx - 9, cy - 14, 18, 24)));
-
-      // Rocket Nose Cone (Red)
-      final nosePath = Path()
-        ..moveTo(cx, cy - 14)
-        ..lineTo(cx + 5, cy - 5)
-        ..lineTo(cx - 5, cy - 5)
-        ..close();
-      canvas.drawPath(nosePath, Paint()..color = const Color(0xFFFF1744));
-
-      // Rocket Wings / Fins (Left & Right)
-      canvas.drawPath(
-        Path()..moveTo(cx - 5, cy + 3)..lineTo(cx - 10, cy + 9)..lineTo(cx - 5, cy + 8)..close(),
-        Paint()..color = const Color(0xFFFF1744),
-      );
-      canvas.drawPath(
-        Path()..moveTo(cx + 5, cy + 3)..lineTo(cx + 10, cy + 9)..lineTo(cx + 5, cy + 8)..close(),
-        Paint()..color = const Color(0xFFFF1744),
-      );
-
-      // Circular Porthole Window
-      canvas.drawCircle(Offset(cx, cy - 1), 3.0, Paint()..color = const Color(0xFF00B0FF));
-      canvas.drawCircle(Offset(cx - 0.8, cy - 1.8), 1.0, Paint()..color = Colors.white);
-    } else if (upgradeId == 'multiplier') {
-      // 1. Expanding Aura Glow
-      final glowRadius = 20.0 + math.sin(floatOffset * 4) * 3.0;
-      canvas.drawCircle(
-        Offset(cx, cy),
-        glowRadius,
-        Paint()..color = const Color(0xFFFF4081).withValues(alpha: 0.35),
-      );
-
-      // 2. Purple Badge
-      final badgeRect = Rect.fromCircle(center: Offset(cx, cy), radius: 19);
-      canvas.drawCircle(Offset(cx, cy), 19, Paint()..shader = const RadialGradient(colors: [Color(0xFFD81B60), Color(0xFF880E4F)]).createShader(badgeRect));
-      canvas.drawCircle(Offset(cx, cy), 19, Paint()..color = const Color(0xFFFFD700)..style = PaintingStyle.stroke..strokeWidth = 2.0);
-
-      // 3. Mega Golden 5-Pointed Star
-      final starPath = Path();
-      for (int i = 0; i < 5; i++) {
-        final aOuter = (i * 72 - 90) * math.pi / 180;
-        final aInner = ((i + 0.5) * 72 - 90) * math.pi / 180;
-        final rO = 12.0;
-        final rI = 5.2;
-        if (i == 0) {
-          starPath.moveTo(cx + math.cos(aOuter) * rO, cy + math.sin(aOuter) * rO);
-        } else {
-          starPath.lineTo(cx + math.cos(aOuter) * rO, cy + math.sin(aOuter) * rO);
-        }
-        starPath.lineTo(cx + math.cos(aInner) * rI, cy + math.sin(aInner) * rI);
-      }
-      starPath.close();
-      canvas.drawPath(starPath, Paint()..color = const Color(0xFFFFD700));
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  Widget build(BuildContext context) => AdventurePanel(title: 'Let’s go exploring!', subtitle: 'Small feet. Big adventures.',
+    child: ListView(children: const [
+      Text('Tap to jump. Tap again for a double jump.\n\nCollect coins to dress up Dino and improve your boosts.\n\nGrab a shield for protection, a magnet for coins, or a rocket for a trip to space.\n\nTap pause whenever you need a break.',
+        style: TextStyle(color: Color(0xFF173B48), fontSize: 17, height: 1.6)),
+    ]));
 }

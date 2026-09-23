@@ -1,10 +1,14 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flame/components.dart';
 import '../utils/colors.dart';
 
+import '../game/dino_game.dart';
+import '../game/game_state.dart';
+
 /// Lightweight particle system with actual visible particles.
-class ParticlePool extends PositionComponent {
+class ParticlePool extends PositionComponent with HasGameReference<DinoGame> {
   final List<_Particle> _particles = [];
   final math.Random _rng = math.Random();
 
@@ -69,7 +73,38 @@ class ParticlePool extends PositionComponent {
   }
 
   void emitCoinCollect(Vector2 pos) {
-    _emit(pos, 6, GameColors.coinGold, 0.4, 40, 15);
+    // 6-8 small gold sparkle particles
+    final count = 6 + _rng.nextInt(3);
+    for (int i = 0; i < count; i++) {
+      final angle = _rng.nextDouble() * 2 * math.pi;
+      final speed = 40.0 + _rng.nextDouble() * 60.0;
+      final color = i % 2 == 0 ? GameColors.coinGold : const Color(0xFFFFF9C4);
+      _particles.add(_Particle(
+        x: pos.x + (_rng.nextDouble() - 0.5) * 6,
+        y: pos.y + (_rng.nextDouble() - 0.5) * 6,
+        vx: math.cos(angle) * speed,
+        vy: math.sin(angle) * speed - 20.0,
+        life: 0.35 + _rng.nextDouble() * 0.15,
+        maxLife: 0.50,
+        color: color,
+        radius: 1.5 + _rng.nextDouble() * 2.0,
+      ));
+    }
+
+    // Quick expanding ring: radius 12 -> 28, alpha fade over ~0.20s
+    _particles.add(_Particle(
+      x: pos.x,
+      y: pos.y,
+      vx: 0,
+      vy: 0,
+      life: 0.20,
+      maxLife: 0.20,
+      color: const Color(0xFFFFD54F),
+      radius: 12.0,
+      isRing: true,
+      startRadius: 12.0,
+      endRadius: 28.0,
+    ));
   }
 
   void emitGravityLaunch(Vector2 pos) {
@@ -123,18 +158,83 @@ class ParticlePool extends PositionComponent {
     }
   }
 
-  void emitBiomeTransition() {
+  void emitLavaEmber(Vector2 pos) {
+    _particles.add(_Particle(
+      x: pos.x + (_rng.nextDouble() - 0.5) * 24,
+      y: pos.y,
+      vx: (_rng.nextDouble() - 0.5) * 20,
+      vy: -35 - _rng.nextDouble() * 35,
+      life: 0.85,
+      maxLife: 0.85,
+      color: _rng.nextBool() ? const Color(0xFFFFD54F) : const Color(0xFFFF5722),
+      radius: 1.5 + _rng.nextDouble() * 1.5,
+    ));
+  }
+
+  void emitBiomeTransition({Color? accentColor}) {
     // Full-width sparkle
-    for (int i = 0; i < 20; i++) {
+    final w = game.size.x > 0 ? game.size.x : 800.0;
+    final h = game.size.y > 0 ? game.size.y * 0.6 : 400.0;
+    for (int i = 0; i < 28; i++) {
+      final color = (accentColor != null && i % 2 == 0)
+          ? accentColor
+          : (i % 3 == 0 ? const Color(0xFFFFD54F) : Colors.white);
       _particles.add(_Particle(
-        x: _rng.nextDouble() * 800,
-        y: _rng.nextDouble() * 400,
-        vx: (_rng.nextDouble() - 0.5) * 20,
-        vy: (_rng.nextDouble() - 0.5) * 20,
-        life: 1.0,
-        maxLife: 1.0,
-        color: Colors.white,
-        radius: 2 + _rng.nextDouble() * 3,
+        x: _rng.nextDouble() * w,
+        y: _rng.nextDouble() * h,
+        vx: (_rng.nextDouble() - 0.5) * 40,
+        vy: -10 - _rng.nextDouble() * 30,
+        life: 0.9 + _rng.nextDouble() * 0.5,
+        maxLife: 1.4,
+        color: color,
+        radius: 2 + _rng.nextDouble() * 3.5,
+      ));
+    }
+  }
+
+  void emitFireworkBurst(Vector2 pos, {List<Color>? colors, int count = 22}) {
+    final defaultColors = [
+      const Color(0xFFFFD700), // Gold
+      const Color(0xFF4DEEEA), // Cyan
+      const Color(0xFFFF4081), // Pink
+      Colors.white,
+      const Color(0xFFFF9100), // Amber
+    ];
+    final palette = (colors != null && colors.isNotEmpty) ? colors : defaultColors;
+    for (int i = 0; i < count; i++) {
+      final angle = _rng.nextDouble() * 2 * math.pi;
+      final speed = 40.0 + _rng.nextDouble() * 100.0;
+      final life = 0.5 + _rng.nextDouble() * 0.35;
+      final color = palette[_rng.nextInt(palette.length)];
+      _particles.add(_Particle(
+        x: pos.x,
+        y: pos.y,
+        vx: math.cos(angle) * speed,
+        vy: math.sin(angle) * speed - 15.0,
+        life: life,
+        maxLife: life,
+        color: color,
+        radius: 2.0 + _rng.nextDouble() * 2.5,
+      ));
+    }
+  }
+
+  void emitSpeedLines() {
+    // High-speed streak lines
+    for (int i = 0; i < 2; i++) {
+      final y = _rng.nextDouble() * game.size.y;
+      final length = 150 + _rng.nextDouble() * 300;
+      _particles.add(_Particle(
+        x: game.size.x + length,
+        y: y,
+        vx: -1200 - _rng.nextDouble() * 800,
+        vy: 0,
+        life: 1.5,
+        maxLife: 1.5,
+        color: const Color(0x66FFFFFF),
+        radius: 1.5 + _rng.nextDouble() * 1.5,
+        isLine: true,
+        length: length,
       ));
     }
   }
@@ -156,12 +256,16 @@ class ParticlePool extends PositionComponent {
 
   @override
   void update(double dt) {
+    dt *= game.globalTimeScale;
     super.update(dt);
     for (int i = _particles.length - 1; i >= 0; i--) {
       final p = _particles[i];
       p.x += p.vx * dt;
       p.y += p.vy * dt;
-      p.vy += 40 * dt; // gravity on particles
+      if (!p.isLine && !p.isRing) {
+        p.vy += 40 * dt; // gravity on particles
+      }
+
       p.life -= dt;
       if (p.life <= 0) {
         _particles.removeAt(i);
@@ -176,11 +280,22 @@ class ParticlePool extends PositionComponent {
     for (final p in _particles) {
       final alpha = (p.life / p.maxLife).clamp(0.0, 1.0);
       _paint.color = p.color.withValues(alpha: alpha);
-      canvas.drawCircle(
-        Offset(p.x, p.y),
-        p.radius * alpha,
-        _paint,
-      );
+      if (p.isRing) {
+        final progress = (1.0 - (p.life / p.maxLife)).clamp(0.0, 1.0);
+        final curRadius = p.startRadius + (p.endRadius - p.startRadius) * progress;
+        _paint.style = PaintingStyle.stroke;
+        _paint.strokeWidth = 2.0 * alpha;
+        canvas.drawCircle(Offset(p.x, p.y), curRadius, _paint);
+        _paint.style = PaintingStyle.fill;
+      } else if (p.isLine) {
+        canvas.drawRect(Rect.fromLTWH(p.x, p.y, p.length, p.radius * 2), _paint);
+      } else {
+        canvas.drawCircle(
+          Offset(p.x, p.y),
+          p.radius * alpha,
+          _paint,
+        );
+      }
     }
   }
 }
@@ -188,10 +303,100 @@ class ParticlePool extends PositionComponent {
 class _Particle {
   double x, y, vx, vy, life, maxLife, radius;
   Color color;
+  bool isLine;
+  double length;
+  bool isRing;
+  double startRadius;
+  double endRadius;
+
   _Particle({
     required this.x, required this.y,
     required this.vx, required this.vy,
     required this.life, required this.maxLife,
     required this.color, required this.radius,
+    this.isLine = false,
+    this.length = 0,
+    this.isRing = false,
+    this.startRadius = 0,
+    this.endRadius = 0,
   });
+}
+
+class HighSpeedStreaks extends PositionComponent with HasGameReference<DinoGame> {
+  final List<_Streak> _streaks = List.generate(3, (_) => _Streak());
+  final math.Random _rng = math.Random();
+  final Paint _paint = Paint();
+
+  @override
+  Future<void> onLoad() async {
+    super.onLoad();
+    _paint.shader = ui.Gradient.linear(
+      Offset.zero,
+      const Offset(1.0, 0.0),
+      [
+        const Color(0x00FFFFFF),
+        const Color(0x20FFFFFF),
+        const Color(0x00FFFFFF),
+      ],
+      const [0.0, 0.5, 1.0],
+    );
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    if (game.state != GameState.playing && game.state != GameState.spaceMode) {
+      for (final s in _streaks) {
+        s.active = false;
+      }
+      return;
+    }
+    
+    final ratio = game.speedManager.currentSpeed / game.speedManager.maxSpeed;
+    if (ratio > 0.6) {
+      for (final s in _streaks) {
+        if (!s.active) {
+          s.active = true;
+          s.x = game.size.x + _rng.nextDouble() * 200;
+          s.y = _rng.nextDouble() * (game.size.y * 0.75); // Skip bottom 25% of screen
+          s.length = 120 + _rng.nextDouble() * 140; // Length 120-260px
+          s.speed = game.speedManager.currentSpeed * 1.5 + _rng.nextDouble() * 500;
+        } else {
+          s.x -= s.speed * dt * game.globalTimeScale;
+          if (s.x + s.length < 0) {
+            s.active = false;
+          }
+        }
+      }
+    } else {
+      for (final s in _streaks) {
+        s.active = false;
+      }
+    }
+  }
+
+  @override
+  void render(Canvas canvas) {
+    if (game.state != GameState.playing && game.state != GameState.spaceMode) return;
+    final ratio = game.speedManager.currentSpeed / game.speedManager.maxSpeed;
+    if (ratio <= 0.6) return;
+
+    for (final s in _streaks) {
+      if (s.active) {
+        canvas.save();
+        canvas.translate(s.x, s.y);
+        canvas.scale(s.length, 1.0);
+        canvas.drawRect(const Rect.fromLTWH(0, 0, 1.0, 2.0), _paint);
+        canvas.restore();
+      }
+    }
+  }
+}
+
+class _Streak {
+  bool active = false;
+  double x = 0;
+  double y = 0;
+  double length = 0;
+  double speed = 0;
 }

@@ -18,6 +18,7 @@ dist/
 .history
 .svn/
 .swiftpm/
+scratch/
 migrate_working_dir/
 
 # IntelliJ related

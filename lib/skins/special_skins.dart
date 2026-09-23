@@ -75,9 +75,22 @@ class CyberNeonDinoSkin extends CharacterSkin {
     canvas.drawRRect(headRect, bodyPaint);
     canvas.drawRRect(headRect, strokePaint);
 
+    // Rim-light Pass (Top-Left)
+    final rimPath = Path()
+      ..addRRect(bodyRect)
+      ..addRRect(headRect)
+      ..addRRect(bodyRect.shift(const Offset(2.5, 2.5)))
+      ..addRRect(headRect.shift(const Offset(2.5, 2.5)))
+      ..fillType = PathFillType.evenOdd;
+    final rimPaint = Paint()..color = const Color(0x26FFFFFF);
+    canvas.save();
+    canvas.clipPath(Path()..addRRect(bodyRect)..addRRect(headRect));
+    canvas.drawPath(rimPath, rimPaint);
+    canvas.restore();
+
     // Visor Glass (Glowing Neon Magenta / Cyan gradient)
     final visorRect = RRect.fromRectAndRadius(
-      Rect.fromCenter(center: Offset(cx + 14, cy - 14), width: size.width * 0.38, height: 12),
+      Rect.fromCenter(center: Offset(cx + 14, cy - 14), width: size.width * 0.38, height: isBlinking && !isSpace ? 4 : 12),
       const Radius.circular(4),
     );
     final visorPaint = Paint()
@@ -129,10 +142,10 @@ class GoldenEmperorSkin extends CharacterSkin {
 
   @override
   void renderSpace(Canvas canvas, Size size, int animFrame) {
-    _renderGoldDino(canvas, size, 0, isJumping: true);
+    _renderGoldDino(canvas, size, 0, isJumping: true, isSpace: true);
   }
 
-  void _renderGoldDino(Canvas canvas, Size size, int frame, {bool isJumping = false}) {
+  void _renderGoldDino(Canvas canvas, Size size, int frame, {bool isJumping = false, bool isSpace = false}) {
     canvas.save();
     if (!isJumping && frame % 2 == 1) {
       canvas.translate(0, 3);
@@ -174,9 +187,28 @@ class GoldenEmperorSkin extends CharacterSkin {
     );
     canvas.drawRRect(headRect, Paint()..shader = goldShader);
 
+    // Rim-light Pass (Top-Left)
+    final rimPath = Path()
+      ..addRRect(bodyRect)
+      ..addRRect(headRect)
+      ..addRRect(bodyRect.shift(const Offset(2.5, 2.5)))
+      ..addRRect(headRect.shift(const Offset(2.5, 2.5)))
+      ..fillType = PathFillType.evenOdd;
+    canvas.save();
+    canvas.clipPath(Path()..addRRect(bodyRect)..addRRect(headRect));
+    canvas.drawPath(rimPath, Paint()..color = const Color(0x33FFFFFF));
+    canvas.restore();
+
     // Eye
-    canvas.drawCircle(Offset(cx + 18, cy - 16), 4, Paint()..color = const Color(0xFF3E2723));
-    canvas.drawCircle(Offset(cx + 19, cy - 17), 1.5, Paint()..color = Colors.white);
+    if (isBlinking && !isSpace) {
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(Rect.fromCenter(center: Offset(cx + 18, cy - 16), width: 8, height: 2), const Radius.circular(1)),
+        Paint()..color = const Color(0xFF3E2723)
+      );
+    } else {
+      canvas.drawCircle(Offset(cx + 18, cy - 16), 4, Paint()..color = const Color(0xFF3E2723));
+      canvas.drawCircle(Offset(cx + 19, cy - 17), 1.5, Paint()..color = Colors.white);
+    }
 
     // Emperor's Crown
     final crownPath = Path()
@@ -238,10 +270,10 @@ class AstronautDinoSkin extends CharacterSkin {
 
   @override
   void renderSpace(Canvas canvas, Size size, int animFrame) {
-    _renderAstroDino(canvas, size, 0, isJumping: true);
+    _renderAstroDino(canvas, size, 0, isJumping: true, isSpace: true);
   }
 
-  void _renderAstroDino(Canvas canvas, Size size, int frame, {bool isJumping = false}) {
+  void _renderAstroDino(Canvas canvas, Size size, int frame, {bool isJumping = false, bool isSpace = false}) {
     canvas.save();
     if (!isJumping && frame % 2 == 1) {
       canvas.translate(0, 3);
@@ -270,11 +302,22 @@ class AstronautDinoSkin extends CharacterSkin {
     canvas.drawCircle(Offset(cx - 4, cy + 6), 4.5, Paint()..color = const Color(0xFF0284C7));
     canvas.drawCircle(Offset(cx - 4, cy + 6), 2, Paint()..color = const Color(0xFFEF4444));
 
-    // 3. Space Helmet Glass Visor
     final helmetCenter = Offset(cx + 8, cy - 14);
-    final helmetRadius = size.width * 0.32;
-    canvas.drawCircle(helmetCenter, helmetRadius, Paint()..color = const Color(0xFFE2E8F0));
+    final helmetRadius = size.width * 0.3;
+
     canvas.drawCircle(helmetCenter, helmetRadius, Paint()..color = const Color(0xFF475569)..style = PaintingStyle.stroke..strokeWidth = 2);
+
+    // Rim-light Pass (Top-Left)
+    final rimPath = Path()
+      ..addRRect(bodyRect)
+      ..addOval(Rect.fromCircle(center: helmetCenter, radius: helmetRadius))
+      ..addRRect(bodyRect.shift(const Offset(2.5, 2.5)))
+      ..addOval(Rect.fromCircle(center: helmetCenter.translate(2.5, 2.5), radius: helmetRadius))
+      ..fillType = PathFillType.evenOdd;
+    canvas.save();
+    canvas.clipPath(Path()..addRRect(bodyRect)..addOval(Rect.fromCircle(center: helmetCenter, radius: helmetRadius)));
+    canvas.drawPath(rimPath, Paint()..color = const Color(0x33FFFFFF));
+    canvas.restore();
 
     // Gold Mirrored Visor
     final visorPaint = Paint()
@@ -334,10 +377,10 @@ class MagmaDragonSkin extends CharacterSkin {
 
   @override
   void renderSpace(Canvas canvas, Size size, int animFrame) {
-    _renderMagmaDino(canvas, size, 0, isJumping: true);
+    _renderMagmaDino(canvas, size, 0, isJumping: true, isSpace: true);
   }
 
-  void _renderMagmaDino(Canvas canvas, Size size, int frame, {bool isJumping = false}) {
+  void _renderMagmaDino(Canvas canvas, Size size, int frame, {bool isJumping = false, bool isSpace = false}) {
     canvas.save();
     if (!isJumping && frame % 2 == 1) {
       canvas.translate(0, 3);
@@ -380,6 +423,18 @@ class MagmaDragonSkin extends CharacterSkin {
     canvas.drawRRect(headRect, Paint()..color = const Color(0xFF1E1B1B));
     canvas.drawRRect(headRect, Paint()..color = const Color(0xFFFF5722)..style = PaintingStyle.stroke..strokeWidth = 2);
 
+    // Rim-light Pass (Top-Left)
+    final rimPath = Path()
+      ..addRRect(bodyRect)
+      ..addRRect(headRect)
+      ..addRRect(bodyRect.shift(const Offset(2.5, 2.5)))
+      ..addRRect(headRect.shift(const Offset(2.5, 2.5)))
+      ..fillType = PathFillType.evenOdd;
+    canvas.save();
+    canvas.clipPath(Path()..addRRect(bodyRect)..addRRect(headRect));
+    canvas.drawPath(rimPath, Paint()..color = const Color(0x26FFFFFF));
+    canvas.restore();
+
     // Flaming Horns
     final hornPath = Path()
       ..moveTo(cx + 2, cy - 26)
@@ -390,8 +445,15 @@ class MagmaDragonSkin extends CharacterSkin {
     canvas.drawPath(hornPath, Paint()..color = const Color(0xFFFFD54F)..style = PaintingStyle.stroke..strokeWidth = 1.5);
 
     // Glowing Yellow Dragon Eye
-    canvas.drawCircle(Offset(cx + 18, cy - 16), 4, Paint()..color = const Color(0xFFFFD54F));
-    canvas.drawCircle(Offset(cx + 18, cy - 16), 2, Paint()..color = const Color(0xFFBF360C));
+    if (isBlinking && !isSpace) {
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(Rect.fromCenter(center: Offset(cx + 18, cy - 16), width: 8, height: 2), const Radius.circular(1)),
+        Paint()..color = const Color(0xFFFFD54F)
+      );
+    } else {
+      canvas.drawCircle(Offset(cx + 18, cy - 16), 4, Paint()..color = const Color(0xFFFFD54F));
+      canvas.drawCircle(Offset(cx + 18, cy - 16), 2, Paint()..color = const Color(0xFFBF360C));
+    }
 
     // Feet
     final legY = cy + size.height * 0.38;

@@ -19,7 +19,9 @@ class AudioManager {
       'pixel_jump_title.mp3',
       'one_more_try.mp3',
       'pixel_jump_1.mp3',
-      'pixel_jump.mp3'
+      'pixel_jump.mp3',
+      'biome_sting.wav',
+      'milestone_chime.wav',
     ]);
   }
 
@@ -164,6 +166,22 @@ class AudioManager {
   static void playUpgrade() {
     ensureAudioPlaying();
     SettingsManager.triggerVibration(duration: 40);
+  }
+
+  static void playBiomeSting() {
+    if (_currentVolume <= 0) return;
+    try {
+      FlameAudio.play('biome_sting.wav', volume: _currentVolume);
+    } catch (_) {}
+    SettingsManager.triggerVibration(duration: 40);
+  }
+
+  static void playMilestoneChime() {
+    if (_currentVolume <= 0) return;
+    try {
+      FlameAudio.play('milestone_chime.wav', volume: _currentVolume);
+    } catch (_) {}
+    SettingsManager.triggerVibration(duration: 25);
   }
 }
 

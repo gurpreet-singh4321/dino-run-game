@@ -16,4 +16,5 @@ class SpeedManager extends Component {
   }
 
   double get speedMultiplier => currentSpeed / baseSpeed;
+  double get maxSpeed => baseSpeed + maxAdd;
 }

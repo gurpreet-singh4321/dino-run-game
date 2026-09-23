@@ -1,0 +1,12 @@
+# Fossil Canyon — first playable art pass
+
+Asset: `assets/images/biomes/desert_fossil_canyon.png`.
+Generated with the built-in image generation tool using the approved concept as reference.
+
+Generation prompt: Production game background asset, based on the attached approved Fossil Canyon concept. Output a single wide 3:1 landscape image. ONLY ENVIRONMENT, remove ALL HUD, text, numbers, hearts, player, shield, coins, balls, obstacles, foreground running platform and underground cross-section. Fill the whole canvas with illustrated landscape. Preserve beautiful painterly 2D style, turquoise sky, peach sunset, lavender distant mesas, terracotta sculpted cliffs, sandstone arch to right, fossil dinosaur ribs mid-left, sandy valley floor. Bottom 20 percent is quiet pale sandy valley with very low contrast and no large objects, intended behind gameplay. Top 20 percent mostly sky. Make left and right boundary visually compatible for horizontal scrolling: same sky colors and same sandy ground heights, no large cropped rocks at boundaries. No sun disk at edge. Landmark silhouettes must be organic and beautiful, subtle brush textures, warm light cool shadows. This is background layer art for real side-view runner. No border, no UI, no foreground silhouettes. Match reference art quality closely.
+
+The panorama scrolls at the existing background speed, with alternate tiles mirrored to make their boundary pixels match. Mirrored landmarks repeat; this is not a hand-authored seamless world. The image scales proportionally to ground height; narrower windows reveal less of the panorama. Flat procedural desert scenery and clouds are retained only as a fallback if the image cannot load. Ground geometry and collisions are unchanged. The ground uses cached painted rock faces and ammonite details.
+
+Next art pass: separate transparent cliff and fossil assets for independent parallax, unique connecting scenery to replace mirrored repetition, and painterly ground sprites. Current implementation is one panorama plus independently scrolling ground and existing dust, not the full multi-layer concept.
+
+Verification: release web build; 13 existing ground/obstacle and collision tests; browser inspection of menu and paused desert gameplay. Analyzer reported 14 existing warnings/info in background helpers, menu and Rive code, with no errors. Full traversal, mobile performance and biome/space transition visual checks remain to be done.

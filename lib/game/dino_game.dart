@@ -12,6 +12,7 @@ import '../components/sky_background.dart';
 import '../components/ui/hud.dart';
 import '../components/ui/combo_display.dart';
 import '../components/ui/space_timer_bar.dart';
+import '../components/ui/milestone_overlay.dart';
 import '../components/ui/start_screen.dart';
 import '../components/ui/game_over_screen.dart';
 import '../managers/spawn_manager.dart';
@@ -21,8 +22,11 @@ import '../managers/coin_manager.dart';
 import '../managers/audio_manager.dart';
 import 'biome_manager.dart';
 import 'game_state.dart';
+import '../skins/new_dino_skin.dart';
+import '../skins/skin_registry.dart';
 
 enum SpacePhase { none, launch, coinRain, returning }
+enum ShakePreset { sideHit, topHit, shieldBreak, rumble, heavyImpact, landing }
 
 class DinoGame extends FlameGame with HasCollisionDetection, TapCallbacks, PanDetector, KeyboardEvents, WidgetsBindingObserver {
   late final Player player;
@@ -34,6 +38,8 @@ class DinoGame extends FlameGame with HasCollisionDetection, TapCallbacks, PanDe
   late final ParticlePool particlePool;
   late final ComboDisplay comboDisplay;
   late final CoinManager coinManager;
+  late final Hud hud;
+  late final MilestoneOverlay milestoneOverlay;
 
   GameState state = GameState.menu;
   double score = 0;
@@ -41,13 +47,43 @@ class DinoGame extends FlameGame with HasCollisionDetection, TapCallbacks, PanDe
   double comboTimer = 0;
   int frameCount = 0;
 
+  // Milestone tracking
+  int _lastCelebratedMilestone = 0;
+  int _initialHighScore = 0;
+  bool _hasShownHighScoreBannerThisRun = false;
+
   // Camera Shake / Vibration
   double shakeTimer = 0;
   double shakeIntensity = 0;
+  double _shakeDuration = 1.0;
+  ShakePreset? currentShakePreset;
 
-  void triggerShake({double duration = 1.0, double intensity = 5.0}) {
+  void triggerShake({double duration = 1.0, double intensity = 5.0, ShakePreset preset = ShakePreset.landing}) {
     shakeTimer = duration;
+    _shakeDuration = duration;
     shakeIntensity = intensity;
+    currentShakePreset = preset;
+  }
+
+  // Impact feedback
+  double hitStopTimer = 0.0;
+  double slowMoTimer = 0.0;
+
+  double get globalTimeScale {
+    if (hitStopTimer > 0) return 0.05; // 90ms hit stop
+    if (slowMoTimer > 0) {
+      // Lerp from 0.85 back to 1.0
+      return 1.0 - (0.15 * (slowMoTimer / 0.20)).clamp(0.0, 0.15);
+    }
+    return 1.0;
+  }
+
+  void triggerHitStop() {
+    hitStopTimer = 0.09;
+  }
+
+  void triggerNearMissSlowMo() {
+    slowMoTimer = 0.20;
   }
 
   // Space mode
@@ -65,6 +101,8 @@ class DinoGame extends FlameGame with HasCollisionDetection, TapCallbacks, PanDe
   @override
   Future<void> onLoad() async {
     await super.onLoad();
+    await NewDinoSkin.preload();
+    SkinRegistry.setCosmetics(coinManager.equippedCosmetics.values);
 
     WidgetsBinding.instance.addObserver(this);
 
@@ -91,11 +129,15 @@ class DinoGame extends FlameGame with HasCollisionDetection, TapCallbacks, PanDe
     add(speedManager);
     add(inputManager);
     add(particlePool);
+    add(HighSpeedStreaks());
 
     // UI
-    add(Hud());
+    hud = Hud();
+    milestoneOverlay = MilestoneOverlay();
+    add(hud);
     add(comboDisplay);
     add(SpaceTimerBar());
+    add(milestoneOverlay);
     add(StartScreen());
     add(GameOverScreen());
   }
@@ -149,10 +191,18 @@ class DinoGame extends FlameGame with HasCollisionDetection, TapCallbacks, PanDe
 
   @override
   void update(double dt) {
-    // Clamp delta time to maximum 33ms (~30 FPS min step) to prevent delta spikes & stuttering
     final clampedDt = math.min(dt, 0.0333);
     super.update(clampedDt);
     frameCount++;
+
+    if (hitStopTimer > 0) hitStopTimer -= clampedDt;
+    if (slowMoTimer > 0) slowMoTimer -= clampedDt;
+
+    // Safety against stuck time-scale in non-playing states
+    if (state != GameState.playing && state != GameState.spaceMode) {
+      hitStopTimer = 0;
+      slowMoTimer = 0;
+    }
 
     if (shakeTimer > 0) {
       shakeTimer -= clampedDt;
@@ -160,8 +210,40 @@ class DinoGame extends FlameGame with HasCollisionDetection, TapCallbacks, PanDe
         shakeTimer = 0;
         camera.viewfinder.position = Vector2.zero();
       } else {
-        final dx = (_rng.nextDouble() - 0.5) * shakeIntensity * 2;
-        final dy = (_rng.nextDouble() - 0.5) * shakeIntensity * 2;
+        // Exponential decay so shakes settle smoothly
+        final decay = math.exp(-2.0 * (1.0 - (shakeTimer / _shakeDuration)));
+        final currentIntensity = shakeIntensity * decay;
+
+        double dx = 0;
+        double dy = 0;
+
+        switch (currentShakePreset) {
+          case ShakePreset.sideHit:
+            dx = (_rng.nextDouble() > 0.5 ? 1 : -1) * currentIntensity;
+            dy = (_rng.nextDouble() - 0.5) * currentIntensity * 0.5;
+            break;
+          case ShakePreset.topHit:
+            dx = (_rng.nextDouble() - 0.5) * currentIntensity * 0.5;
+            dy = (_rng.nextDouble() > 0.5 ? 1 : -1) * currentIntensity;
+            break;
+          case ShakePreset.shieldBreak:
+            // High frequency, low amplitude
+            dx = math.sin(frameCount * 1.5) * currentIntensity;
+            dy = math.cos(frameCount * 1.5) * currentIntensity;
+            break;
+          case ShakePreset.rumble:
+            // Low frequency
+            dx = math.sin(frameCount * 0.2) * currentIntensity;
+            dy = math.cos(frameCount * 0.2) * currentIntensity;
+            break;
+          case ShakePreset.heavyImpact:
+          case ShakePreset.landing:
+          default:
+            dx = (_rng.nextDouble() - 0.5) * currentIntensity * 2;
+            dy = (_rng.nextDouble() - 0.5) * currentIntensity * 2;
+            break;
+        }
+
         camera.viewfinder.position = Vector2(dx, dy);
       }
     }
@@ -182,16 +264,42 @@ class DinoGame extends FlameGame with HasCollisionDetection, TapCallbacks, PanDe
     }
   }
 
+  void _checkMilestones() {
+    final currentMilestone = (score / 1000).floor();
+    if (currentMilestone > _lastCelebratedMilestone) {
+      // Correction 1: If multiple 1000-boundaries passed in a single frame, celebrate ONLY the latest one
+      final isMajor = (currentMilestone % 5 == 0);
+      milestoneOverlay.triggerScoreCelebration(isMajor: isMajor);
+      hud.triggerScorePop(isMajor: isMajor);
+      AudioManager.playMilestoneChime();
+      _lastCelebratedMilestone = currentMilestone;
+    }
+  }
+
+  void _checkHighScoreBanner() {
+    // Correction 2: Only check and trigger while in playing state (never during spaceMode)
+    if (state == GameState.playing) {
+      if (!_hasShownHighScoreBannerThisRun && _initialHighScore > 0 && score > _initialHighScore) {
+        _hasShownHighScoreBannerThisRun = true;
+        milestoneOverlay.showHighScoreBanner();
+      }
+    }
+  }
+
   void _updatePlaying(double dt) {
     score += speedManager.currentSpeed * dt * 0.05;
     speedManager.updateSpeed(score);
     biomeManager.updateBiome(score, speedManager.currentSpeed);
+    _checkMilestones();
+    _checkHighScoreBanner();
 
     if (comboTimer > 0) {
       comboTimer -= dt;
       if (comboTimer <= 0) {
+        if (combo > 0) {
+          comboDisplay.showComboBreak(combo);
+        }
         combo = 0;
-        comboDisplay.hide();
       }
     }
   }
@@ -199,6 +307,8 @@ class DinoGame extends FlameGame with HasCollisionDetection, TapCallbacks, PanDe
   void _updateSpaceMode(double dt) {
     final cosmicBonus = 1.0 + (coinManager.cosmicLevel * 0.4);
     score += dt * 5 * cosmicBonus;
+    _checkMilestones();
+    // High-score banner check intentionally deferred until returning to playing state!
     spacePhaseTimer -= dt;
 
     switch (spacePhase) {
@@ -271,6 +381,8 @@ class DinoGame extends FlameGame with HasCollisionDetection, TapCallbacks, PanDe
   void startGame({int? startingStage}) {
     state = GameState.playing;
     overlays.remove('MainMenuOverlay');
+    overlays.remove('PauseMenu');
+    overlays.remove('SettingsDialog');
     score = 0;
     combo = 0;
     comboTimer = 0;
@@ -278,6 +390,10 @@ class DinoGame extends FlameGame with HasCollisionDetection, TapCallbacks, PanDe
     spacePhase = SpacePhase.none;
     spacePhaseTimer = 0;
     spaceTransitionProgress = 0;
+    _lastCelebratedMilestone = 0;
+    _initialHighScore = coinManager.highScore;
+    _hasShownHighScoreBannerThisRun = false;
+    milestoneOverlay.reset();
     coinManager.resetRunCoins();
     speedManager.reset();
     biomeManager.reset(startingStage: startingStage ?? biomeManager.currentStage);
@@ -287,10 +403,14 @@ class DinoGame extends FlameGame with HasCollisionDetection, TapCallbacks, PanDe
   }
 
   void reviveGame() {
+    overlays.remove('MainMenuOverlay');
+    overlays.remove('PauseMenu');
+    overlays.remove('SettingsDialog');
     player.revive();
     spawnManager.clearGroundEntities();
     state = GameState.playing;
     resumeEngine();
+    triggerHitStop();
     AudioManager.playGameplayBgm();
   }
 
@@ -334,8 +454,10 @@ class DinoGame extends FlameGame with HasCollisionDetection, TapCallbacks, PanDe
   void exitToMenu() {
     state = GameState.menu;
     overlays.remove('PauseMenu');
+    overlays.remove('SettingsDialog');
     overlays.add('MainMenuOverlay');
     resumeEngine();
+    milestoneOverlay.reset();
     speedManager.reset();
     biomeManager.reset();
     player.reset();
@@ -376,6 +498,8 @@ class DinoGame extends FlameGame with HasCollisionDetection, TapCallbacks, PanDe
         overlays.add('SettingsDialog');
         return;
       }
+      // Menu overlay handles its own taps; do not fall through to _handleInputStart() / startGame()
+      return;
     }
 
     if (state == GameState.gameOver) {
@@ -488,6 +612,8 @@ class DinoGame extends FlameGame with HasCollisionDetection, TapCallbacks, PanDe
   void _handleInputEnd() {
     if (state == GameState.spaceMode) {
       player.isThrusting = false;
+    } else if (state == GameState.playing) {
+      player.onJumpRelease();
     }
   }
 }

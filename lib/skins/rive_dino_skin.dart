@@ -3,8 +3,21 @@ import 'package:flame_rive/flame_rive.dart';
 import 'package:flutter/widgets.dart';
 import 'package:rive/rive.dart' as rive;
 import 'skin.dart';
+import 'cosmetics.dart';
 
 class RiveDinoSkin extends CharacterSkin {
+  @override
+  CosmeticFit get cosmeticFit => const CosmeticFit(
+    head: Offset(.53, .43), neck: Offset(.53, .67),
+    back: Offset(.31, .72), scale: .62);
+  @override
+  CosmeticFit cosmeticFitFor(Size size) {
+    final fit = cosmeticFit;
+    // The existing artboard is drawn 15 logical pixels below its bounds.
+    final shift = Offset(0, size.height > 0 ? 15 / size.height : 0);
+    return CosmeticFit(head: fit.head + shift, neck: fit.neck + shift,
+      back: fit.back + shift, scale: fit.scale);
+  }
   @override
   String get id => 'rive_dino';
 
@@ -82,6 +95,7 @@ class RiveDinoSkin extends CharacterSkin {
 
   @override
   void update(double dt) {
+    super.update(dt);
     if (_stateMachine == null && _animation != null) {
       _animation!.advanceAndApply(dt);
     }

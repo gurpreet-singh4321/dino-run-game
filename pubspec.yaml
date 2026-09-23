@@ -43,6 +43,7 @@ flutter:
     - assets/dino.riv
     - assets/sun.riv
     - assets/images/
+    - assets/images/biomes/
     - assets/images/dino_sprite.png
     - assets/images/app_icon.png
     - assets/images/desert_bg.jpg

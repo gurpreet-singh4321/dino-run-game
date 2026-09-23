@@ -44,7 +44,7 @@ class DefaultDinoSkin extends CharacterSkin {
   @override
   void renderSpace(Canvas canvas, Size size, int frame) {
     _loadSprite();
-    _renderBaseDino(canvas, size, 0, true);
+    _renderBaseDino(canvas, size, 0, true, isSpace: true);
 
     // Cute Space Helmet
     final glassPaint = Paint()
@@ -74,7 +74,7 @@ class DefaultDinoSkin extends CharacterSkin {
     );
   }
 
-  void _renderBaseDino(Canvas canvas, Size size, int frame, bool isJumping) {
+  void _renderBaseDino(Canvas canvas, Size size, int frame, bool isJumping, {bool isSpace = false}) {
     if (_dinoSprite == null) return;
     
     canvas.save();
@@ -84,12 +84,32 @@ class DefaultDinoSkin extends CharacterSkin {
       canvas.translate(0, size.height * 0.05);
     }
     
-    // The sprite is facing right. Let's just draw it in the bounding box.
-    // It's a single frame sprite now!
+    // The sprite is facing right.
     _dinoSprite!.render(
       canvas,
       size: Vector2(size.width, size.height),
     );
+
+    // Rim-light Pass (Top-Left)
+    canvas.saveLayer(Rect.fromLTWH(0, 0, size.width, size.height), Paint());
+    final rimPaint = Paint()
+      ..colorFilter = const ColorFilter.mode(Color(0x33FFFFFF), BlendMode.srcIn);
+    _dinoSprite!.render(canvas, size: Vector2(size.width, size.height), overridePaint: rimPaint);
+    
+    canvas.save();
+    canvas.translate(2.5, 2.5);
+    _dinoSprite!.render(canvas, size: Vector2(size.width, size.height), overridePaint: Paint()..blendMode = BlendMode.dstOut);
+    canvas.restore();
+    canvas.restore();
+
+    // Eye Blink Overlay
+    if (isBlinking && !isSpace) {
+      canvas.drawLine(
+        Offset(size.width * 0.60, size.height * 0.32),
+        Offset(size.width * 0.68, size.height * 0.32),
+        Paint()..color = const Color(0xFF1E3A2F)..strokeWidth = 2.0..strokeCap = StrokeCap.round
+      );
+    }
 
     canvas.restore();
   }

@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flame/components.dart';
 import 'package:flame/collisions.dart';
@@ -10,15 +11,33 @@ enum CollectibleType { coin, doubleCoin, shield, magnet, gravity, giant, dinoEgg
 class Collectible extends PositionComponent with CollisionCallbacks, HasGameReference<DinoGame> {
   final CollectibleType collectType;
   double _animTimer = 0;
-  int _animFrame = 0;
+  double _glintTimer = 0;
   double _floatOffset = 0;
   bool _collected = false;
 
+  // Smoothed magnet attraction state
+  double _magnetVx = 0.0;
+  double _magnetVy = 0.0;
+  double _magnetTime = 0.0;
+
   Collectible({required this.collectType, required Vector2 position})
-    : super(position: position, size: Vector2.all(42));
+    : super(position: position, size: Vector2.all(42)) {
+    resetCollectible();
+  }
+
+  /// Resets per-collectible state so pooled/recycled instances never inherit stale velocities.
+  void resetCollectible() {
+    _magnetVx = 0.0;
+    _magnetVy = 0.0;
+    _magnetTime = 0.0;
+    _collected = false;
+    _animTimer = 0.0;
+    _glintTimer = 0.0;
+  }
 
   @override
   Future<void> onLoad() async {
+    resetCollectible();
     add(CircleHitbox(radius: 21));
     priority = 6;
     _floatOffset = math.Random().nextDouble() * math.pi * 2;
@@ -26,6 +45,7 @@ class Collectible extends PositionComponent with CollisionCallbacks, HasGameRefe
 
   @override
   void update(double dt) {
+    dt *= game.globalTimeScale;
     super.update(dt);
     if (_collected) return;
 
@@ -38,12 +58,9 @@ class Collectible extends PositionComponent with CollisionCallbacks, HasGameRefe
     _floatOffset += dt * 4;
     position.y += math.sin(_floatOffset) * 0.35;
 
-    // Spin animation
+    // Continuous 3D spin and glint timers
     _animTimer += dt;
-    if (_animTimer >= 0.08) {
-      _animTimer -= 0.08;
-      _animFrame = (_animFrame + 1) % 4;
-    }
+    _glintTimer = (_glintTimer + dt) % 1.8;
 
     // Remove if off-screen
     if (position.x < -40) {
@@ -61,20 +78,36 @@ class Collectible extends PositionComponent with CollisionCallbacks, HasGameRefe
       }
     }
 
-    // Magnet attraction (Only pulls coins/doubleCoins, never power-ups!)
+    // Magnet attraction with curved ease-in acceleration (Only pulls coins/doubleCoins)
     final isCoin = collectType == CollectibleType.coin || collectType == CollectibleType.doubleCoin;
     if (game.player.magnetTimer > 0 && isCoin) {
       final magnetLvl = game.coinManager.magnetLevel;
       final pullRadius = 160.0 + (magnetLvl * 30.0);
       final pullSpeed = 320.0 + (magnetLvl * 40.0);
 
-      final dx = game.player.position.x - position.x;
-      final dy = game.player.position.y - position.y;
+      final dinoCenter = game.player.position + Vector2((game.player.size.x * game.player.scale.x) / 2, (game.player.size.y * game.player.scale.y) / 2);
+      final coinCenter = position + size / 2;
+      final dx = dinoCenter.x - coinCenter.x;
+      final dy = dinoCenter.y - coinCenter.y;
       final dist = math.sqrt(dx * dx + dy * dy);
       if (dist < pullRadius && dist > 5) {
-        position.x += dx / dist * pullSpeed * dt;
-        position.y += dy / dist * pullSpeed * dt;
+        _magnetTime += dt;
+        final ramp = (_magnetTime / 0.15).clamp(0.0, 1.0);
+        final targetVx = (dx / dist) * pullSpeed;
+        final targetVy = (dy / dist) * pullSpeed;
+        _magnetVx = ui.lerpDouble(_magnetVx, targetVx, dt * 10.0) ?? targetVx;
+        _magnetVy = ui.lerpDouble(_magnetVy, targetVy, dt * 10.0) ?? targetVy;
+        position.x += _magnetVx * ramp * dt;
+        position.y += _magnetVy * ramp * dt;
+      } else {
+        _magnetTime = 0.0;
+        _magnetVx = 0.0;
+        _magnetVy = 0.0;
       }
+    } else {
+      _magnetTime = 0.0;
+      _magnetVx = 0.0;
+      _magnetVy = 0.0;
     }
   }
 
@@ -94,11 +127,13 @@ class Collectible extends PositionComponent with CollisionCallbacks, HasGameRefe
         final bonus = (multLvl > 0 && math.Random().nextDouble() < multLvl * 0.2) ? 2 : 1;
         game.score += (25 * bonus * cosmicBonus).toInt();
         game.coinManager.addCoins(bonus);
+        game.hud.triggerCoinPulse();
         break;
       case CollectibleType.doubleCoin:
         final bonus = 2 + (multLvl > 0 ? 1 : 0);
         game.score += (50 * (bonus / 2) * cosmicBonus).toInt();
         game.coinManager.addCoins(bonus);
+        game.hud.triggerCoinPulse();
         break;
       case CollectibleType.shield:
         final dur = 8.0 + (shieldLvl * 2.0);
@@ -158,6 +193,16 @@ class Collectible extends PositionComponent with CollisionCallbacks, HasGameRefe
     canvas.save();
     canvas.scale(scaleX, 1.0);
 
+    // 3D Rim depth when turning edge-on
+    if (scaleX < 0.4) {
+      final rimOffset = (1.0 - scaleX) * 2.5;
+      canvas.drawCircle(
+        Offset(-rimOffset, 0),
+        15,
+        Paint()..color = const Color(0xFFD84315),
+      );
+    }
+
     // Outer rim
     canvas.drawCircle(
       Offset.zero,
@@ -195,12 +240,25 @@ class Collectible extends PositionComponent with CollisionCallbacks, HasGameRefe
       );
     }
 
+    // Specular glint sweep across face every ~1.8 seconds
+    if (scaleX > 0.3 && _glintTimer < 0.35) {
+      final t = _glintTimer / 0.35;
+      final gx = -13.0 + 26.0 * t;
+      final glintAlpha = 0.75 * math.sin(t * math.pi);
+      final glintPaint = Paint()
+        ..color = Colors.white.withValues(alpha: glintAlpha)
+        ..strokeWidth = 2.2
+        ..strokeCap = StrokeCap.round;
+      canvas.drawLine(Offset(gx - 4, -8), Offset(gx + 4, 8), glintPaint);
+    }
+
     canvas.restore();
   }
 
   void _renderCoin(Canvas canvas) {
     final center = Offset(size.x / 2, size.y / 2);
-    final scaleX = [1.0, 0.6, 0.25, 0.6][_animFrame];
+    // Continuous 3D spin illusion
+    final scaleX = math.cos(_animTimer * 5.0).abs().clamp(0.08, 1.0);
 
     // Outer bright golden glow halo
     canvas.drawCircle(
@@ -217,7 +275,8 @@ class Collectible extends PositionComponent with CollisionCallbacks, HasGameRefe
 
   void _renderDoubleCoin(Canvas canvas) {
     final center = Offset(size.x / 2, size.y / 2);
-    final scaleX = [1.0, 0.6, 0.25, 0.6][_animFrame];
+    final scaleX1 = math.cos(_animTimer * 5.0).abs().clamp(0.08, 1.0);
+    final scaleX2 = math.cos((_animTimer + 0.18) * 5.0).abs().clamp(0.08, 1.0);
 
     // Double coin glowing aura
     canvas.drawCircle(
@@ -229,13 +288,13 @@ class Collectible extends PositionComponent with CollisionCallbacks, HasGameRefe
     // 1. Back Coin (Offset top-left)
     canvas.save();
     canvas.translate(center.dx - 5, center.dy - 4);
-    _drawSingleCoinBody(canvas, scaleX);
+    _drawSingleCoinBody(canvas, scaleX2);
     canvas.restore();
 
     // 2. Front Coin (Offset bottom-right)
     canvas.save();
     canvas.translate(center.dx + 5, center.dy + 4);
-    _drawSingleCoinBody(canvas, scaleX);
+    _drawSingleCoinBody(canvas, scaleX1);
     canvas.restore();
   }
 

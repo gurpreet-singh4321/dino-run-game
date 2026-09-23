@@ -40,6 +40,18 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
   double fallVelocityY = 0;
   bool hasLanded = false;
 
+  // Spawn entrance animation & hitbox gating
+  double entranceTimer = 0.0;
+  static const double entranceDuration = 0.20;
+  bool _hitboxesActivated = false;
+
+  bool get isEntranceComplete {
+    if (type == ObstacleType.pillar && isFallingFromSky) {
+      return hasLanded;
+    }
+    return entranceTimer >= entranceDuration;
+  }
+
   Obstacle({required this.type, required this.speed}) {
     final rng = math.Random();
     _seed = rng.nextInt(99999);
@@ -117,12 +129,27 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
     } else {
       add(RectangleHitbox(size: size * 0.85, position: size * 0.075));
     }
+
+    // Initially deactivate hitboxes until entrance animation completes (Layer 1 gating)
+    for (final child in children.whereType<ShapeHitbox>()) {
+      child.collisionType = CollisionType.inactive;
+    }
+
     priority = 5;
   }
 
   @override
   void update(double dt) {
+    dt *= game.globalTimeScale;
     super.update(dt);
+
+    entranceTimer += dt;
+    if (!_hitboxesActivated && isEntranceComplete) {
+      _hitboxesActivated = true;
+      for (final child in children.whereType<ShapeHitbox>()) {
+        child.collisionType = CollisionType.active;
+      }
+    }
 
     if (game.state == GameState.playing || game.state == GameState.spaceMode) {
       // Use LIVE speed from speedManager so obstacles match the ground
@@ -207,6 +234,10 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
         game.comboTimer = 1.6;
         game.score += game.combo * 12;
         game.comboDisplay.show(game.combo);
+        
+        game.triggerNearMissSlowMo();
+        game.particlePool.emitSpeedLines();
+
         if (game.biomeManager.effectiveBiome.name == 'DESERT') {
           game.particlePool.emitDesertNearMiss(position + size / 2);
         } else {
@@ -249,273 +280,358 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
     }
   }
 
-  void _renderCactus(Canvas canvas, double w, double h, bool tall) {
-    final rng = math.Random(_seed);
-
-    // Ground shadow
-    final shadowPaint = Paint()..color = Colors.black.withValues(alpha: 0.25);
-    canvas.drawOval(Rect.fromLTWH(w * 0.05, h - 4, w * 0.9, 6), shadowPaint);
-
-    // Saguaro cactus green gradient body
-    final trunkWidth = w * 0.44;
-    final trunkRect = Rect.fromLTWH((w - trunkWidth) / 2, 0, trunkWidth, h);
-    final cactusGradient = const LinearGradient(
-      colors: [Color(0xFF66BB6A), Color(0xFF2E7D32), Color(0xFF1B5E20)],
+  void _renderGroundShadow(Canvas canvas, double w, double h, [double shadowAlphaMultiplier = 1.0]) {
+    final alpha = (0.25 * shadowAlphaMultiplier).clamp(0.0, 0.35);
+    if (alpha <= 0.01) return;
+    // +4px horizontal offset to match top-left rim lighting casting shadow to bottom-right
+    final shadowRect = Rect.fromCenter(
+      center: Offset(w * 0.5 + 4.0, h - 2.0),
+      width: w * 0.9,
+      height: 7.0,
     );
-    final paint = Paint()..shader = cactusGradient.createShader(trunkRect);
+    final shadowShader = RadialGradient(
+      colors: [
+        Color(0xFF000000).withValues(alpha: alpha),
+        Color(0xFF000000).withValues(alpha: alpha * 0.5),
+        Colors.transparent,
+      ],
+      stops: const [0.0, 0.65, 1.0],
+    ).createShader(shadowRect);
+    canvas.drawOval(shadowRect, Paint()..shader = shadowShader);
+  }
 
-    // Main central trunk
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        trunkRect,
-        Radius.circular(trunkWidth * 0.45),
-      ),
-      paint,
-    );
+  void _renderGroundObstacle(Canvas canvas, void Function(double shadowMult) renderBody) {
+    final easeProgress = (entranceTimer / entranceDuration).clamp(0.0, 1.0);
+    final isEntrance = entranceTimer < entranceDuration;
 
-    // Vertical rib line highlights
-    final ribPaint = Paint()
-      ..color = const Color(0xFF81C784).withValues(alpha: 0.7)
-      ..strokeWidth = 2.0;
-    canvas.drawLine(Offset(w * 0.42, h * 0.05), Offset(w * 0.42, h * 0.95), ribPaint);
-    canvas.drawLine(Offset(w * 0.58, h * 0.05), Offset(w * 0.58, h * 0.95), ribPaint);
+    if (isEntrance) {
+      final curvedProgress = Curves.easeOutCubic.transform(easeProgress);
+      final offsetY = (1.0 - curvedProgress) * 20.0;
 
-    // Spine needle dot clusters
-    final spinePaint = Paint()..color = const Color(0xFFDCEDC8);
-    for (double sy = h * 0.15; sy < h * 0.85; sy += 16) {
-      canvas.drawCircle(Offset((w - trunkWidth) / 2 - 1, sy), 1.5, spinePaint);
-      canvas.drawCircle(Offset((w + trunkWidth) / 2 + 1, sy), 1.5, spinePaint);
-    }
-
-    // Branch growth: starts at 0.05 scale, grows to 1.0 over 2.5 seconds
-    final double branchScale = (age / 2.0).clamp(0.05, 1.0);
-    final branchCount = tall ? (2 + rng.nextInt(2)) : (1 + rng.nextInt(2));
-    
-    for (int i = 0; i < branchCount; i++) {
-      final isRight = (i % 2 == 0);
-      final yPos = h * (0.2 + i * 0.28);
-      final branchLen = w * (0.32 + rng.nextDouble() * 0.3) * branchScale;
-      final branchThickness = 11.0;
-      final upLen = h * (0.18 + rng.nextDouble() * 0.15) * branchScale;
-      
       canvas.save();
-      canvas.translate(isRight ? w * 0.65 : w * 0.35, yPos);
-      
-      // Horizontal arm
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(
-          Rect.fromLTWH(
-            isRight ? 0 : -branchLen, 
-            -branchThickness / 2, 
-            branchLen, 
-            branchThickness,
-          ),
-          Radius.circular(branchThickness / 2),
-        ),
-        paint,
-      );
-
-      // Vertical arm tip going up
-      final tipX = (isRight ? branchLen : -branchLen) + (isRight ? -branchThickness / 2 : -branchThickness / 2);
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(
-          Rect.fromLTWH(
-            tipX, 
-            -upLen - branchThickness / 2, 
-            branchThickness, 
-            upLen + branchThickness,
-          ),
-          Radius.circular(branchThickness / 2),
-        ),
-        paint,
-      );
-
-      // Arm flower blossom
-      canvas.drawCircle(Offset(tipX + branchThickness / 2, -upLen - branchThickness / 2), 4.0, Paint()..color = const Color(0xFFFF4081));
-      canvas.drawCircle(Offset(tipX + branchThickness / 2, -upLen - branchThickness / 2), 1.8, Paint()..color = const Color(0xFFFFEB3B));
-
+      // Clip at ground line (local y = size.y)
+      // Both obstacle and shadow are translated together and clipped at size.y (Condition 3)
+      canvas.clipRect(Rect.fromLTRB(-60, -200, size.x + 60, size.y));
+      canvas.translate(0, offsetY);
+      renderBody(curvedProgress);
       canvas.restore();
+    } else {
+      renderBody(1.0);
     }
+  }
 
-    // Top main flower blossom
-    canvas.drawCircle(Offset(w / 2, 0), 5.5, Paint()..color = const Color(0xFFFF4081));
-    canvas.drawCircle(Offset(w / 2, 0), 2.2, Paint()..color = const Color(0xFFFFEB3B));
+  void _renderBirdGroundShadow(Canvas canvas, double w, double h, double easeProgress) {
+    try {
+      final groundYLocal = game.ground.groundY - position.y;
+      if (groundYLocal > h) {
+        final altitude = (groundYLocal - h).clamp(20.0, 300.0);
+        final shadowScale = (1.0 + altitude * 0.002).clamp(1.0, 1.6);
+        final shadowAlpha = (0.22 * (1.0 - (altitude / 450.0)) * easeProgress).clamp(0.05, 0.22);
+        final shadowRect = Rect.fromCenter(
+          center: Offset(w * 0.5 + 4.0, groundYLocal - 2.0),
+          width: w * 0.85 * shadowScale,
+          height: 6.0 * shadowScale,
+        );
+        final shadowShader = RadialGradient(
+          colors: [
+            Color(0xFF000000).withValues(alpha: shadowAlpha),
+            Color(0xFF000000).withValues(alpha: shadowAlpha * 0.4),
+            Colors.transparent,
+          ],
+          stops: const [0.0, 0.6, 1.0],
+        ).createShader(shadowRect);
+        canvas.drawOval(shadowRect, Paint()..shader = shadowShader);
+      }
+    } catch (_) {
+      // Fallback
+    }
+  }
+
+  void _renderCactus(Canvas canvas, double w, double h, bool tall) {
+    _renderGroundObstacle(canvas, (shadowMult) {
+      final rng = math.Random(_seed);
+
+      // Ground shadow (+4px offset, radial gradient)
+      _renderGroundShadow(canvas, w, h, shadowMult);
+
+      // Saguaro cactus green gradient body
+      final trunkWidth = w * 0.44;
+      final trunkRect = Rect.fromLTWH((w - trunkWidth) / 2, 0, trunkWidth, h);
+      final cactusGradient = const LinearGradient(
+        colors: [Color(0xFF66BB6A), Color(0xFF2E7D32), Color(0xFF1B5E20)],
+      );
+      final paint = Paint()..shader = cactusGradient.createShader(trunkRect);
+
+      // Main central trunk
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          trunkRect,
+          Radius.circular(trunkWidth * 0.45),
+        ),
+        paint,
+      );
+
+      // Vertical rib line highlights
+      final ribPaint = Paint()
+        ..color = const Color(0xFF81C784).withValues(alpha: 0.7)
+        ..strokeWidth = 2.0;
+      canvas.drawLine(Offset(w * 0.42, h * 0.05), Offset(w * 0.42, h * 0.95), ribPaint);
+      canvas.drawLine(Offset(w * 0.58, h * 0.05), Offset(w * 0.58, h * 0.95), ribPaint);
+
+      // Spine needle dot clusters
+      final spinePaint = Paint()..color = const Color(0xFFDCEDC8);
+      for (double sy = h * 0.15; sy < h * 0.85; sy += 16) {
+        canvas.drawCircle(Offset((w - trunkWidth) / 2 - 1, sy), 1.5, spinePaint);
+        canvas.drawCircle(Offset((w + trunkWidth) / 2 + 1, sy), 1.5, spinePaint);
+      }
+
+      // Branch growth: starts at 0.05 scale, grows to 1.0 over 2.5 seconds
+      final double branchScale = (age / 2.0).clamp(0.05, 1.0);
+      final branchCount = tall ? (2 + rng.nextInt(2)) : (1 + rng.nextInt(2));
+      
+      for (int i = 0; i < branchCount; i++) {
+        final isRight = (i % 2 == 0);
+        final yPos = h * (0.2 + i * 0.28);
+        final branchLen = w * (0.32 + rng.nextDouble() * 0.3) * branchScale;
+        final branchThickness = 11.0;
+        final upLen = h * (0.18 + rng.nextDouble() * 0.15) * branchScale;
+        
+        canvas.save();
+        canvas.translate(isRight ? w * 0.65 : w * 0.35, yPos);
+        
+        // Horizontal arm
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromLTWH(
+              isRight ? 0 : -branchLen, 
+              -branchThickness / 2, 
+              branchLen, 
+              branchThickness,
+            ),
+            Radius.circular(branchThickness / 2),
+          ),
+          paint,
+        );
+
+        // Vertical arm tip going up
+        final tipX = (isRight ? branchLen : -branchLen) + (isRight ? -branchThickness / 2 : -branchThickness / 2);
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromLTWH(
+              tipX, 
+              -upLen - branchThickness / 2, 
+              branchThickness, 
+              upLen + branchThickness,
+            ),
+            Radius.circular(branchThickness / 2),
+          ),
+          paint,
+        );
+
+        // Arm flower blossom
+        canvas.drawCircle(Offset(tipX + branchThickness / 2, -upLen - branchThickness / 2), 4.0, Paint()..color = const Color(0xFFFF4081));
+        canvas.drawCircle(Offset(tipX + branchThickness / 2, -upLen - branchThickness / 2), 1.8, Paint()..color = const Color(0xFFFFEB3B));
+
+        canvas.restore();
+      }
+
+      // Top main flower blossom
+      canvas.drawCircle(Offset(w / 2, 0), 5.5, Paint()..color = const Color(0xFFFF4081));
+      canvas.drawCircle(Offset(w / 2, 0), 2.2, Paint()..color = const Color(0xFFFFEB3B));
+    });
   }
 
   void _renderRock(Canvas canvas) {
-    final rng = math.Random(_seed);
-    
-    // Dynamic wobble
-    final wobble = math.sin(age * _wobbleSpeed + _wobblePhase) * 1.5;
-    
-    canvas.save();
-    canvas.translate(size.x / 2, size.y);
-    canvas.rotate(wobble * math.pi / 180);
-    canvas.translate(-size.x / 2, -size.y);
+    _renderGroundObstacle(canvas, (shadowMult) {
+      final rng = math.Random(_seed);
 
-    // Chunky irregular rock vertices
-    final pts = <Offset>[];
-    final vertexCount = 8 + rng.nextInt(3);
-    for (int i = 0; i < vertexCount; i++) {
-      final angle = (i / vertexCount) * math.pi * 2 - math.pi / 2;
-      final radiusX = size.x * 0.45 * (0.75 + rng.nextDouble() * 0.25);
-      final radiusY = size.y * 0.45 * (0.75 + rng.nextDouble() * 0.25);
-      pts.add(Offset(
-        size.x / 2 + math.cos(angle) * radiusX,
-        size.y / 2 + math.sin(angle) * radiusY,
-      ));
-    }
+      // 1. Soft Ground Contact AO Shadow (+4px offset, radial gradient, Condition 3)
+      _renderGroundShadow(canvas, size.x, size.y, shadowMult);
+      
+      // Dynamic wobble
+      final wobble = math.sin(age * _wobbleSpeed + _wobblePhase) * 1.5;
+      
+      canvas.save();
+      canvas.translate(size.x / 2, size.y);
+      canvas.rotate(wobble * math.pi / 180);
+      canvas.translate(-size.x / 2, -size.y);
 
-    // Normalize vertices so rock sits flush on ground [0, size.x] & [0, size.y]
-    final maxY = pts.fold(0.0, (maxVal, p) => math.max(maxVal, p.dy));
-    final minY = pts.fold(size.y, (minVal, p) => math.min(minVal, p.dy));
-    final heightRange = (maxY - minY) > 0 ? (maxY - minY) : 1.0;
-
-    final maxX = pts.fold(0.0, (maxVal, p) => math.max(maxVal, p.dx));
-    final minX = pts.fold(size.x, (minVal, p) => math.min(minVal, p.dx));
-    final widthRange = (maxX - minX) > 0 ? (maxX - minX) : 1.0;
-
-    final adjustedPts = pts.map((p) {
-      final normX = (p.dx - minX) / widthRange;
-      final normY = (p.dy - minY) / heightRange;
-      return Offset(normX * size.x, normY * size.y);
-    }).toList();
-
-    final path = Path();
-    path.moveTo(adjustedPts[0].dx, adjustedPts[0].dy);
-    for (int i = 1; i < adjustedPts.length; i++) {
-      path.lineTo(adjustedPts[i].dx, adjustedPts[i].dy);
-    }
-    path.close();
-
-    // 1. Soft Ground Contact AO Shadow
-    final shadowPaint = Paint()..color = Colors.black.withValues(alpha: 0.35);
-    canvas.drawOval(Rect.fromLTWH(size.x * 0.05, size.y - 4, size.x * 0.9, 8), shadowPaint);
-
-    // 2. Base Rock Body Gradient (3D Shading)
-    final rockGradient = LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: const [
-        Color(0xFF8D6E63), // Lit top-left facet
-        Color(0xFF5D4037), // Mid rock body
-        Color(0xFF3E2723), // Shadowed bottom-right
-      ],
-      stops: const [0.0, 0.5, 1.0],
-    );
-    canvas.drawPath(path, Paint()..shader = rockGradient.createShader(Rect.fromLTWH(0, 0, size.x, size.y)));
-
-    // 3. 3D Facet Shading Lines (Chiseled Rock Planes)
-    final centerPt = Offset(size.x * 0.45, size.y * 0.45);
-    final shadowFacetPaint = Paint()
-      ..color = const Color(0xFF261815).withValues(alpha: 0.45)
-      ..style = PaintingStyle.fill;
-
-    // Draw shaded facet triangles
-    for (int i = 0; i < adjustedPts.length; i++) {
-      final p1 = adjustedPts[i];
-      final p2 = adjustedPts[(i + 1) % adjustedPts.length];
-      if (p1.dx > size.x * 0.4 || p1.dy > size.y * 0.5) {
-        final facetPath = Path()
-          ..moveTo(centerPt.dx, centerPt.dy)
-          ..lineTo(p1.dx, p1.dy)
-          ..lineTo(p2.dx, p2.dy)
-          ..close();
-        canvas.drawPath(facetPath, shadowFacetPaint);
+      // Chunky irregular rock vertices
+      final pts = <Offset>[];
+      final vertexCount = 8 + rng.nextInt(3);
+      for (int i = 0; i < vertexCount; i++) {
+        final angle = (i / vertexCount) * math.pi * 2 - math.pi / 2;
+        final radiusX = size.x * 0.45 * (0.75 + rng.nextDouble() * 0.25);
+        final radiusY = size.y * 0.45 * (0.75 + rng.nextDouble() * 0.25);
+        pts.add(Offset(
+          size.x / 2 + math.cos(angle) * radiusX,
+          size.y / 2 + math.sin(angle) * radiusY,
+        ));
       }
-    }
 
-    // 4. Branching Fissures & Deep Cracks with Specular Edges
-    final crackDarkPaint = Paint()
-      ..color = const Color(0xFF1B0000)
-      ..strokeWidth = 2.2
-      ..style = PaintingStyle.stroke;
-    final crackLitPaint = Paint()
-      ..color = const Color(0xFFD7CCC8).withValues(alpha: 0.7)
-      ..strokeWidth = 1.2
-      ..style = PaintingStyle.stroke;
+      // Normalize vertices so rock sits flush on ground [0, size.x] & [0, size.y]
+      final maxY = pts.fold(0.0, (maxVal, p) => math.max(maxVal, p.dy));
+      final minY = pts.fold(size.y, (minVal, p) => math.min(minVal, p.dy));
+      final heightRange = (maxY - minY) > 0 ? (maxY - minY) : 1.0;
 
-    for (int i = 0; i < 3; i++) {
-      final cx = size.x * (0.25 + (i * 0.25));
-      final cy = size.y * (0.25 + rng.nextDouble() * 0.5);
-      final cx2 = cx + (rng.nextDouble() - 0.5) * size.x * 0.35;
-      final cy2 = cy + rng.nextDouble() * size.y * 0.35;
+      final maxX = pts.fold(0.0, (maxVal, p) => math.max(maxVal, p.dx));
+      final minX = pts.fold(size.x, (minVal, p) => math.min(minVal, p.dx));
+      final widthRange = (maxX - minX) > 0 ? (maxX - minX) : 1.0;
 
-      canvas.drawLine(Offset(cx + 1, cy + 1), Offset(cx2 + 1, cy2 + 1), crackLitPaint);
-      canvas.drawLine(Offset(cx, cy), Offset(cx2, cy2), crackDarkPaint);
-    }
+      final adjustedPts = pts.map((p) {
+        final normX = (p.dx - minX) / widthRange;
+        final normY = (p.dy - minY) / heightRange;
+        return Offset(normX * size.x, normY * size.y);
+      }).toList();
 
-    // 5. Mineral Ore Gold & Quartz Micro-speckles
-    final orePaint = Paint()..color = const Color(0xFFFFD54F);
-    for (int k = 0; k < 4; k++) {
-      final ox = size.x * (0.2 + rng.nextDouble() * 0.6);
-      final oy = size.y * (0.2 + rng.nextDouble() * 0.6);
-      canvas.drawCircle(Offset(ox, oy), 1.2 + rng.nextDouble() * 1.0, orePaint);
-    }
+      final path = Path();
+      path.moveTo(adjustedPts[0].dx, adjustedPts[0].dy);
+      for (int i = 1; i < adjustedPts.length; i++) {
+        path.lineTo(adjustedPts[i].dx, adjustedPts[i].dy);
+      }
+      path.close();
 
-    // 6. Sunlight Specular Edge Outline (Top-Left Edge Highlight)
-    final highlightStroke = Paint()
-      ..color = const Color(0xFFE0D7D3).withValues(alpha: 0.8)
-      ..strokeWidth = 2.0
-      ..style = PaintingStyle.stroke;
+      // 2. Base Rock Body Gradient (3D Shading)
+      final rockGradient = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: const [
+          Color(0xFF8D6E63), // Lit top-left facet
+          Color(0xFF5D4037), // Mid rock body
+          Color(0xFF3E2723), // Shadowed bottom-right
+        ],
+        stops: const [0.0, 0.5, 1.0],
+      );
+      canvas.drawPath(path, Paint()..shader = rockGradient.createShader(Rect.fromLTWH(0, 0, size.x, size.y)));
 
-    final hlPath = Path();
-    hlPath.moveTo(adjustedPts[0].dx, adjustedPts[0].dy);
-    for (int i = 1; i < adjustedPts.length / 2; i++) {
-      hlPath.lineTo(adjustedPts[i].dx, adjustedPts[i].dy);
-    }
-    canvas.drawPath(hlPath, highlightStroke);
+      // 3. 3D Facet Shading Lines (Chiseled Rock Planes)
+      final centerPt = Offset(size.x * 0.45, size.y * 0.45);
+      final shadowFacetPaint = Paint()
+        ..color = const Color(0xFF261815).withValues(alpha: 0.45)
+        ..style = PaintingStyle.fill;
 
-    canvas.restore();
+      // Draw shaded facet triangles
+      for (int i = 0; i < adjustedPts.length; i++) {
+        final p1 = adjustedPts[i];
+        final p2 = adjustedPts[(i + 1) % adjustedPts.length];
+        if (p1.dx > size.x * 0.4 || p1.dy > size.y * 0.5) {
+          final facetPath = Path()
+            ..moveTo(centerPt.dx, centerPt.dy)
+            ..lineTo(p1.dx, p1.dy)
+            ..lineTo(p2.dx, p2.dy)
+            ..close();
+          canvas.drawPath(facetPath, shadowFacetPaint);
+        }
+      }
+
+      // 4. Branching Fissures & Deep Cracks with Specular Edges
+      final crackDarkPaint = Paint()
+        ..color = const Color(0xFF1B0000)
+        ..strokeWidth = 2.2
+        ..style = PaintingStyle.stroke;
+      final crackLitPaint = Paint()
+        ..color = const Color(0xFFD7CCC8).withValues(alpha: 0.7)
+        ..strokeWidth = 1.2
+        ..style = PaintingStyle.stroke;
+
+      for (int i = 0; i < 3; i++) {
+        final cx = size.x * (0.25 + (i * 0.25));
+        final cy = size.y * (0.25 + rng.nextDouble() * 0.5);
+        final cx2 = cx + (rng.nextDouble() - 0.5) * size.x * 0.35;
+        final cy2 = cy + rng.nextDouble() * size.y * 0.35;
+
+        canvas.drawLine(Offset(cx + 1, cy + 1), Offset(cx2 + 1, cy2 + 1), crackLitPaint);
+        canvas.drawLine(Offset(cx, cy), Offset(cx2, cy2), crackDarkPaint);
+      }
+
+      // 5. Mineral Ore Gold & Quartz Micro-speckles
+      final orePaint = Paint()..color = const Color(0xFFFFD54F);
+      for (int k = 0; k < 4; k++) {
+        final ox = size.x * (0.2 + rng.nextDouble() * 0.6);
+        final oy = size.y * (0.2 + rng.nextDouble() * 0.6);
+        canvas.drawCircle(Offset(ox, oy), 1.2 + rng.nextDouble() * 1.0, orePaint);
+      }
+
+      // 6. Sunlight Specular Edge Outline (Top-Left Edge Highlight)
+      final highlightStroke = Paint()
+        ..color = const Color(0xFFE0D7D3).withValues(alpha: 0.8)
+        ..strokeWidth = 2.0
+        ..style = PaintingStyle.stroke;
+
+      final hlPath = Path();
+      hlPath.moveTo(adjustedPts[0].dx, adjustedPts[0].dy);
+      for (int i = 1; i < adjustedPts.length / 2; i++) {
+        hlPath.lineTo(adjustedPts[i].dx, adjustedPts[i].dy);
+      }
+      canvas.drawPath(hlPath, highlightStroke);
+
+      canvas.restore();
+    });
   }
 
   void _renderBush(Canvas canvas) {
-    final rng = math.Random(_seed);
-    final sway = math.sin(age * 2.5 + _wobblePhase) * 2.0;
-    
-    canvas.save();
-    canvas.translate(size.x / 2, size.y);
-    canvas.rotate(sway * math.pi / 180);
-    canvas.translate(-size.x / 2, -size.y);
+    _renderGroundObstacle(canvas, (shadowMult) {
+      final rng = math.Random(_seed);
 
-    // Soft ground contact shadow
-    final shadowPaint = Paint()..color = Colors.black.withValues(alpha: 0.3);
-    canvas.drawOval(Rect.fromLTWH(size.x * 0.05, size.y - 4, size.x * 0.9, 7), shadowPaint);
+      // Soft ground contact shadow (+4px offset, radial gradient, Condition 3)
+      _renderGroundShadow(canvas, size.x, size.y, shadowMult);
 
-    // Low-lying dark base shadow foliage
-    final basePaint = Paint()..color = const Color(0xFF1B5E20);
-    canvas.drawCircle(Offset(size.x * 0.22, size.y * 0.65), size.x * 0.28, basePaint);
-    canvas.drawCircle(Offset(size.x * 0.78, size.y * 0.65), size.x * 0.28, basePaint);
-    canvas.drawCircle(Offset(size.x * 0.5, size.y * 0.45), size.x * 0.36, basePaint);
+      final sway = math.sin(age * 2.5 + _wobblePhase) * 2.0;
+      
+      canvas.save();
+      canvas.translate(size.x / 2, size.y);
+      canvas.rotate(sway * math.pi / 180);
+      canvas.translate(-size.x / 2, -size.y);
 
-    // Fluffy round main green bush foliage
-    final mainPaint = Paint()..color = const Color(0xFF2E7D32);
-    canvas.drawCircle(Offset(size.x * 0.25, size.y * 0.6), size.x * 0.25, mainPaint);
-    canvas.drawCircle(Offset(size.x * 0.75, size.y * 0.6), size.x * 0.25, mainPaint);
-    canvas.drawCircle(Offset(size.x * 0.5, size.y * 0.4), size.x * 0.33, mainPaint);
+      // Low-lying dark base shadow foliage
+      final basePaint = Paint()..color = const Color(0xFF1B5E20);
+      canvas.drawCircle(Offset(size.x * 0.22, size.y * 0.65), size.x * 0.28, basePaint);
+      canvas.drawCircle(Offset(size.x * 0.78, size.y * 0.65), size.x * 0.28, basePaint);
+      canvas.drawCircle(Offset(size.x * 0.5, size.y * 0.45), size.x * 0.36, basePaint);
 
-    // Top bright leaf highlights
-    final highlightPaint = Paint()..color = const Color(0xFF66BB6A);
-    canvas.drawCircle(Offset(size.x * 0.35, size.y * 0.38), size.x * 0.18, highlightPaint);
-    canvas.drawCircle(Offset(size.x * 0.65, size.y * 0.38), size.x * 0.18, highlightPaint);
-    canvas.drawCircle(Offset(size.x * 0.5, size.y * 0.28), size.x * 0.2, highlightPaint);
+      // Fluffy round main green bush foliage
+      final mainPaint = Paint()..color = const Color(0xFF2E7D32);
+      canvas.drawCircle(Offset(size.x * 0.25, size.y * 0.6), size.x * 0.25, mainPaint);
+      canvas.drawCircle(Offset(size.x * 0.75, size.y * 0.6), size.x * 0.25, mainPaint);
+      canvas.drawCircle(Offset(size.x * 0.5, size.y * 0.4), size.x * 0.33, mainPaint);
 
-    // Little round berries/flowers
-    final flowerPaint = Paint()..color = (rng.nextBool()) ? const Color(0xFFE91E63) : const Color(0xFFFFCA28);
-    for (int i = 0; i < 5; i++) {
-      final fx = size.x * (0.2 + (i * 0.15));
-      final fy = size.y * (0.35 + (i % 2) * 0.2);
-      canvas.drawCircle(Offset(fx, fy), 2.5, flowerPaint);
-    }
+      // Top bright leaf highlights
+      final highlightPaint = Paint()..color = const Color(0xFF66BB6A);
+      canvas.drawCircle(Offset(size.x * 0.35, size.y * 0.38), size.x * 0.18, highlightPaint);
+      canvas.drawCircle(Offset(size.x * 0.65, size.y * 0.38), size.x * 0.18, highlightPaint);
+      canvas.drawCircle(Offset(size.x * 0.5, size.y * 0.28), size.x * 0.2, highlightPaint);
 
-    canvas.restore();
+      // Little round berries/flowers
+      final flowerPaint = Paint()..color = (rng.nextBool()) ? const Color(0xFFE91E63) : const Color(0xFFFFCA28);
+      for (int i = 0; i < 5; i++) {
+        final fx = size.x * (0.2 + (i * 0.15));
+        final fy = size.y * (0.35 + (i % 2) * 0.2);
+        canvas.drawCircle(Offset(fx, fy), 2.5, flowerPaint);
+      }
+
+      canvas.restore();
+    });
   }
 
   void _renderBird(Canvas canvas) {
     final w = size.x;
     final h = size.y;
 
+    final easeProgress = (entranceTimer / entranceDuration).clamp(0.0, 1.0);
+    final isEntrance = entranceTimer < entranceDuration;
+
+    // 1. Ground Shadow (projected to terrain below)
+    _renderBirdGroundShadow(canvas, w, h, easeProgress);
+
     canvas.save();
+
+    // 2. Render-only swoop offset: returns to exactly 0 when entrance completes (Condition 1)
+    if (isEntrance) {
+      final curvedProgress = Curves.easeOutQuad.transform(easeProgress);
+      final swoopY = math.sin((1.0 - curvedProgress) * math.pi) * 15.0;
+      final swoopX = (1.0 - curvedProgress) * 20.0;
+      canvas.translate(swoopX, swoopY);
+    }
 
     // Smooth continuous 60fps wing flap physics
     final flapPhase = math.sin(age * 18.0);
@@ -689,10 +805,36 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
     final w = size.x;
     final h = size.y;
 
-    // 1. Soft Ground Shadow
-    final shadowPaint = Paint()..color = Colors.black.withValues(alpha: 0.30);
-    canvas.drawOval(Rect.fromLTWH(w * 0.05, h - 5, w * 0.9, 8), shadowPaint);
+    if (isFallingFromSky) {
+      // 1. Soft Ground Shadow projected to landing target
+      final distanceToGround = (targetGroundY - position.y).clamp(0.0, 500.0);
+      final proximity = 1.0 - (distanceToGround / 500.0).clamp(0.0, 1.0);
+      final localGroundY = h + distanceToGround;
+      final shadowRect = Rect.fromCenter(
+        center: Offset(w * 0.5 + 4.0, localGroundY - 2.0),
+        width: w * (0.6 + 0.4 * proximity),
+        height: 7.0,
+      );
+      final shadowShader = RadialGradient(
+        colors: [
+          Color(0xFF000000).withValues(alpha: 0.25 * proximity),
+          Color(0xFF000000).withValues(alpha: 0.12 * proximity),
+          Colors.transparent,
+        ],
+        stops: const [0.0, 0.65, 1.0],
+      ).createShader(shadowRect);
+      canvas.drawOval(shadowRect, Paint()..shader = shadowShader);
 
+      _renderPillarBody(canvas, w, h);
+    } else {
+      _renderGroundObstacle(canvas, (shadowMult) {
+        _renderGroundShadow(canvas, w, h, shadowMult);
+        _renderPillarBody(canvas, w, h);
+      });
+    }
+  }
+
+  void _renderPillarBody(Canvas canvas, double w, double h) {
     // 2. Base Pillar Shaft (Stone / Pipe Column)
     final shaftWidth = w * 0.72;
     final shaftLeft = (w - shaftWidth) / 2;
@@ -749,6 +891,17 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
     final w = size.x;
     final h = size.y;
 
+    final easeProgress = (entranceTimer / entranceDuration).clamp(0.0, 1.0);
+    final isEntrance = entranceTimer < entranceDuration;
+
+    canvas.save();
+    if (isEntrance) {
+      final curvedProgress = Curves.easeOutCubic.transform(easeProgress);
+      final offsetY = -(1.0 - curvedProgress) * 30.0;
+      canvas.clipRect(Rect.fromLTWH(-30, 0, w + 60, h + 50));
+      canvas.translate(0, offsetY);
+    }
+
     // 1. Pipe Shaft (Top to Bottom)
     final shaftWidth = w * 0.76;
     final shaftLeft = (w - shaftWidth) / 2;
@@ -791,6 +944,8 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
       ..color = Colors.white.withValues(alpha: 0.6)
       ..strokeWidth = 2.0;
     canvas.drawLine(Offset(4, h - 20), Offset(w - 4, h - 20), capHlPaint);
+
+    canvas.restore();
   }
 
   void _renderPipePair(Canvas canvas) {
@@ -801,6 +956,12 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
 
     final gTop = liveGapTopY > 0 ? liveGapTopY : gapTopY;
     final gBottom = liveGapBottomY > 0 ? liveGapBottomY : gapBottomY;
+
+    final easeProgress = (entranceTimer / entranceDuration).clamp(0.0, 1.0);
+    final isEntrance = entranceTimer < entranceDuration;
+    final curvedProgress = Curves.easeOutCubic.transform(easeProgress);
+    final topOffsetY = isEntrance ? -(1.0 - curvedProgress) * 30.0 : 0.0;
+    final bottomOffsetY = isEntrance ? (1.0 - curvedProgress) * 30.0 : 0.0;
 
     final shaftGradient = const LinearGradient(
       colors: [
@@ -830,6 +991,10 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
 
     // --- 1. TOP PIPE (Hanging down from top of screen y=0 to gTop) ---
     if (gTop > 15) {
+      canvas.save();
+      if (isEntrance) {
+        canvas.translate(0, topOffsetY);
+      }
       final topShaftRect = Rect.fromLTWH(shaftLeft, 0, shaftWidth, math.max(0.0, gTop - 18));
       canvas.drawRect(topShaftRect, Paint()..shader = shaftGradient.createShader(topShaftRect));
       canvas.drawLine(Offset(shaftLeft + 6, 0), Offset(shaftLeft + 6, math.max(0.0, gTop - 18)), shinePaint);
@@ -842,10 +1007,36 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
       );
       canvas.drawRRect(RRect.fromRectAndRadius(topCapRect, const Radius.circular(4)), capBorderPaint);
       canvas.drawLine(Offset(4, gTop - 20), Offset(w - 4, gTop - 20), capHlPaint);
+
+      // Pipe Gap Rim Glow (Item 5: bright edge stroke + subtle glow into safe gap)
+      final topGlowRect = Rect.fromLTWH(0, gTop, w, 14);
+      final topGlowShader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          const Color(0xFF00E5FF).withValues(alpha: 0.45),
+          Colors.transparent,
+        ],
+      ).createShader(topGlowRect);
+      canvas.drawRect(topGlowRect, Paint()..shader = topGlowShader);
+
+      final rimHighlightPaint = Paint()
+        ..color = const Color(0xFF80DEEA)
+        ..strokeWidth = 2.0;
+      canvas.drawLine(Offset(0, gTop), Offset(w, gTop), rimHighlightPaint);
+
+      canvas.restore();
     }
 
     // --- 2. BOTTOM PIPE (Rising up from ground y=h to gBottom) ---
     if (gBottom < h - 15) {
+      canvas.save();
+      if (isEntrance) {
+        // Clip at ground line (size.y = h) so pipe and shadow rise together (Condition 3)
+        canvas.clipRect(Rect.fromLTRB(-30, -50, w + 30, h));
+        canvas.translate(0, bottomOffsetY);
+      }
+
       // Bottom pipe top rim cap
       final bottomCapRect = Rect.fromLTWH(0, gBottom, w, 22);
       canvas.drawRRect(
@@ -859,181 +1050,201 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
       canvas.drawRect(bottomShaftRect, Paint()..shader = shaftGradient.createShader(bottomShaftRect));
       canvas.drawLine(Offset(shaftLeft + 6, gBottom + 22), Offset(shaftLeft + 6, h), shinePaint);
 
-      // Soft Ground Shadow
-      final shadowPaint = Paint()..color = Colors.black.withValues(alpha: 0.30);
-      canvas.drawOval(Rect.fromLTWH(w * 0.05, h - 4, w * 0.9, 8), shadowPaint);
+      // Pipe Gap Rim Glow (Item 5: bright edge stroke + subtle glow into safe gap)
+      final bottomGlowRect = Rect.fromLTWH(0, gBottom - 14, w, 14);
+      final bottomGlowShader = LinearGradient(
+        begin: Alignment.bottomCenter,
+        end: Alignment.topCenter,
+        colors: [
+          const Color(0xFF00E5FF).withValues(alpha: 0.45),
+          Colors.transparent,
+        ],
+      ).createShader(bottomGlowRect);
+      canvas.drawRect(bottomGlowRect, Paint()..shader = bottomGlowShader);
+
+      final rimHighlightPaint = Paint()
+        ..color = const Color(0xFF80DEEA)
+        ..strokeWidth = 2.0;
+      canvas.drawLine(Offset(0, gBottom), Offset(w, gBottom), rimHighlightPaint);
+
+      // Soft Ground Shadow with +4px offset and shadowMult (Condition 3)
+      _renderGroundShadow(canvas, w, h, isEntrance ? curvedProgress : 1.0);
+
+      canvas.restore();
     }
   }
 
   /// 🌋 Renders fluid, bubbling molten lava with organic splashing magma and basalt rim
   void _renderLavaPit(Canvas canvas) {
-    final w = size.x;
-    final h = size.y;
+    _renderGroundObstacle(canvas, (shadowMult) {
+      final w = size.x;
+      final h = size.y;
 
-    // 1. Ambient Pulsing Thermal Magma Glow
-    final glowPulse = 0.85 + math.sin(age * 4.0) * 0.15;
-    final glowRect = Rect.fromCenter(
-      center: Offset(w * 0.5, h - 6),
-      width: w * 1.6,
-      height: 32,
-    );
-    final glowShader = RadialGradient(
-      colors: [
-        Color(0x66FF3D00).withValues(alpha: 0.55 * glowPulse),
-        Color(0x33FF9100).withValues(alpha: 0.30 * glowPulse),
-        Colors.transparent,
-      ],
-      stops: const [0.0, 0.5, 1.0],
-    ).createShader(glowRect);
-    canvas.drawOval(glowRect, Paint()..shader = glowShader);
-
-    // 2. Basalt Crust Pit Reservoir (Dark cooled magma rock rim with rounded organic edges)
-    final basaltPath = Path()
-      ..moveTo(2, h)
-      ..quadraticBezierTo(w * 0.15, h - 12, w * 0.35, h - 9)
-      ..quadraticBezierTo(w * 0.5, h - 13, w * 0.65, h - 9)
-      ..quadraticBezierTo(w * 0.85, h - 12, w - 2, h)
-      ..close();
-
-    final basaltShader = LinearGradient(
-      begin: Alignment.topCenter,
-      end: Alignment.bottomCenter,
-      colors: const [
-        Color(0xFF2E1C14), // Charred volcanic rock
-        Color(0xFF1B0E09),
-        Color(0xFF0F0805),
-      ],
-    ).createShader(Rect.fromLTWH(0, h - 16, w, 16));
-    canvas.drawPath(basaltPath, Paint()..shader = basaltShader);
-
-    // Basalt jagged glowing crack lines
-    final crackPaint = Paint()
-      ..color = const Color(0xFFFF5722).withValues(alpha: 0.80)
-      ..strokeWidth = 1.4
-      ..style = PaintingStyle.stroke;
-    canvas.drawLine(Offset(w * 0.16, h - 3), Offset(w * 0.28, h - 8), crackPaint);
-    canvas.drawLine(Offset(w * 0.72, h - 4), Offset(w * 0.84, h - 8), crackPaint);
-
-    // 3. Fluid Liquid Magma Pool Surface (Viscous undulating molten wave)
-    final magmaPoolPath = Path()..moveTo(w * 0.10, h);
-    for (double x = w * 0.10; x <= w * 0.90; x += 4.0) {
-      final normX = (x - w * 0.10) / (w * 0.80);
-      final wave = math.sin(age * 5.5 + normX * math.pi * 3) * 1.8;
-      final y = h - 5 - math.sin(normX * math.pi) * 3.5 + wave;
-      magmaPoolPath.lineTo(x, y);
-    }
-    magmaPoolPath.lineTo(w * 0.90, h);
-    magmaPoolPath.close();
-
-    final magmaShader = LinearGradient(
-      begin: Alignment.topCenter,
-      end: Alignment.bottomCenter,
-      colors: const [
-        Color(0xFFFFF176), // White-hot molten surface
-        Color(0xFFFF9100), // Blazing liquid orange
-        Color(0xFFD50000), // Viscous crimson magma
-      ],
-      stops: const [0.0, 0.45, 1.0],
-    ).createShader(Rect.fromLTWH(w * 0.10, h - 14, w * 0.80, 14));
-    canvas.drawPath(magmaPoolPath, Paint()..shader = magmaShader);
-
-    // 4. Fluid Magma Bubbles (Organic popping liquid domes)
-    for (int b = 0; b < 3; b++) {
-      final bubbleProgress = (age * (1.8 + b * 0.6) + b * 0.35) % 1.0;
-      final bx = w * (0.26 + b * 0.24);
-      final by = h - 6 - (bubbleProgress * 7.0);
-      final br = (2.5 + b * 0.8) * math.sin(bubbleProgress * math.pi);
-      if (br > 0.5) {
-        canvas.drawCircle(Offset(bx, by), br, Paint()..color = const Color(0xFFFF9100));
-        canvas.drawCircle(Offset(bx, by - br * 0.2), br * 0.55, Paint()..color = const Color(0xFFFFFDE7));
-      }
-    }
-
-    // 5. Dynamic Liquid Magma Geyser Splash (Organic fluid splash tendrils)
-    final splashHeight = (h * 0.65) + math.sin(age * 6.0) * 5.0;
-    final spoutApexX = w * 0.5 + math.sin(age * 3.5) * 3.0;
-    final spoutApexY = h - splashHeight;
-
-    final fluidSpoutPath = Path()
-      ..moveTo(w * 0.30, h - 5)
-      ..cubicTo(
-        w * 0.36 + math.sin(age * 7.0) * 3.5, h - splashHeight * 0.45,
-        spoutApexX - 5 + math.cos(age * 8.0) * 2.5, spoutApexY + splashHeight * 0.25,
-        spoutApexX, spoutApexY,
-      )
-      ..cubicTo(
-        spoutApexX + 5 - math.cos(age * 8.0) * 2.5, spoutApexY + splashHeight * 0.25,
-        w * 0.64 - math.sin(age * 7.0) * 3.5, h - splashHeight * 0.45,
-        w * 0.70, h - 5,
-      )
-      ..close();
-
-    final fluidSpoutShader = LinearGradient(
-      begin: Alignment.topCenter,
-      end: Alignment.bottomCenter,
-      colors: const [
-        Color(0xFFFFF9C4), // White-hot liquid tip
-        Color(0xFFFFAB00), // Vibrant amber molten liquid
-        Color(0xFFFF3D00), // Blazing red-orange magma
-        Color(0xFFB71C1C), // Deep crimson base
-      ],
-      stops: const [0.0, 0.35, 0.75, 1.0],
-    ).createShader(Rect.fromLTWH(w * 0.25, spoutApexY, w * 0.5, splashHeight));
-    canvas.drawPath(fluidSpoutPath, Paint()..shader = fluidSpoutShader);
-
-    // Inner bright hot fluid stream
-    final innerFluidPath = Path()
-      ..moveTo(w * 0.40, h - 5)
-      ..quadraticBezierTo(
-        spoutApexX + math.sin(age * 6.0) * 1.5, h - splashHeight * 0.5,
-        spoutApexX, spoutApexY + 3,
-      )
-      ..quadraticBezierTo(
-        spoutApexX - math.sin(age * 6.0) * 1.5, h - splashHeight * 0.5,
-        w * 0.60, h - 5,
-      )
-      ..close();
-    canvas.drawPath(
-      innerFluidPath,
-      Paint()
-        ..shader = LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: const [
-            Color(0xFFFFFFFF),
-            Color(0xFFFFF59D),
-            Color(0xFFFF9100),
-          ],
-        ).createShader(Rect.fromLTWH(w * 0.38, spoutApexY + 3, w * 0.24, splashHeight - 3)),
-    );
-
-    // 6. Flying Liquid Magma Droplets & Embers (Arching in gravity)
-    final sparkYellow = Paint()..color = const Color(0xFFFFF59D);
-    final sparkOrange = Paint()..color = const Color(0xFFFF9100);
-    final sparkRed = Paint()..color = const Color(0xFFFF3D00);
-
-    for (int p = 0; p < 7; p++) {
-      final pProg = ((age * 2.5 + p * 0.16) % 1.0);
-      final side = (p % 2 == 0) ? 1.0 : -1.0;
-      final px = spoutApexX + side * (p * 3.5 + 7.0) * pProg;
-      final py = spoutApexY - (16.0 * math.sin(pProg * math.pi)) + (pProg * pProg * 24.0);
-      final pr = (2.2 * (1.0 - pProg)).clamp(0.6, 2.2);
-      final pPaint = (p % 3 == 0) ? sparkYellow : (p % 2 == 0) ? sparkOrange : sparkRed;
-      canvas.drawCircle(Offset(px, py), pr, pPaint);
-    }
-
-    // 7. Billowing Ash & Smoke Wisps
-    for (int s = 0; s < 3; s++) {
-      final sProg = (age * 1.4 + s * 0.35) % 1.0;
-      final sx = spoutApexX + math.sin(age * 2.5 + s) * (5.0 + sProg * 12.0);
-      final sy = spoutApexY - 6.0 - sProg * 26.0;
-      final sr = 4.0 + sProg * 7.0;
-      final sAlpha = (1.0 - sProg) * 0.28;
-      canvas.drawCircle(
-        Offset(sx, sy),
-        sr,
-        Paint()..color = const Color(0xFF455A64).withValues(alpha: sAlpha),
+      // 1. Ambient Pulsing Thermal Magma Glow
+      final glowPulse = 0.85 + math.sin(age * 4.0) * 0.15;
+      final glowRect = Rect.fromCenter(
+        center: Offset(w * 0.5, h - 6),
+        width: w * 1.6,
+        height: 32,
       );
-    }
+      final glowShader = RadialGradient(
+        colors: [
+          Color(0x66FF3D00).withValues(alpha: 0.55 * glowPulse),
+          Color(0x33FF9100).withValues(alpha: 0.30 * glowPulse),
+          Colors.transparent,
+        ],
+        stops: const [0.0, 0.5, 1.0],
+      ).createShader(glowRect);
+      canvas.drawOval(glowRect, Paint()..shader = glowShader);
+
+      // 2. Basalt Crust Pit Reservoir (Dark cooled magma rock rim with rounded organic edges)
+      final basaltPath = Path()
+        ..moveTo(2, h)
+        ..quadraticBezierTo(w * 0.15, h - 12, w * 0.35, h - 9)
+        ..quadraticBezierTo(w * 0.5, h - 13, w * 0.65, h - 9)
+        ..quadraticBezierTo(w * 0.85, h - 12, w - 2, h)
+        ..close();
+
+      final basaltShader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: const [
+          Color(0xFF2E1C14), // Charred volcanic rock
+          Color(0xFF1B0E09),
+          Color(0xFF0F0805),
+        ],
+      ).createShader(Rect.fromLTWH(0, h - 16, w, 16));
+      canvas.drawPath(basaltPath, Paint()..shader = basaltShader);
+
+      // Basalt jagged glowing crack lines
+      final crackPaint = Paint()
+        ..color = const Color(0xFFFF5722).withValues(alpha: 0.80)
+        ..strokeWidth = 1.4
+        ..style = PaintingStyle.stroke;
+      canvas.drawLine(Offset(w * 0.16, h - 3), Offset(w * 0.28, h - 8), crackPaint);
+      canvas.drawLine(Offset(w * 0.72, h - 4), Offset(w * 0.84, h - 8), crackPaint);
+
+      // 3. Fluid Liquid Magma Pool Surface (Viscous undulating molten wave)
+      final magmaPoolPath = Path()..moveTo(w * 0.10, h);
+      for (double x = w * 0.10; x <= w * 0.90; x += 4.0) {
+        final normX = (x - w * 0.10) / (w * 0.80);
+        final wave = math.sin(age * 5.5 + normX * math.pi * 3) * 1.8;
+        final y = h - 5 - math.sin(normX * math.pi) * 3.5 + wave;
+        magmaPoolPath.lineTo(x, y);
+      }
+      magmaPoolPath.lineTo(w * 0.90, h);
+      magmaPoolPath.close();
+
+      final magmaShader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: const [
+          Color(0xFFFFF176), // White-hot molten surface
+          Color(0xFFFF9100), // Blazing liquid orange
+          Color(0xFFD50000), // Viscous crimson magma
+        ],
+        stops: const [0.0, 0.45, 1.0],
+      ).createShader(Rect.fromLTWH(w * 0.10, h - 14, w * 0.80, 14));
+      canvas.drawPath(magmaPoolPath, Paint()..shader = magmaShader);
+
+      // 4. Fluid Magma Bubbles (Organic popping liquid domes)
+      for (int b = 0; b < 3; b++) {
+        final bubbleProgress = (age * (1.8 + b * 0.6) + b * 0.35) % 1.0;
+        final bx = w * (0.26 + b * 0.24);
+        final by = h - 6 - (bubbleProgress * 7.0);
+        final br = (2.5 + b * 0.8) * math.sin(bubbleProgress * math.pi);
+        if (br > 0.5) {
+          canvas.drawCircle(Offset(bx, by), br, Paint()..color = const Color(0xFFFF9100));
+          canvas.drawCircle(Offset(bx, by - br * 0.2), br * 0.55, Paint()..color = const Color(0xFFFFFDE7));
+        }
+      }
+
+      // 5. Dynamic Liquid Magma Geyser Splash (Organic fluid splash tendrils)
+      final splashHeight = (h * 0.65) + math.sin(age * 6.0) * 5.0;
+      final spoutApexX = w * 0.5 + math.sin(age * 3.5) * 3.0;
+      final spoutApexY = h - splashHeight;
+
+      final fluidSpoutPath = Path()
+        ..moveTo(w * 0.30, h - 5)
+        ..cubicTo(
+          w * 0.36 + math.sin(age * 7.0) * 3.5, h - splashHeight * 0.45,
+          spoutApexX - 5 + math.cos(age * 8.0) * 2.5, spoutApexY + splashHeight * 0.25,
+          spoutApexX, spoutApexY,
+        )
+        ..cubicTo(
+          spoutApexX + 5 - math.cos(age * 8.0) * 2.5, spoutApexY + splashHeight * 0.25,
+          w * 0.64 - math.sin(age * 7.0) * 3.5, h - splashHeight * 0.45,
+          w * 0.70, h - 5,
+        )
+        ..close();
+
+      final fluidSpoutShader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: const [
+          Color(0xFFFFF9C4), // White-hot liquid tip
+          Color(0xFFFFAB00), // Vibrant amber molten liquid
+          Color(0xFFFF3D00), // Blazing red-orange magma
+          Color(0xFFB71C1C), // Deep crimson base
+        ],
+        stops: const [0.0, 0.35, 0.75, 1.0],
+      ).createShader(Rect.fromLTWH(w * 0.25, spoutApexY, w * 0.5, splashHeight));
+      canvas.drawPath(fluidSpoutPath, Paint()..shader = fluidSpoutShader);
+
+      // Inner bright hot fluid stream
+      final innerFluidPath = Path()
+        ..moveTo(w * 0.40, h - 5)
+        ..quadraticBezierTo(
+          spoutApexX + math.sin(age * 6.0) * 1.5, h - splashHeight * 0.5,
+          spoutApexX, spoutApexY + 3,
+        )
+        ..quadraticBezierTo(
+          spoutApexX - math.sin(age * 6.0) * 1.5, h - splashHeight * 0.5,
+          w * 0.60, h - 5,
+        )
+        ..close();
+      canvas.drawPath(
+        innerFluidPath,
+        Paint()
+          ..shader = LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: const [
+              Color(0xFFFFFFFF),
+              Color(0xFFFFF59D),
+              Color(0xFFFF9100),
+            ],
+          ).createShader(Rect.fromLTWH(w * 0.38, spoutApexY + 3, w * 0.24, splashHeight - 3)),
+      );
+
+      // 6. Flying Liquid Magma Droplets & Embers (Arching in gravity)
+      final sparkYellow = Paint()..color = const Color(0xFFFFF59D);
+      final sparkOrange = Paint()..color = const Color(0xFFFF9100);
+      final sparkRed = Paint()..color = const Color(0xFFFF3D00);
+
+      for (int p = 0; p < 7; p++) {
+        final pProg = ((age * 2.5 + p * 0.16) % 1.0);
+        final side = (p % 2 == 0) ? 1.0 : -1.0;
+        final px = spoutApexX + side * (p * 3.5 + 7.0) * pProg;
+        final py = spoutApexY - (16.0 * math.sin(pProg * math.pi)) + (pProg * pProg * 24.0);
+        final pr = (2.2 * (1.0 - pProg)).clamp(0.6, 2.2);
+        final pPaint = (p % 3 == 0) ? sparkYellow : (p % 2 == 0) ? sparkOrange : sparkRed;
+        canvas.drawCircle(Offset(px, py), pr, pPaint);
+      }
+
+      // 7. Billowing Ash & Smoke Wisps
+      for (int s = 0; s < 3; s++) {
+        final sProg = (age * 1.4 + s * 0.35) % 1.0;
+        final sx = spoutApexX + math.sin(age * 2.5 + s) * (5.0 + sProg * 12.0);
+        final sy = spoutApexY - 6.0 - sProg * 26.0;
+        final sr = 4.0 + sProg * 7.0;
+        final sAlpha = (1.0 - sProg) * 0.28;
+        canvas.drawCircle(
+          Offset(sx, sy),
+          sr,
+          Paint()..color = const Color(0xFF455A64).withValues(alpha: sAlpha),
+        );
+      }
+    });
   }
 }

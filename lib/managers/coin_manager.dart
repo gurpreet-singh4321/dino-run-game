@@ -1,5 +1,7 @@
+import '../skins/skin_registry.dart';
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../skins/cosmetics.dart';
 
 /// Manages persistent coin balance, upgrades, unlocked skins, daily rewards, and missions.
 class CoinManager {
@@ -27,8 +29,39 @@ class CoinManager {
   int _coins = 0;
   int _runCoins = 0;
   int _highScore = 0;
-  Set<String> _unlockedSkins = {'rive_dino', 'default'};
-  String _activeSkinId = 'rive_dino';
+  Set<String> _unlockedSkins = {'rive_dino', 'default', 'new_dino'};
+  final Set<String> _ownedCosmetics = {'red_scarf'};
+  final Map<CosmeticSlot, String> _equippedCosmetics = {};
+  Map<CosmeticSlot, String> get equippedCosmetics => Map.unmodifiable(_equippedCosmetics);
+  bool ownsCosmetic(String id) => _ownedCosmetics.contains(id);
+
+  Future<bool> purchaseCosmetic(String id) async {
+    final item = CosmeticCatalog.find(id);
+    if (item == null) return false;
+    if (_ownedCosmetics.contains(id)) return true;
+    if (_coins < item.price) return false;
+    _coins -= item.price;
+    _ownedCosmetics.add(id);
+    await _save();
+    await forceSave();
+    return true;
+  }
+
+  Future<bool> equipCosmetic(String id) async {
+    final item = CosmeticCatalog.find(id);
+    if (item == null || !_ownedCosmetics.contains(id)) return false;
+    _equippedCosmetics[item.slot] = id;
+    await _save();
+    await forceSave();
+    return true;
+  }
+
+  Future<void> removeCosmetic(CosmeticSlot slot) async {
+    _equippedCosmetics.remove(slot);
+    await _save();
+    await forceSave();
+  }
+  String _activeSkinId = 'new_dino';
 
   // Upgrades (Level 0 = base, max level = 5)
   int _magnetLevel = 0;
@@ -82,7 +115,8 @@ class CoinManager {
       final prefs = await SharedPreferences.getInstance();
       _coins = prefs.getInt(_coinKey) ?? 2350; // generous starting coins for testing
       _highScore = prefs.getInt(_highScoreKey) ?? 0;
-      _activeSkinId = prefs.getString(_activeSkinKey) ?? 'rive_dino';
+      _activeSkinId = prefs.getString(_activeSkinKey) ?? 'new_dino';
+      if (!SkinRegistry.isAvailable(_activeSkinId)) _activeSkinId = 'new_dino';
       
       final skinsList = prefs.getStringList(_skinsKey);
       if (skinsList != null) {
@@ -90,6 +124,16 @@ class CoinManager {
       }
       _unlockedSkins.add('rive_dino');
       _unlockedSkins.add('default');
+      _unlockedSkins.add('new_dino');
+      _ownedCosmetics.addAll((prefs.getStringList('dino_owned_cosmetics') ?? [])
+          .where((id) => CosmeticCatalog.find(id) != null));
+      _equippedCosmetics.clear();
+      for (final id in prefs.getStringList('dino_equipped_cosmetics') ?? <String>[]) {
+        final item = CosmeticCatalog.find(id);
+        if (item != null && _ownedCosmetics.contains(id)) {
+          _equippedCosmetics[item.slot] = id;
+        }
+      }
 
       _magnetLevel = prefs.getInt(_magnetLevelKey) ?? 0;
       _shieldLevel = prefs.getInt(_shieldLevelKey) ?? 0;
@@ -139,6 +183,8 @@ class CoinManager {
       await prefs.setInt(_highScoreKey, _highScore);
       await prefs.setString(_activeSkinKey, _activeSkinId);
       await prefs.setStringList(_skinsKey, _unlockedSkins.toList());
+      await prefs.setStringList('dino_owned_cosmetics', _ownedCosmetics.toList());
+      await prefs.setStringList('dino_equipped_cosmetics', _equippedCosmetics.values.toList());
 
       await prefs.setInt(_magnetLevelKey, _magnetLevel);
       await prefs.setInt(_shieldLevelKey, _shieldLevel);
@@ -175,6 +221,7 @@ class CoinManager {
   }
 
   bool tryPurchaseSkin(String skinId, int price) {
+    if (!SkinRegistry.isAvailable(skinId)) return false;
     if (_unlockedSkins.contains(skinId)) return true; // Already owned
     if (_coins < price) return false;
     _coins -= price;
@@ -184,7 +231,7 @@ class CoinManager {
   }
 
   void setActiveSkin(String skinId) {
-    if (_unlockedSkins.contains(skinId)) {
+    if (SkinRegistry.isAvailable(skinId) && _unlockedSkins.contains(skinId)) {
       _activeSkinId = skinId;
       _save();
     }

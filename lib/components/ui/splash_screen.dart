@@ -67,54 +67,32 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   Future<void> _preloadAssets() async {
     try {
       await Flame.images.load('dino_sprite.png');
-      await Flame.images.load('desert_bg_v3.jpg');
-      await Flame.images.load('rain_bg.jpg');
+      try { await Flame.images.load('desert_bg_v3.jpg'); } catch (_) {}
+      try { await Flame.images.load('rain_bg.jpg'); } catch (_) {}
+      try { await Flame.images.load('forest_bg.jpg'); } catch (_) {}
+      try { await Flame.images.load('ice_bg.jpg'); } catch (_) {}
+      try { await Flame.images.load('volcano_bg.jpg'); } catch (_) {}
+      try { await Flame.images.load('cosmos_bg.jpg'); } catch (_) {}
+      try { await Flame.images.load('space_bg.jpg'); } catch (_) {}
+      try { await Flame.images.load('biomes/desert_panorama.jpg'); } catch (_) {}
+      try { await Flame.images.load('biomes/rain_panorama.jpg'); } catch (_) {}
+      try { await Flame.images.load('biomes/forest_panorama.jpg'); } catch (_) {}
+      try { await Flame.images.load('biomes/ice_panorama.jpg'); } catch (_) {}
+      try { await Flame.images.load('biomes/volcano_panorama.jpg'); } catch (_) {}
+      try { await Flame.images.load('biomes/cosmos_panorama.jpg'); } catch (_) {}
       await AudioManager.preloadAll();
       await RiveDinoSkin.preload();
     } catch (_) {}
   }
 
   void _navigateToGame() {
-    final game = DinoGame(coinManager: widget.coinManager);
-
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         transitionDuration: const Duration(milliseconds: 800),
         pageBuilder: (context, animation, secondaryAnimation) {
           return FadeTransition(
             opacity: animation,
-            child: Listener(
-              onPointerDown: (_) => AudioManager.ensureAudioPlaying(),
-              child: Scaffold(
-                body: PopScope(
-                  canPop: false,
-                  onPopInvokedWithResult: (didPop, result) {
-                    if (didPop) return;
-                    game.togglePause();
-                  },
-                  child: GameWidget<DinoGame>(
-                    game: game,
-                    overlayBuilderMap: {
-                      'MainMenuOverlay': (BuildContext context, DinoGame game) {
-                        return MainMenuOverlay(game: game);
-                      },
-                      'PauseMenu': (BuildContext context, DinoGame game) {
-                        return PauseMenu(game: game);
-                      },
-                      'SettingsDialog': (BuildContext context, DinoGame game) {
-                        return SettingsDialog(
-                          onClose: () {
-                            game.overlays.remove('SettingsDialog');
-                          },
-                        );
-                      },
-                    },
-                    initialActiveOverlays: const ['MainMenuOverlay'],
-                    autofocus: true,
-                  ),
-                ),
-              ),
-            ),
+            child: GamePlayScreen(coinManager: widget.coinManager),
           );
         },
       ),
@@ -363,3 +341,59 @@ class _StarFieldPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _StarFieldPainter oldDelegate) => oldDelegate.time != time;
 }
+
+class GamePlayScreen extends StatefulWidget {
+  final CoinManager coinManager;
+
+  const GamePlayScreen({super.key, required this.coinManager});
+
+  @override
+  State<GamePlayScreen> createState() => _GamePlayScreenState();
+}
+
+class _GamePlayScreenState extends State<GamePlayScreen> {
+  late final DinoGame _game;
+
+  @override
+  void initState() {
+    super.initState();
+    _game = DinoGame(coinManager: widget.coinManager);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Listener(
+      onPointerDown: (_) => AudioManager.ensureAudioPlaying(),
+      child: Scaffold(
+        body: PopScope(
+          canPop: false,
+          onPopInvokedWithResult: (didPop, result) {
+            if (didPop) return;
+            _game.togglePause();
+          },
+          child: GameWidget<DinoGame>(
+            game: _game,
+            overlayBuilderMap: {
+              'MainMenuOverlay': (BuildContext context, DinoGame game) {
+                return MainMenuOverlay(game: game);
+              },
+              'PauseMenu': (BuildContext context, DinoGame game) {
+                return PauseMenu(game: game);
+              },
+              'SettingsDialog': (BuildContext context, DinoGame game) {
+                return SettingsDialog(
+                  onClose: () {
+                    game.overlays.remove('SettingsDialog');
+                  },
+                );
+              },
+            },
+            initialActiveOverlays: const ['MainMenuOverlay'],
+            autofocus: true,
+          ),
+        ),
+      ),
+    );
+  }
+}
+

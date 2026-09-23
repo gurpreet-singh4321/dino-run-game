@@ -104,6 +104,7 @@ class FallingStone extends PositionComponent with CollisionCallbacks, HasGameRef
 
   @override
   void update(double dt) {
+    dt *= game.globalTimeScale;
     super.update(dt);
 
     if (game.state == GameState.playing) {

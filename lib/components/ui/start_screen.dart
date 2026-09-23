@@ -5,13 +5,28 @@ import '../../game/dino_game.dart';
 import '../../game/game_state.dart';
 import '../../utils/colors.dart';
 
+import 'dart:ui' as ui;
+import 'package:flutter/services.dart';
+
 /// Start/title screen rendered in the game canvas.
 class StartScreen extends PositionComponent with HasGameReference<DinoGame> {
   double _time = 0;
+  ui.Image? _titleArt;
 
   @override
   Future<void> onLoad() async {
     priority = 100;
+    try {
+      final data = await rootBundle.load('assets/images/title_key_art.jpg');
+      final bytes = data.buffer.asUint8List();
+      final codec = await ui.instantiateImageCodec(bytes);
+      final frame = await codec.getNextFrame();
+      _titleArt = frame.image;
+    } catch (_) {
+      try {
+        _titleArt = await game.images.load('title_key_art.jpg');
+      } catch (_) {}
+    }
   }
 
   @override
@@ -33,20 +48,31 @@ class StartScreen extends PositionComponent with HasGameReference<DinoGame> {
       Paint()..color = const Color(0x66000000),
     );
 
-    // Title
-    final titlePaint = TextPaint(
-      style: const TextStyle(
-        color: GameColors.uiGreen,
-        fontSize: 48,
-        fontWeight: FontWeight.w900,
-        letterSpacing: 4,
-        shadows: [
-          Shadow(color: Color(0xFF000000), offset: Offset(2, 2), blurRadius: 4),
-          Shadow(color: GameColors.uiGreen, offset: Offset(0, 0), blurRadius: 12),
-        ],
-      ),
-    );
-    titlePaint.render(canvas, 'DINO RUN', Vector2(cx, cy - 80), anchor: Anchor.center);
+    // Title Art
+    if (_titleArt != null) {
+      final imgW = _titleArt!.width.toDouble();
+      final imgH = _titleArt!.height.toDouble();
+      final scale = (game.size.x * 0.8) / imgW; // 80% of screen width
+      final sw = imgW * scale;
+      final sh = imgH * scale;
+      final destRect = Rect.fromLTWH(cx - sw / 2, cy - sh, sw, sh);
+      canvas.drawImageRect(_titleArt!, Rect.fromLTWH(0, 0, imgW, imgH), destRect, Paint());
+    } else {
+      // Fallback Title
+      final titlePaint = TextPaint(
+        style: const TextStyle(
+          color: GameColors.uiGreen,
+          fontSize: 48,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 4,
+          shadows: [
+            Shadow(color: Color(0xFF000000), offset: Offset(2, 2), blurRadius: 4),
+            Shadow(color: GameColors.uiGreen, offset: Offset(0, 0), blurRadius: 12),
+          ],
+        ),
+      );
+      titlePaint.render(canvas, 'DINO RUN', Vector2(cx, cy - 80), anchor: Anchor.center);
+    }
 
     // Subtitle
     final subtitlePaint = TextPaint(
