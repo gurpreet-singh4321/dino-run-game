@@ -37,6 +37,10 @@ class MilestoneOverlay extends PositionComponent with HasGameReference<DinoGame>
   int _cinematicStage = 0;
   double _screenFlashAlpha = 0.0;
 
+  // Cached text paints to prevent frame-by-frame text layout rebuilds
+  TextPaint? _cinematicTitlePaint;
+  TextPaint? _cinematicSubtitlePaint;
+
   // --- High-Score Banner State ---
   _BannerPhase _bannerPhase = _BannerPhase.none;
   double _bannerTimer = 0.0;
@@ -87,6 +91,33 @@ class MilestoneOverlay extends PositionComponent with HasGameReference<DinoGame>
 
   // --- Public API ---
 
+  void _initCinematicTextPaints(Biome biome) {
+    _cinematicTitlePaint = TextPaint(
+      style: TextStyle(
+        color: biome.accentColor,
+        fontSize: 26,
+        fontWeight: FontWeight.w900,
+        letterSpacing: 2.2,
+        shadows: [
+          const Shadow(color: Colors.black, offset: Offset(2, 2)), // Solid drop shadow, no blur
+          Shadow(color: biome.accentColor.withValues(alpha: 0.8), offset: Offset.zero, blurRadius: 4), // Reduced blur glow
+        ],
+      ),
+    );
+
+    _cinematicSubtitlePaint = TextPaint(
+      style: const TextStyle(
+        color: Colors.white,
+        fontSize: 14,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 3.0,
+        shadows: [
+          Shadow(color: Colors.black, offset: Offset(1, 1)), // Solid drop shadow, no blur
+        ],
+      ),
+    );
+  }
+
   /// Trigger the biome-entry cinematic when a biome transition begins.
   void triggerBiomeCinematic(Biome nextBiome, int targetStage) {
     _cinematicBiome = nextBiome;
@@ -94,6 +125,9 @@ class MilestoneOverlay extends PositionComponent with HasGameReference<DinoGame>
     _cinematicPhase = _CinematicPhase.slideIn;
     _cinematicTimer = 0.0;
     _screenFlashAlpha = 0.15; // 15% flash
+
+    // FIX: Cache text paints once per transition to avoid heavy GPU blur & layout rebuilds!
+    _initCinematicTextPaints(nextBiome);
 
     // Trigger audio sting & transition particles
     AudioManager.playBiomeSting();
@@ -135,6 +169,8 @@ class MilestoneOverlay extends PositionComponent with HasGameReference<DinoGame>
     _cinematicTimer = 0.0;
     _cinematicBiome = null;
     _screenFlashAlpha = 0.0;
+    _cinematicTitlePaint = null;
+    _cinematicSubtitlePaint = null;
     _bannerPhase = _BannerPhase.none;
     _bannerTimer = 0.0;
     _bannerShimmerProgress = 0.0;
@@ -319,6 +355,10 @@ class MilestoneOverlay extends PositionComponent with HasGameReference<DinoGame>
 
     // Title Card Centered in Upper-Mid Canvas (safe from ground & obstacles)
     if (alpha > 0.01) {
+      if (_cinematicTitlePaint == null || _cinematicSubtitlePaint == null) {
+        _initCinematicTextPaints(biome);
+      }
+
       final cardCenterY = h * 0.38;
       final cardCenterX = w / 2;
 
@@ -328,50 +368,31 @@ class MilestoneOverlay extends PositionComponent with HasGameReference<DinoGame>
       canvas.scale(scale, scale);
       canvas.translate(-cardCenterX, -cardCenterY);
 
-      // Era Roman Numeral Subtitle
       final roman = BiomeManager.toRoman(_cinematicStage + 1);
-      final subtitlePaint = TextPaint(
-        style: TextStyle(
-          color: Colors.white.withValues(alpha: 0.92 * alpha),
-          fontSize: 14,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 3.0,
-          shadows: [
-            Shadow(color: Colors.black.withValues(alpha: alpha), offset: const Offset(1, 1), blurRadius: 4),
-          ],
-        ),
+
+      // FIX: Use saveLayer to apply alpha efficiently as a single composite pass 
+      // instead of rebuilding TextPainters and shadows every frame
+      canvas.saveLayer(
+        Rect.fromCenter(center: Offset(cardCenterX, cardCenterY), width: w, height: 120),
+        Paint()..color = Colors.white.withValues(alpha: alpha.clamp(0.0, 1.0)),
       );
 
-      // Main Biome Title
-      final titlePaint = TextPaint(
-        style: TextStyle(
-          color: biome.accentColor.withValues(alpha: alpha),
-          fontSize: 26,
-          fontWeight: FontWeight.w900,
-          letterSpacing: 2.2,
-          shadows: [
-            Shadow(color: Colors.black.withValues(alpha: 0.9 * alpha), offset: const Offset(2, 2), blurRadius: 5),
-            Shadow(color: biome.accentColor.withValues(alpha: 0.5 * alpha), offset: Offset.zero, blurRadius: 10),
-          ],
-        ),
-      );
-
-      // Render Title Card Texts
-      titlePaint.render(
+      _cinematicTitlePaint!.render(
         canvas,
         biome.displayName,
         Vector2(cardCenterX, cardCenterY - 14),
         anchor: Anchor.center,
       );
 
-      subtitlePaint.render(
+      _cinematicSubtitlePaint!.render(
         canvas,
         '— EPOCH $roman —',
         Vector2(cardCenterX, cardCenterY + 16),
         anchor: Anchor.center,
       );
 
-      canvas.restore();
+      canvas.restore(); // Restore saveLayer
+      canvas.restore(); // Restore transform
     }
   }
 
