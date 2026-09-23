@@ -2106,17 +2106,24 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     final baseIndex = (scroll / tileW).floor();
     double startX = -(scroll % tileW);
 
+    // 1.5px overlap seals floating-point and sub-pixel anti-aliasing cracks across consecutive tiles
+    const overlap = 1.5;
+    final destRectLocal = Rect.fromLTWH(0, 0, tileW + overlap, h);
+
     int i = 0;
     while (startX < size.x + 50) {
       final isMirrored = mirrorTiling && ((baseIndex + i).abs() % 2 == 1);
       if (isMirrored) {
         canvas.save();
-        canvas.translate(startX + tileW, 0);
+        // Translate by (startX + tileW + overlap) so that the mirrored tile spans
+        // precisely [startX, startX + tileW + overlap] in canvas space, providing
+        // a seamless overlap on both normal-to-mirrored and mirrored-to-normal boundaries.
+        canvas.translate(startX + tileW + overlap, 0);
         canvas.scale(-1.0, 1.0);
         canvas.drawImageRect(
           img,
           srcRect,
-          Rect.fromLTWH(0, 0, tileW, h),
+          destRectLocal,
           paint,
         );
         canvas.restore();
@@ -2124,7 +2131,7 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
         canvas.drawImageRect(
           img,
           srcRect,
-          Rect.fromLTWH(startX, 0, tileW, h),
+          Rect.fromLTWH(startX, 0, tileW + overlap, h),
           paint,
         );
       }
