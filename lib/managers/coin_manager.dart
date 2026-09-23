@@ -29,7 +29,7 @@ class CoinManager {
   int _coins = 0;
   int _runCoins = 0;
   int _highScore = 0;
-  Set<String> _unlockedSkins = {'rive_dino', 'default', 'new_dino'};
+  Set<String> _unlockedSkins = {'new_dino'};
   final Set<String> _ownedCosmetics = {'red_scarf'};
   final Map<CosmeticSlot, String> _equippedCosmetics = {};
   Map<CosmeticSlot, String> get equippedCosmetics => Map.unmodifiable(_equippedCosmetics);
@@ -122,8 +122,6 @@ class CoinManager {
       if (skinsList != null) {
         _unlockedSkins = skinsList.toSet();
       }
-      _unlockedSkins.add('rive_dino');
-      _unlockedSkins.add('default');
       _unlockedSkins.add('new_dino');
       _ownedCosmetics.addAll((prefs.getStringList('dino_owned_cosmetics') ?? [])
           .where((id) => CosmeticCatalog.find(id) != null));

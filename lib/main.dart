@@ -2,7 +2,6 @@ import 'dart:ui' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flame/flame.dart';
-import 'package:flame_rive/flame_rive.dart';
 import 'managers/coin_manager.dart';
 import 'managers/settings_manager.dart';
 import 'components/ui/splash_screen.dart';
@@ -16,7 +15,6 @@ void main() async {
     DeviceOrientation.landscapeLeft,
     DeviceOrientation.landscapeRight,
   ]);
-  await RiveNative.init();
 
   final coinManager = CoinManager();
   await coinManager.load();

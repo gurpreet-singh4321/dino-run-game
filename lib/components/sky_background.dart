@@ -65,47 +65,13 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     priority = -100; // Draw behind everything
 
     final results = await Future.wait([
-      _loadImageSafely([
-        'assets/images/biomes/desert_fossil_canyon.png',
-        'assets/images/biomes/desert_panorama.jpg',
-        'assets/images/desert_bg_v3.jpg',
-        'assets/images/desert_bg.jpg',
-        'assets/images/desert_bg_panorama.jpg',
-        'assets/images/desert_bg_hd.jpg',
-      ]),
-      _loadImageSafely([
-        'assets/images/biomes/rain_painted_v1.png',
-        'assets/images/biomes/rain_panorama.jpg',
-        'assets/images/rain_bg.jpg',
-      ]),
-      _loadImageSafely([
-        'assets/images/biomes/forest_painted_v1.png',
-        'assets/images/biomes/forest_panorama.jpg',
-        'assets/images/forest_bg.jpg',
-      ]),
-      _loadImageSafely([
-        'assets/images/biomes/ice_painted_v1.png',
-        'assets/images/biomes/ice_panorama.jpg',
-        'assets/images/ice_bg.jpg',
-      ]),
-      _loadImageSafely([
-        'assets/images/biomes/volcano_painted_v1.png',
-        'assets/images/biomes/volcano_panorama.jpg',
-        'assets/images/volcano_bg.jpg',
-      ]),
-      _loadImageSafely([
-        'assets/images/biomes/cosmos_painted_v1.png',
-        'assets/images/biomes/cosmos_panorama.jpg',
-        'assets/images/cosmos_bg.jpg',
-        'assets/images/space_bg.jpg',
-      ]),
-      _loadImageSafely([
-        'assets/images/biomes/cosmos_painted_v1.png',
-        'assets/images/space_bg.jpg',
-        'assets/images/space_bg_panorama.jpg',
-        'assets/images/biomes/cosmos_panorama.jpg',
-        'assets/images/cosmos_bg.jpg',
-      ]),
+      _loadImageSafely(['assets/images/biomes/desert_fossil_canyon.png']),
+      _loadImageSafely(['assets/images/biomes/rain_painted_v1.png']),
+      _loadImageSafely(['assets/images/biomes/forest_painted_v1.png']),
+      _loadImageSafely(['assets/images/biomes/ice_painted_v1.png']),
+      _loadImageSafely(['assets/images/biomes/volcano_painted_v1.png']),
+      _loadImageSafely(['assets/images/biomes/cosmos_painted_v1.png']),
+      _loadImageSafely(['assets/images/biomes/cosmos_painted_v1.png']),
     ]);
 
     _desertBgImage = results[0];

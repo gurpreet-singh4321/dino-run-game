@@ -5,7 +5,6 @@ import 'package:flame/flame.dart';
 import '../../game/dino_game.dart';
 import '../../managers/coin_manager.dart';
 import '../../managers/audio_manager.dart';
-import '../../skins/rive_dino_skin.dart';
 import 'pause_menu.dart';
 import 'settings_dialog.dart';
 import 'main_menu_overlay.dart';
@@ -67,21 +66,15 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   Future<void> _preloadAssets() async {
     try {
       await Flame.images.load('dino_sprite.png');
-      try { await Flame.images.load('desert_bg_v3.jpg'); } catch (_) {}
-      try { await Flame.images.load('rain_bg.jpg'); } catch (_) {}
-      try { await Flame.images.load('forest_bg.jpg'); } catch (_) {}
-      try { await Flame.images.load('ice_bg.jpg'); } catch (_) {}
-      try { await Flame.images.load('volcano_bg.jpg'); } catch (_) {}
-      try { await Flame.images.load('cosmos_bg.jpg'); } catch (_) {}
-      try { await Flame.images.load('space_bg.jpg'); } catch (_) {}
-      try { await Flame.images.load('biomes/desert_panorama.jpg'); } catch (_) {}
-      try { await Flame.images.load('biomes/rain_panorama.jpg'); } catch (_) {}
-      try { await Flame.images.load('biomes/forest_panorama.jpg'); } catch (_) {}
-      try { await Flame.images.load('biomes/ice_panorama.jpg'); } catch (_) {}
-      try { await Flame.images.load('biomes/volcano_panorama.jpg'); } catch (_) {}
-      try { await Flame.images.load('biomes/cosmos_panorama.jpg'); } catch (_) {}
+      try { await Flame.images.load('new_dino_rig.png'); } catch (_) {}
+      try { await Flame.images.load('title_key_art.jpg'); } catch (_) {}
+      try { await Flame.images.load('biomes/desert_fossil_canyon.png'); } catch (_) {}
+      try { await Flame.images.load('biomes/rain_painted_v1.png'); } catch (_) {}
+      try { await Flame.images.load('biomes/forest_painted_v1.png'); } catch (_) {}
+      try { await Flame.images.load('biomes/ice_painted_v1.png'); } catch (_) {}
+      try { await Flame.images.load('biomes/volcano_painted_v1.png'); } catch (_) {}
+      try { await Flame.images.load('biomes/cosmos_painted_v1.png'); } catch (_) {}
       await AudioManager.preloadAll();
-      await RiveDinoSkin.preload();
     } catch (_) {}
   }
 

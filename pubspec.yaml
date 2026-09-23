@@ -13,10 +13,7 @@ dependencies:
   flame_audio: ^2.10.0
   flame_tiled: ^1.20.0
   shared_preferences: ^2.2.3
-  flame_rive: ^1.11.2
-  rive: ^0.14.11
   vibration: ^2.0.0
-  rive_common: ^0.4.15
 
 dev_dependencies:
   flutter_test:
@@ -40,22 +37,8 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/dino.riv
-    - assets/sun.riv
     - assets/images/
     - assets/images/biomes/
     - assets/images/dino_sprite.png
     - assets/images/app_icon.png
-    - assets/images/desert_bg.jpg
-    - assets/images/desert_bg_hd.jpg
-    - assets/images/desert_bg_panorama.jpg
-    - assets/images/desert_bg_v2.jpg
-    - assets/images/desert_bg_flawless.jpg
-    - assets/images/desert_bg_v3.jpg
-    - assets/images/rain_bg.jpg
-    - assets/images/forest_bg.jpg
-    - assets/images/ice_bg.jpg
-    - assets/images/volcano_bg.jpg
-    - assets/images/cosmos_bg.jpg
-    - assets/images/space_bg.jpg
     - assets/audio/
