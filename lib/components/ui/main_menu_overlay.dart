@@ -1726,7 +1726,7 @@ class _TimeCodexDialog extends StatelessWidget {
   Widget build(BuildContext context) => AdventurePanel(title: 'A world of adventures', subtitle: 'Six epochs to explore with Dino.',
     child: ListView(children: const [
       Text('Ancient Desert · Jurassic Monsoon · Primeval Forest\n\nGlacial Tundra · Cosmic Orbit · Volcano Inferno',
-        style: TextStyle(color: Color(0xFF173B48), fontSize: 18, height: 1.6)),
+        style: TextStyle(color: Colors.white, fontSize: 18, height: 1.6, fontWeight: FontWeight.w600)),
     ]));
 }
 class _TutorialDialog extends StatelessWidget {
@@ -1735,6 +1735,6 @@ class _TutorialDialog extends StatelessWidget {
   Widget build(BuildContext context) => AdventurePanel(title: 'Let’s go exploring!', subtitle: 'Small feet. Big adventures.',
     child: ListView(children: const [
       Text('Tap to jump. Tap again for a double jump.\n\nCollect coins to dress up Dino and improve your boosts.\n\nGrab a shield for protection, a magnet for coins, or a rocket for a trip to space.\n\nTap pause whenever you need a break.',
-        style: TextStyle(color: Color(0xFF173B48), fontSize: 17, height: 1.6)),
+        style: TextStyle(color: Color(0xFFE2E8F0), fontSize: 17, height: 1.6)),
     ]));
 }

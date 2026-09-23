@@ -12,10 +12,10 @@ class _SettingsDialogState extends State<SettingsDialog> {
   bool _vibrationEnabled = SettingsManager.vibrationEnabled;
   @override
   Widget build(BuildContext context) => AdventurePanel(title: 'Make it yours', subtitle: 'A comfy adventure, just the way you like it.', onClose: widget.onClose,
-    child: Theme(data: ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF245566))),
+    child: Theme(data: ThemeData.dark().copyWith(colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF4DEEEA), brightness: Brightness.dark)),
       child: ListView(padding: const EdgeInsets.symmetric(horizontal: 12), children: [
         const SizedBox(height: 8),
-        Text('Sound volume · ${(_volume * 100).round()}%', style: const TextStyle(color: Color(0xFF173B48), fontSize: 18, fontWeight: FontWeight.w800)),
+        Text('Sound volume · ${(_volume * 100).round()}%', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
         Slider(value: _volume, divisions: 20, label: '${(_volume * 100).round()}%',
           onChanged: (value) { setState(() => _volume = value); SettingsManager.setVolume(value); }),
         Material(color: Colors.transparent, child: SwitchListTile(contentPadding: EdgeInsets.zero,

@@ -162,8 +162,9 @@ class CoinManager {
 
   Future<void> _save() async {
     _dirty = true;
-    _saveTimer?.cancel();
-    _saveTimer = Timer(const Duration(seconds: 2), () => _flushSave());
+    if (_saveTimer == null || !_saveTimer!.isActive) {
+      _saveTimer = Timer(const Duration(seconds: 2), () => _flushSave());
+    }
   }
 
   /// Force an immediate save (call on game-over, app-pause, purchase).
@@ -177,6 +178,7 @@ class CoinManager {
 
   Future<void> _flushSave() async {
     _dirty = false;
+    _saveTimer = null;
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt(_coinKey, _coins);
@@ -289,12 +291,36 @@ class CoinManager {
 
   // --- Daily Rewards ---
 
-  void claimDailyReward({int rewardCoins = 150}) {
-    if (!canClaimDailyReward) return;
-    _lastDailyClaimDate = _getTodayString();
-    _dailyStreak = (_dailyStreak % 7) + 1;
-    addCoins(rewardCoins);
-    _save();
+  int claimDailyReward({int? rewardCoins, int baseRewardCoins = 150}) {
+    if (!canClaimDailyReward) return 0;
+    final base = rewardCoins ?? baseRewardCoins;
+    final today = DateTime.now();
+    final todayStr = _getTodayString();
+
+    if (_lastDailyClaimDate != null) {
+      try {
+        final last = DateTime.parse(_lastDailyClaimDate!);
+        final todayUtc = DateTime.utc(today.year, today.month, today.day);
+        final lastUtc = DateTime.utc(last.year, last.month, last.day);
+        final diff = todayUtc.difference(lastUtc).inDays;
+
+        if (diff == 1) {
+          _dailyStreak = (_dailyStreak % 7) + 1;
+        } else if (diff > 1) {
+          _dailyStreak = 1;
+        }
+      } catch (_) {
+        _dailyStreak = 1;
+      }
+    } else {
+      _dailyStreak = 1;
+    }
+
+    _lastDailyClaimDate = todayStr;
+    final totalReward = base + (_dailyStreak * 50);
+    addCoins(totalReward);
+    forceSave();
+    return totalReward;
   }
 
   // --- Missions ---
