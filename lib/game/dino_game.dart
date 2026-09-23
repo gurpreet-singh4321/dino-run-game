@@ -361,6 +361,7 @@ class DinoGame extends FlameGame with HasCollisionDetection, TapCallbacks, PanDe
     spaceTransitionProgress = 0;
     spaceTimer = 0;
     spawnManager.clearGroundEntities();
+    spawnManager.clearMeteors();
     player.exitSpaceMode();
     spawnManager.resumeGroundSpawning();
     final shieldLvl = coinManager.shieldLevel;
@@ -408,6 +409,15 @@ class DinoGame extends FlameGame with HasCollisionDetection, TapCallbacks, PanDe
     overlays.remove('SettingsDialog');
     player.revive();
     spawnManager.clearGroundEntities();
+    spawnManager.clearMeteors();
+    spawnManager.resumeGroundSpawning();
+
+    // FIX: Clear space phase timers if the player died during a rocket flight!
+    spacePhase = SpacePhase.none;
+    spaceTimer = 0;
+    spacePhaseTimer = 0;
+    spaceTransitionProgress = 0;
+
     state = GameState.playing;
     resumeEngine();
     triggerHitStop();

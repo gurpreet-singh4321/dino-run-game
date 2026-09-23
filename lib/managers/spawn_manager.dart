@@ -422,12 +422,17 @@ class SpawnManager extends Component with HasGameReference<DinoGame> {
     coinTimer = 0.8;
   }
 
-  void reset() {
-    clearGroundEntities();
+  void clearMeteors() {
     for (final m in _meteors) {
       m.removeFromParent();
     }
     _meteors.clear();
+    meteorTimer = 0;
+  }
+
+  void reset() {
+    clearGroundEntities();
+    clearMeteors();
     obstacleTimer = 1.8;
     coinTimer = 1.0;
     meteorTimer = 0;

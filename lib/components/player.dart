@@ -132,6 +132,17 @@ class Player extends PositionComponent with CollisionCallbacks, HasGameReference
     shieldTimer = 0;
     magnetTimer = 0;
     giantTimer = 0;
+    scale = Vector2.all(1.0);
+
+    // FIX: Force remove jetpack, space physics and squash/stretch on revive!
+    inSpaceMode = false;
+    isThrusting = false;
+    movingLeft = false;
+    movingRight = false;
+    squashX = 1.0;
+    squashY = 1.0;
+    _jumpCutApplied = false;
+
     _resetPosition();
     game.particlePool.emitCuteDeath(position + Vector2(size.x / 2, size.y / 2));
     game.particlePool.emitShieldBreak(position + Vector2(size.x / 2, size.y / 2));
