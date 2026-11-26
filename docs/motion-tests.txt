@@ -1,0 +1,13 @@
+00:00 +0: loading C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/motion_evidence_test.dart
+00:00 +0: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/motion_evidence_test.dart: Draw the actual rig across ten reproducible motion poses
+00:00 +1: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/dino_motion_test.dart: Stance foot stays level and moves at uniform ground-relative speed
+00:00 +2: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/dino_motion_test.dart: Gait is continuous in position and velocity at lift-off and wrap
+00:00 +3: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/dino_motion_test.dart: Motion is stable at 30, 60 and 120 FPS
+00:00 +4: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/dino_motion_test.dart: Cadence stays readable at every speed and display size
+00:00 +5: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/dino_motion_test.dart: Landing preserves stride phase and feet roll continuously
+00:00 +6: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/dino_motion_test.dart: Jump tucks legs, descent reaches, landing recovers without a pop
+00:00 +7: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/dino_motion_test.dart: IK keeps bone lengths and finite joints across an entire run
+00:00 +8: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/dino_motion_test.dart: Compact stride keeps both short legs under the body without stretching
+00:00 +9: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/dino_motion_test.dart: Core states distinguish launch, double jump, descent, land and damage
+00:00 +10: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/dino_preview_test.dart: Previews own advancing clocks and never mutate gameplay motion
+00:01 +11: All tests passed!

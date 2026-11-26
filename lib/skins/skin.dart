@@ -14,7 +14,9 @@ enum CharacterPose { running, jumping, falling, space }
 abstract class CharacterSkin {
   bool get hasArticulatedMotion => false;
   void resetMotion() {}
-  void onJump() {}
+  void onJump({bool doubleJump = false}) {}
+  void onDamage() {}
+  void setPowerState({bool shield = false, bool magnet = false, bool giant = false}) {}
   void advanceMotion(double dt, {required double speed,
       required double velocityY, required bool grounded,
       bool idle = false, bool space = false, double characterWidth = 80}) => update(dt);

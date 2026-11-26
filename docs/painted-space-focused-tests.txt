@@ -1,0 +1,28 @@
+00:00 +0: loading C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/gameplay_fairness_test.dart
+00:00 +0: (setUpAll)
+00:00 +0: Menu reveal can finish its fade while a fresh run begins
+00:00 +1: Actual collision collects once during damage and space-return immunity
+00:00 +2: Damage, shield absorption, recovery and giant crush assert real outcomes
+00:00 +3: Meteor impact stays ahead at both speeds and leaves one scrolling crater
+00:00 +3 -1: Meteor impact stays ahead at both speeds and leaves one scrolling crater [E]
+  Expected: RockPhase:<RockPhase.landed>
+    Actual: RockPhase:<RockPhase.warning>
+  
+  package:matcher                                     expect
+  package:flutter_test/src/widget_tester.dart 473:18  expect
+  test\gameplay_fairness_test.dart 180:9              main.<fn>
+  
+00:00 +3 -1: Each falling stone owns a moving collider; empty cluster space is safe
+00:00 +4 -1: Every space phase pauses by touch and keeps its timer and physics frozen
+00:00 +5 -1: Rolling hazards clear on launch, revive, restart and menu exit
+00:00 +6 -1: Space trails stay bounded, passive, collectable and clear on return
+00:00 +7 -1: Hit stop freezes hazard schedule, distance and power duration together
+00:00 +8 -1: Immunity rescues a gap fall and giant changes preserve floor contact
+00:01 +9 -1: Viewport mapping preserves logical physics at every landscape size
+00:01 +10 -1: Game over flushes earned rewards and stats before a fresh manager reload
+00:01 +11 -1: Production jump and progression agree at 30/60/120 FPS and long frames
+00:01 +12 -1: (tearDownAll)
+00:01 +12 -1: Some tests failed.
+
+Failing tests:
+  C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/gameplay_fairness_test.dart: Meteor impact stays ahead at both speeds and leaves one scrolling crater

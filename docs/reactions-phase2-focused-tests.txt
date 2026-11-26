@@ -1,0 +1,92 @@
+00:00 +0: loading C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/gameplay_fairness_test.dart
+test/gameplay_fairness_test.dart:112:24: Error: Method not found: 'ballAtPlayer'.
+    final ball = await ballAtPlayer();
+                       ^^^^^^^^^^^^
+test/gameplay_fairness_test.dart:120:27: Error: Method not found: 'ballAtPlayer'.
+    final airBall = await ballAtPlayer();
+                          ^^^^^^^^^^^^
+test/gameplay_fairness_test.dart:112:24: Error: Local variable 'ballAtPlayer' can't be referenced before it is declared.
+    final ball = await ballAtPlayer();
+                       ^^^^^^^^^^^^
+test/gameplay_fairness_test.dart:136:23: Context: This is the declaration of the variable 'ballAtPlayer'.
+  Future<RollingBall> ballAtPlayer() async {
+                      ^^^^^^^^^^^^
+test/gameplay_fairness_test.dart:120:27: Error: Local variable 'ballAtPlayer' can't be referenced before it is declared.
+    final airBall = await ballAtPlayer();
+                          ^^^^^^^^^^^^
+test/gameplay_fairness_test.dart:136:23: Context: This is the declaration of the variable 'ballAtPlayer'.
+  Future<RollingBall> ballAtPlayer() async {
+                      ^^^^^^^^^^^^
+test/gameplay_fairness_test.dart:178:13: Error: Method not found: 'ballAtPlayer'.
+      await ballAtPlayer();
+            ^^^^^^^^^^^^
+test/gameplay_fairness_test.dart:181:13: Error: Method not found: 'ballAtPlayer'.
+      await ballAtPlayer();
+            ^^^^^^^^^^^^
+test/gameplay_fairness_test.dart:187:13: Error: Method not found: 'ballAtPlayer'.
+      await ballAtPlayer();
+            ^^^^^^^^^^^^
+test/gameplay_fairness_test.dart:195:26: Error: Method not found: 'ballAtPlayer'.
+      final ball = await ballAtPlayer();
+                         ^^^^^^^^^^^^
+test/gameplay_fairness_test.dart:292:28: Error: Method not found: 'ballAtPlayer'.
+        final ball = await ballAtPlayer();
+                           ^^^^^^^^^^^^
+test/gameplay_fairness_test.dart:304:27: Error: Method not found: 'ballAtPlayer'.
+      final fresh = await ballAtPlayer();
+                          ^^^^^^^^^^^^
+test/gameplay_fairness_test.dart:411:28: Error: Method not found: 'ballAtPlayer'.
+        final ball = await ballAtPlayer();
+                           ^^^^^^^^^^^^
+test/gameplay_fairness_test.dart:465:26: Error: Method not found: 'ballAtPlayer'.
+      final ball = await ballAtPlayer();
+                         ^^^^^^^^^^^^
+00:00 +0 -1: loading C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/gameplay_fairness_test.dart [E]
+  Failed to load "C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/gameplay_fairness_test.dart":
+  Compilation failed for testPath=C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/gameplay_fairness_test.dart: test/gameplay_fairness_test.dart:112:24: Error: Method not found: 'ballAtPlayer'.
+      final ball = await ballAtPlayer();
+                         ^^^^^^^^^^^^
+  test/gameplay_fairness_test.dart:120:27: Error: Method not found: 'ballAtPlayer'.
+      final airBall = await ballAtPlayer();
+                            ^^^^^^^^^^^^
+  test/gameplay_fairness_test.dart:112:24: Error: Local variable 'ballAtPlayer' can't be referenced before it is declared.
+      final ball = await ballAtPlayer();
+                         ^^^^^^^^^^^^
+  test/gameplay_fairness_test.dart:136:23: Context: This is the declaration of the variable 'ballAtPlayer'.
+    Future<RollingBall> ballAtPlayer() async {
+                        ^^^^^^^^^^^^
+  test/gameplay_fairness_test.dart:120:27: Error: Local variable 'ballAtPlayer' can't be referenced before it is declared.
+      final airBall = await ballAtPlayer();
+                            ^^^^^^^^^^^^
+  test/gameplay_fairness_test.dart:136:23: Context: This is the declaration of the variable 'ballAtPlayer'.
+    Future<RollingBall> ballAtPlayer() async {
+                        ^^^^^^^^^^^^
+  test/gameplay_fairness_test.dart:178:13: Error: Method not found: 'ballAtPlayer'.
+        await ballAtPlayer();
+              ^^^^^^^^^^^^
+  test/gameplay_fairness_test.dart:181:13: Error: Method not found: 'ballAtPlayer'.
+        await ballAtPlayer();
+              ^^^^^^^^^^^^
+  test/gameplay_fairness_test.dart:187:13: Error: Method not found: 'ballAtPlayer'.
+        await ballAtPlayer();
+              ^^^^^^^^^^^^
+  test/gameplay_fairness_test.dart:195:26: Error: Method not found: 'ballAtPlayer'.
+        final ball = await ballAtPlayer();
+                           ^^^^^^^^^^^^
+  test/gameplay_fairness_test.dart:292:28: Error: Method not found: 'ballAtPlayer'.
+          final ball = await ballAtPlayer();
+                             ^^^^^^^^^^^^
+  test/gameplay_fairness_test.dart:304:27: Error: Method not found: 'ballAtPlayer'.
+        final fresh = await ballAtPlayer();
+                            ^^^^^^^^^^^^
+  test/gameplay_fairness_test.dart:411:28: Error: Method not found: 'ballAtPlayer'.
+          final ball = await ballAtPlayer();
+                             ^^^^^^^^^^^^
+  test/gameplay_fairness_test.dart:465:26: Error: Method not found: 'ballAtPlayer'.
+        final ball = await ballAtPlayer();
+                           ^^^^^^^^^^^^
+  .
+00:00 +0 -1: Some tests failed.
+
+Failing tests:
+  C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/gameplay_fairness_test.dart: loading C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/gameplay_fairness_test.dart

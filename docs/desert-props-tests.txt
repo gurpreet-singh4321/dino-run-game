@@ -1,0 +1,115 @@
+00:00 +0: loading C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/collectibles_glowup_test.dart
+00:00 +0: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/collision_test.dart: Mounted Flame hitboxes collide only when overlapping
+00:00 +1: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/collision_test.dart: Mounted Flame hitboxes collide only when overlapping
+00:00 +2: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/collision_test.dart: Mounted Flame hitboxes collide only when overlapping
+00:00 +3: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/collision_test.dart: Mounted Flame hitboxes collide only when overlapping
+00:00 +4: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/collision_test.dart: Mounted Flame hitboxes collide only when overlapping
+00:00 +5: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/collision_test.dart: Mounted Flame hitboxes collide only when overlapping
+00:00 +6: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/collision_test.dart: Mounted Flame hitboxes collide only when overlapping
+00:00 +7: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/collision_test.dart: Mounted Flame hitboxes collide only when overlapping
+00:00 +8: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/collision_test.dart: Mounted Flame hitboxes collide only when overlapping
+00:00 +9: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/collision_test.dart: Mounted Flame hitboxes collide only when overlapping
+00:00 +10: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/collision_test.dart: Mounted Flame hitboxes collide only when overlapping
+00:00 +11: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/collision_test.dart: Mounted Flame hitboxes collide only when overlapping
+00:00 +12: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/dino_gesture_layer_test.dart: Yawning forearm stays in front of the neck scarf
+00:00 +13: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/dino_joint_test.dart: Painted torso, knees, ankles and feet remain one connected silhouette
+00:01 +14: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/dino_joint_test.dart: Painted torso, knees, ankles and feet remain one connected silhouette
+00:01 +15: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/dino_joint_test.dart: Painted torso, knees, ankles and feet remain one connected silhouette
+00:01 +16: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/dino_joint_test.dart: Painted torso, knees, ankles and feet remain one connected silhouette
+00:01 +17: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/dino_joint_test.dart: Painted torso, knees, ankles and feet remain one connected silhouette
+00:01 +18: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/dino_joint_test.dart: Painted torso, knees, ankles and feet remain one connected silhouette
+00:01 +19: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/dino_joint_test.dart: Painted torso, knees, ankles and feet remain one connected silhouette
+00:01 +20: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/dino_joint_test.dart: Painted torso, knees, ankles and feet remain one connected silhouette
+00:01 +21: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/dino_joint_test.dart: Painted torso, knees, ankles and feet remain one connected silhouette
+00:01 +22: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/dino_joint_test.dart: Painted torso, knees, ankles and feet remain one connected silhouette
+00:01 +23: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/dino_joint_test.dart: Painted torso, knees, ankles and feet remain one connected silhouette
+00:01 +24: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/dino_joint_test.dart: Painted torso, knees, ankles and feet remain one connected silhouette
+00:02 +25: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/dino_preview_test.dart: Previews own advancing clocks and never mutate gameplay motion
+00:03 +26: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/epoch_transition_test.dart: Scenery keeps its opaque base and queues rapid epoch navigation
+00:03 +27: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/epoch_transition_test.dart: Scenery keeps its opaque base and queues rapid epoch navigation
+00:03 +28: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/epoch_transition_test.dart: Scenery keeps its opaque base and queues rapid epoch navigation
+00:03 +29: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/epoch_transition_test.dart: Scenery keeps its opaque base and queues rapid epoch navigation
+00:03 +30: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/epoch_transition_test.dart: Scenery keeps its opaque base and queues rapid epoch navigation
+00:03 +31: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/epoch_transition_test.dart: Scenery keeps its opaque base and queues rapid epoch navigation
+00:03 +32: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/epoch_transition_test.dart: Scenery keeps its opaque base and queues rapid epoch navigation
+00:03 +33: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/epoch_transition_test.dart: Scenery keeps its opaque base and queues rapid epoch navigation
+00:03 +34: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/epoch_transition_test.dart: Scenery keeps its opaque base and queues rapid epoch navigation
+00:03 +35: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/epoch_transition_test.dart: Scenery keeps its opaque base and queues rapid epoch navigation
+00:04 +36: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/epoch_transition_test.dart: Scenery keeps its opaque base and queues rapid epoch navigation
+00:04 +37: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/epoch_transition_test.dart: Scenery keeps its opaque base and queues rapid epoch navigation
+00:04 +38: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/epoch_transition_test.dart: Scenery keeps its opaque base and queues rapid epoch navigation
+00:04 +39: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/epoch_transition_test.dart: Scenery keeps its opaque base and queues rapid epoch navigation
+00:04 +40: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/gameplay_fairness_test.dart: Authored Desert is completable with real taps at 30/60/120 FPS
+00:06 +41: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/gameplay_fairness_test.dart: Authored Desert is completable with real taps at 30/60/120 FPS
+00:06 +42: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/gameplay_fairness_test.dart: Authored Desert is completable with real taps at 30/60/120 FPS
+00:06 +43: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/gameplay_fairness_test.dart: Authored Desert is completable with real taps at 30/60/120 FPS
+00:06 +44: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/gameplay_fairness_test.dart: Authored Desert is completable with real taps at 30/60/120 FPS
+00:06 +45: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/gameplay_fairness_test.dart: Authored Desert is completable with real taps at 30/60/120 FPS
+00:06 +46: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/gameplay_fairness_test.dart: Authored Desert is completable with real taps at 30/60/120 FPS
+00:06 +47: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/gameplay_fairness_test.dart: Authored Desert is completable with real taps at 30/60/120 FPS
+00:06 +48: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/gameplay_fairness_test.dart: Authored Desert is completable with real taps at 30/60/120 FPS
+00:06 +49: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/gameplay_fairness_test.dart: Authored Desert is completable with real taps at 30/60/120 FPS
+00:06 +50: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/gameplay_fairness_test.dart: Authored Desert is completable with real taps at 30/60/120 FPS
+00:07 +51: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/gameplay_fairness_test.dart: Authored Desert is completable with real taps at 30/60/120 FPS
+00:07 +52: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/gameplay_fairness_test.dart: Authored Desert is completable with real taps at 30/60/120 FPS
+00:07 +53: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/gameplay_fairness_test.dart: Authored Desert is completable with real taps at 30/60/120 FPS
+00:07 +54: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/gameplay_fairness_test.dart: Authored Desert is completable with real taps at 30/60/120 FPS
+00:08 +55: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/gameplay_fairness_test.dart: Authored Desert is completable with real taps at 30/60/120 FPS
+00:08 +56: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/gameplay_fairness_test.dart: Authored Desert is completable with real taps at 30/60/120 FPS
+00:08 +57: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/gameplay_fairness_test.dart: Authored Desert is completable with real taps at 30/60/120 FPS
+00:08 +58: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/gameplay_fairness_test.dart: Authored Desert is completable with real taps at 30/60/120 FPS
+00:08 +59: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/menu_transactions_test.dart: Try-on never edits saved outfit and cart unlock requires Equip
+00:09 +60: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/menu_transactions_test.dart: Try-on never edits saved outfit and cart unlock requires Equip
+00:09 +61: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/menu_transactions_test.dart: Try-on never edits saved outfit and cart unlock requires Equip
+00:09 +62: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/menu_transactions_test.dart: Try-on never edits saved outfit and cart unlock requires Equip
+00:09 +63: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/menu_transactions_test.dart: Try-on never edits saved outfit and cart unlock requires Equip
+00:09 +64: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/menu_transactions_test.dart: Try-on never edits saved outfit and cart unlock requires Equip
+00:09 +65: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/menu_transactions_test.dart: Try-on never edits saved outfit and cart unlock requires Equip
+00:09 +66: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/menu_transactions_test.dart: Try-on never edits saved outfit and cart unlock requires Equip
+00:09 +67: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/menu_transactions_test.dart: Try-on never edits saved outfit and cart unlock requires Equip
+00:09 +68: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/menu_transactions_test.dart: Try-on never edits saved outfit and cart unlock requires Equip
+00:09 +69: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/menu_transactions_test.dart: Try-on never edits saved outfit and cart unlock requires Equip
+00:09 +70: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/menu_transactions_test.dart: Try-on never edits saved outfit and cart unlock requires Equip
+00:09 +71: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/menu_transactions_test.dart: Try-on never edits saved outfit and cart unlock requires Equip
+00:09 +72: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/menu_transactions_test.dart: Try-on never edits saved outfit and cart unlock requires Equip
+00:09 +73: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/menu_transactions_test.dart: Try-on never edits saved outfit and cart unlock requires Equip
+00:09 +74: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/menu_transactions_test.dart: Try-on never edits saved outfit and cart unlock requires Equip
+00:09 +75: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/menu_transactions_test.dart: Try-on never edits saved outfit and cart unlock requires Equip
+00:09 +76: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/menu_transactions_test.dart: Try-on never edits saved outfit and cart unlock requires Equip
+00:09 +77: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/menu_transactions_test.dart: Try-on never edits saved outfit and cart unlock requires Equip
+00:09 +78: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/menu_transactions_test.dart: Try-on never edits saved outfit and cart unlock requires Equip
+00:09 +79: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/menu_transactions_test.dart: Try-on never edits saved outfit and cart unlock requires Equip
+00:09 +80: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/menu_transactions_test.dart: Try-on never edits saved outfit and cart unlock requires Equip
+00:09 +81: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/menu_transactions_test.dart: Try-on never edits saved outfit and cart unlock requires Equip
+00:10 +82: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/menu_transactions_test.dart: Try-on never edits saved outfit and cart unlock requires Equip
+00:10 +83: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/menu_transactions_test.dart: Try-on never edits saved outfit and cart unlock requires Equip
+00:10 +84: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/menu_transactions_test.dart: Try-on never edits saved outfit and cart unlock requires Equip
+00:10 +85: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/menu_transactions_test.dart: Try-on never edits saved outfit and cart unlock requires Equip
+00:10 +86: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/menu_transactions_test.dart: Try-on never edits saved outfit and cart unlock requires Equip
+00:10 +87: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/menu_transactions_test.dart: Try-on never edits saved outfit and cart unlock requires Equip
+00:10 +88: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/menu_transactions_test.dart: Try-on never edits saved outfit and cart unlock requires Equip
+00:10 +89: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/menu_transactions_test.dart: Try-on never edits saved outfit and cart unlock requires Equip
+00:10 +90: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/menu_transactions_test.dart: Try-on never edits saved outfit and cart unlock requires Equip
+00:10 +91: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/menu_transactions_test.dart: Try-on never edits saved outfit and cart unlock requires Equip
+00:10 +92: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/menu_transactions_test.dart: Try-on never edits saved outfit and cart unlock requires Equip
+00:10 +93: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/menu_transactions_test.dart: Try-on never edits saved outfit and cart unlock requires Equip
+00:10 +94: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/menu_transactions_test.dart: Try-on never edits saved outfit and cart unlock requires Equip
+00:10 +95: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/menu_transactions_test.dart: Try-on never edits saved outfit and cart unlock requires Equip
+00:10 +96: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/mobile_menu_test.dart: Scenic menus and last journal/wardrobe items fit Size(568.0, 320.0)
+00:10 +97: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/mobile_menu_test.dart: Scenic menus and last journal/wardrobe items fit Size(568.0, 320.0)
+00:10 +98: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/mobile_menu_test.dart: Scenic menus and last journal/wardrobe items fit Size(568.0, 320.0)
+00:10 +99: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/mobile_menu_test.dart: Scenic menus and last journal/wardrobe items fit Size(568.0, 320.0)
+00:10 +100: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/mobile_menu_test.dart: Scenic menus and last journal/wardrobe items fit Size(568.0, 320.0)
+00:10 +101: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/mobile_menu_test.dart: Scenic menus and last journal/wardrobe items fit Size(568.0, 320.0)
+00:10 +102: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/mobile_menu_test.dart: Scenic menus and last journal/wardrobe items fit Size(568.0, 320.0)
+00:11 +103: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/mobile_menu_test.dart: Scenic menus and last journal/wardrobe items fit Size(568.0, 320.0)
+00:11 +104: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/mobile_menu_test.dart: Scenic menus and last journal/wardrobe items fit Size(568.0, 320.0)
+00:12 +105: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/mobile_menu_test.dart: Scenic menus and last journal/wardrobe items fit Size(568.0, 320.0)
+00:12 +106: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/mobile_menu_test.dart: Scenic menus and last journal/wardrobe items fit Size(568.0, 320.0)
+00:12 +107: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/mobile_menu_test.dart: Scenic menus and last journal/wardrobe items fit Size(568.0, 320.0)
+00:12 +108: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/mobile_menu_test.dart: Scenic menus and last journal/wardrobe items fit Size(568.0, 320.0)
+00:13 +109: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/mobile_menu_test.dart: Scenic menus and last journal/wardrobe items fit Size(568.0, 320.0)
+00:13 +110: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/mobile_menu_test.dart: Scenic menus and last journal/wardrobe items fit Size(640.0, 360.0)
+00:14 +111: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/mobile_menu_test.dart: Scenic menus and last journal/wardrobe items fit Size(844.0, 390.0)
+00:16 +112: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/mobile_menu_test.dart: Scenic menus and last journal/wardrobe items fit Size(1024.0, 600.0)
+00:17 +113: All tests passed!

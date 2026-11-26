@@ -7,13 +7,57 @@ import 'package:dino_run_epochs/skins/skin_registry.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  setUp(() => SharedPreferences.setMockInitialValues({}));
+  setUp(() => SharedPreferences.setMockInitialValues({'dino_coins': 2350}));
+
+  test(
+    'Cart finishes migrate additively, charge once and equip explicitly',
+    () async {
+      SharedPreferences.setMockInitialValues({
+        'dino_coins': 700,
+        'dino_high_score': 1234,
+        'dino_owned_cosmetics': ['explorer_hat'],
+        'dino_equipped_cosmetics': ['explorer_hat'],
+        'dino_upgrade_cosmic': 2,
+        'dino_claimed_missions': ['1'],
+      });
+      final wallet = CoinManager();
+      await wallet.load();
+      expect(wallet.equippedCartSkin, 'fossil_rover');
+      expect(await wallet.equipCartSkin('lagoon_rover'), isFalse);
+      expect(await wallet.purchaseCartSkin('missing'), isFalse);
+      final results = await Future.wait([
+        wallet.purchaseCartSkin('lagoon_rover'),
+        wallet.purchaseCartSkin('lagoon_rover'),
+      ]);
+      expect(results, [true, true]);
+      expect(wallet.coins, 350);
+      expect(wallet.equippedCartSkin, 'fossil_rover');
+      expect(await wallet.equipCartSkin('lagoon_rover'), isTrue);
+      final restored = CoinManager();
+      await restored.load();
+      expect(restored.equippedCartSkin, 'lagoon_rover');
+      expect(restored.coins, 350);
+      expect(restored.highScore, 1234);
+      expect(restored.equippedCosmetics[CosmeticSlot.head], 'explorer_hat');
+      expect(restored.cosmicLevel, 2);
+      expect(restored.isMissionClaimed(1), isTrue);
+      expect(await restored.purchaseCartSkin('sunset_rover'), isTrue);
+      expect(restored.coins, 0);
+      final poor = CoinManager();
+      await poor.load();
+      expect(await poor.purchaseCosmetic('winter_hat'), isFalse);
+      await restored.forceSave();
+      await poor.forceSave();
+    },
+  );
 
   test('Unreleased characters cannot be purchased or selected', () async {
     final manager = CoinManager();
     await manager.load();
     manager.addCoins(10000);
-    for (final skin in SkinRegistry.all.where((s) => !SkinRegistry.isAvailable(s.id))) {
+    for (final skin in SkinRegistry.all.where(
+      (s) => !SkinRegistry.isAvailable(s.id),
+    )) {
       final balance = manager.coins;
       expect(manager.tryPurchaseSkin(skin.id, 0), isFalse);
       manager.setActiveSkin(skin.id);
@@ -23,18 +67,22 @@ void main() {
     expect(SkinRegistry.playable.map((s) => s.id), ['new_dino']);
   });
 
-  test('Existing save migrates to the only Dino without losing coins', () async {
-    SharedPreferences.setMockInitialValues({
-      'dino_active_skin': 'rive_dino', 'dino_unlocked_skins': ['rive_dino'],
-      'dino_coins': 420,
-    });
-    final manager = CoinManager();
-    await manager.load();
-    expect(manager.activeSkinId, 'new_dino');
-    expect(manager.coins, 420);
-    expect(manager.isSkinUnlocked('new_dino'), isTrue);
-    expect(SkinRegistry.getById('new_dino').displayName, 'Dino');
-  });
+  test(
+    'Existing save migrates to the only Dino without losing coins',
+    () async {
+      SharedPreferences.setMockInitialValues({
+        'dino_active_skin': 'rive_dino',
+        'dino_unlocked_skins': ['rive_dino'],
+        'dino_coins': 420,
+      });
+      final manager = CoinManager();
+      await manager.load();
+      expect(manager.activeSkinId, 'new_dino');
+      expect(manager.coins, 420);
+      expect(manager.isSkinUnlocked('new_dino'), isTrue);
+      expect(SkinRegistry.getById('new_dino').displayName, 'Dino');
+    },
+  );
 
   test('One purchase serves both characters and survives reload', () async {
     final manager = CoinManager();
@@ -57,21 +105,24 @@ void main() {
     expect(restored.coins, balance - 250);
   });
 
-  test('Slots replace independently and invalid or unowned items cannot equip', () async {
-    final manager = CoinManager();
-    await manager.load();
-    expect(await manager.equipCosmetic('explorer_pack'), isFalse);
-    expect(await manager.purchaseCosmetic('invalid'), isFalse);
-    await manager.equipCosmetic('red_scarf');
-    await manager.purchaseCosmetic('explorer_hat');
-    await manager.equipCosmetic('explorer_hat');
-    await manager.purchaseCosmetic('winter_hat');
-    await manager.equipCosmetic('winter_hat');
-    expect(manager.equippedCosmetics.length, 2);
-    expect(manager.equippedCosmetics[CosmeticSlot.head], 'winter_hat');
-    await manager.removeCosmetic(CosmeticSlot.head);
-    expect(manager.equippedCosmetics.values, ['red_scarf']);
-  });
+  test(
+    'Slots replace independently and invalid or unowned items cannot equip',
+    () async {
+      final manager = CoinManager();
+      await manager.load();
+      expect(await manager.equipCosmetic('explorer_pack'), isFalse);
+      expect(await manager.purchaseCosmetic('invalid'), isFalse);
+      await manager.equipCosmetic('red_scarf');
+      await manager.purchaseCosmetic('explorer_hat');
+      await manager.equipCosmetic('explorer_hat');
+      await manager.purchaseCosmetic('winter_hat');
+      await manager.equipCosmetic('winter_hat');
+      expect(manager.equippedCosmetics.length, 2);
+      expect(manager.equippedCosmetics[CosmeticSlot.head], 'winter_hat');
+      await manager.removeCosmetic(CosmeticSlot.head);
+      expect(manager.equippedCosmetics.values, ['red_scarf']);
+    },
+  );
 
   test('Insufficient balance never buys an item', () async {
     SharedPreferences.setMockInitialValues({'dino_coins': 10});
@@ -81,4 +132,40 @@ void main() {
     expect(manager.coins, 10);
     expect(manager.ownsCosmetic('explorer_hat'), isFalse);
   });
+  test(
+    'New accessories persist independently in existing save slots',
+    () async {
+      final manager = CoinManager();
+      await manager.load();
+      manager.addCoins(5000);
+      final before = manager.coins;
+      const ids = [
+        'leaf_crown',
+        'aviator_hat',
+        'space_helmet',
+        'mint_scarf',
+        'leaf_cape',
+        'star_pack',
+      ];
+      var spent = 0;
+      for (final id in ids) {
+        final item = CosmeticCatalog.find(id)!;
+        expect(await manager.purchaseCosmetic(id), isTrue);
+        spent += item.price;
+        expect(await manager.equipCosmetic(id), isTrue);
+      }
+      await manager.forceSave();
+      final restored = CoinManager();
+      await restored.load();
+      expect(restored.coins, before - spent);
+      for (final id in ids) {
+        expect(restored.ownsCosmetic(id), isTrue);
+      }
+      expect(restored.equippedCosmetics, {
+        CosmeticSlot.head: 'space_helmet',
+        CosmeticSlot.neck: 'mint_scarf',
+        CosmeticSlot.back: 'star_pack',
+      });
+    },
+  );
 }

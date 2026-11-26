@@ -1,0 +1,3 @@
+00:00 +0: loading C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/tool/export_mobile_menu_test.dart
+00:00 +0: Menus fit Size(844.0, 390.0)
+00:02 +1: All tests passed!

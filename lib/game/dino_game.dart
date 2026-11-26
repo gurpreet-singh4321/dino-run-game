@@ -1,4 +1,9 @@
+import 'desert_journey.dart';
+import '../utils/cart_review.dart';
 import 'dart:math' as math;
+import 'dart:async';
+import 'package:flame/components.dart';
+import 'package:flame/camera.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
@@ -22,13 +27,22 @@ import '../managers/coin_manager.dart';
 import '../managers/audio_manager.dart';
 import 'biome_manager.dart';
 import 'game_state.dart';
+import 'run_simulation.dart';
+import '../utils/vibration_util.dart';
 import '../skins/new_dino_skin.dart';
 import '../skins/skin_registry.dart';
 
 enum SpacePhase { none, launch, coinRain, returning }
+
 enum ShakePreset { sideHit, topHit, shieldBreak, rumble, heavyImpact, landing }
 
-class DinoGame extends FlameGame with HasCollisionDetection, TapCallbacks, PanDetector, KeyboardEvents, WidgetsBindingObserver {
+class DinoGame extends FlameGame
+    with
+        HasCollisionDetection,
+        TapCallbacks,
+        PanDetector,
+        KeyboardEvents,
+        WidgetsBindingObserver {
   late final Player player;
   late final Ground ground;
   late final SpawnManager spawnManager;
@@ -42,7 +56,17 @@ class DinoGame extends FlameGame with HasCollisionDetection, TapCallbacks, PanDe
   late final MilestoneOverlay milestoneOverlay;
 
   GameState state = GameState.menu;
+  /// Flutter dialogs own navigation and input while the world stays in menu.
+  bool menuPanelOpen = false;
+  /// Production uses accessible Flutter results; canvas stays for headless tools.
+  bool useFlutterResults = false;
   double score = 0;
+  double runDistance = 0;
+  final DesertJourney desertJourney = DesertJourney();
+  bool _desertRun = false;
+  int smashedObjects = 0;
+  double get difficultyProgress => runDistance * .05;
+  final simulation = RunSimulation();
   int combo = 0;
   double comboTimer = 0;
   int frameCount = 0;
@@ -58,7 +82,11 @@ class DinoGame extends FlameGame with HasCollisionDetection, TapCallbacks, PanDe
   double _shakeDuration = 1.0;
   ShakePreset? currentShakePreset;
 
-  void triggerShake({double duration = 1.0, double intensity = 5.0, ShakePreset preset = ShakePreset.landing}) {
+  void triggerShake({
+    double duration = 1.0,
+    double intensity = 5.0,
+    ShakePreset preset = ShakePreset.landing,
+  }) {
     shakeTimer = duration;
     _shakeDuration = duration;
     shakeIntensity = intensity;
@@ -70,7 +98,7 @@ class DinoGame extends FlameGame with HasCollisionDetection, TapCallbacks, PanDe
   double slowMoTimer = 0.0;
 
   double get globalTimeScale {
-    if (hitStopTimer > 0) return 0.05; // 90ms hit stop
+    if (hitStopTimer > 0) return 0;
     if (slowMoTimer > 0) {
       // Lerp from 0.85 back to 1.0
       return 1.0 - (0.15 * (slowMoTimer / 0.20)).clamp(0.0, 0.15);
@@ -93,10 +121,33 @@ class DinoGame extends FlameGame with HasCollisionDetection, TapCallbacks, PanDe
   static const double spaceReturnDuration = 2.8;
   SpacePhase spacePhase = SpacePhase.none;
   double spacePhaseTimer = 0;
+
   /// 0→1 for darkening sky during launch, 1→0 for lightening during return
   double spaceTransitionProgress = 0;
 
-  DinoGame({required this.coinManager});
+  DinoGame({required this.coinManager})
+    : super(
+        camera: CameraComponent(
+          viewport: FixedResolutionViewport(resolution: Vector2(640, 360)),
+        ),
+      ) {
+    camera.viewfinder.anchor = Anchor.topLeft;
+  }
+
+  Vector2 canvasToPlayfield(Vector2 point) =>
+      camera.viewport.globalToLocal(point);
+
+  bool tryPauseAt(Vector2 point) {
+    if ((state == GameState.playing || state == GameState.spaceMode) &&
+        point.x >= size.x / 2 - 30 &&
+        point.x <= size.x / 2 + 30 &&
+        point.y >= 14 &&
+        point.y <= 74) {
+      pauseGame();
+      return true;
+    }
+    return false;
+  }
 
   @override
   Future<void> onLoad() async {
@@ -110,7 +161,7 @@ class DinoGame extends FlameGame with HasCollisionDetection, TapCallbacks, PanDe
     AudioManager.playTitleBgm();
 
     // Background sky
-    add(SkyBackground());
+    world.add(SkyBackground());
 
     // Core components
     ground = Ground();
@@ -122,28 +173,29 @@ class DinoGame extends FlameGame with HasCollisionDetection, TapCallbacks, PanDe
     particlePool = ParticlePool();
     comboDisplay = ComboDisplay();
 
-    add(ground);
-    add(player);
-    add(spawnManager);
-    add(biomeManager);
-    add(speedManager);
-    add(inputManager);
-    add(particlePool);
-    add(HighSpeedStreaks());
+    world.add(ground);
+    world.add(player);
+    world.add(spawnManager);
+    world.add(biomeManager);
+    world.add(speedManager);
+    world.add(inputManager);
+    world.add(particlePool);
+    world.add(HighSpeedStreaks());
 
     // UI
     hud = Hud();
     milestoneOverlay = MilestoneOverlay();
-    add(hud);
-    add(comboDisplay);
-    add(SpaceTimerBar());
-    add(milestoneOverlay);
-    add(StartScreen());
-    add(GameOverScreen());
+    camera.viewport.add(hud);
+    camera.viewport.add(comboDisplay);
+    camera.viewport.add(SpaceTimerBar());
+    camera.viewport.add(milestoneOverlay);
+    camera.viewport.add(StartScreen());
+    camera.viewport.add(GameOverScreen());
   }
 
   @override
   void onRemove() {
+    unawaited(coinManager.forceSave());
     WidgetsBinding.instance.removeObserver(this);
     super.onRemove();
   }
@@ -156,10 +208,12 @@ class DinoGame extends FlameGame with HasCollisionDetection, TapCallbacks, PanDe
         state == AppLifecycleState.hidden ||
         state == AppLifecycleState.detached) {
       // App moved to background — pause gameplay & completely silence music audio!
-      if (this.state == GameState.playing || this.state == GameState.spaceMode) {
+      if (this.state == GameState.playing ||
+          this.state == GameState.spaceMode) {
         pauseGame();
       }
       AudioManager.pauseBgm();
+      unawaited(coinManager.forceSave());
     } else if (state == AppLifecycleState.resumed) {
       // App returned to foreground
       if (this.state == GameState.paused) {
@@ -167,7 +221,8 @@ class DinoGame extends FlameGame with HasCollisionDetection, TapCallbacks, PanDe
         AudioManager.pauseBgm();
       } else if (this.state == GameState.menu) {
         AudioManager.playTitleBgm();
-      } else if (this.state == GameState.playing || this.state == GameState.spaceMode) {
+      } else if (this.state == GameState.playing ||
+          this.state == GameState.spaceMode) {
         AudioManager.resumeBgm();
       }
     }
@@ -180,7 +235,8 @@ class DinoGame extends FlameGame with HasCollisionDetection, TapCallbacks, PanDe
         state == AppLifecycleState.inactive ||
         state == AppLifecycleState.hidden ||
         state == AppLifecycleState.detached) {
-      if (this.state == GameState.playing || this.state == GameState.spaceMode) {
+      if (this.state == GameState.playing ||
+          this.state == GameState.spaceMode) {
         pauseGame();
       }
       AudioManager.pauseBgm();
@@ -191,12 +247,19 @@ class DinoGame extends FlameGame with HasCollisionDetection, TapCallbacks, PanDe
 
   @override
   void update(double dt) {
-    final clampedDt = math.min(dt, 0.0333);
-    super.update(clampedDt);
+    if (state == GameState.paused) return;
+    simulation.advance(dt, (realDt) {
+      final simulationDt = realDt * globalTimeScale;
+      super.update(simulationDt);
+      _simulateStep(realDt, simulationDt);
+    });
+  }
+
+  void _simulateStep(double realDt, double clampedDt) {
     frameCount++;
 
-    if (hitStopTimer > 0) hitStopTimer -= clampedDt;
-    if (slowMoTimer > 0) slowMoTimer -= clampedDt;
+    if (hitStopTimer > 0) hitStopTimer -= realDt;
+    if (slowMoTimer > 0) slowMoTimer -= realDt;
 
     // Safety against stuck time-scale in non-playing states
     if (state != GameState.playing && state != GameState.spaceMode) {
@@ -205,7 +268,7 @@ class DinoGame extends FlameGame with HasCollisionDetection, TapCallbacks, PanDe
     }
 
     if (shakeTimer > 0) {
-      shakeTimer -= clampedDt;
+      shakeTimer -= realDt;
       if (shakeTimer <= 0) {
         shakeTimer = 0;
         camera.viewfinder.position = Vector2.zero();
@@ -279,7 +342,9 @@ class DinoGame extends FlameGame with HasCollisionDetection, TapCallbacks, PanDe
   void _checkHighScoreBanner() {
     // Correction 2: Only check and trigger while in playing state (never during spaceMode)
     if (state == GameState.playing) {
-      if (!_hasShownHighScoreBannerThisRun && _initialHighScore > 0 && score > _initialHighScore) {
+      if (!_hasShownHighScoreBannerThisRun &&
+          _initialHighScore > 0 &&
+          score > _initialHighScore) {
         _hasShownHighScoreBannerThisRun = true;
         milestoneOverlay.showHighScoreBanner();
       }
@@ -287,9 +352,21 @@ class DinoGame extends FlameGame with HasCollisionDetection, TapCallbacks, PanDe
   }
 
   void _updatePlaying(double dt) {
+    runDistance += speedManager.currentSpeed * dt;
     score += speedManager.currentSpeed * dt * 0.05;
-    speedManager.updateSpeed(score);
-    biomeManager.updateBiome(score, speedManager.currentSpeed);
+    if (desertJourney.active) {
+      speedManager.currentSpeed = DesertJourney.speed;
+      if (runDistance >= DesertJourney.length) {
+        desertJourney.completed = true;
+        desertJourney.active = false;
+        spawnManager.resumeGroundSpawning();
+        AudioManager.playMilestoneChime();
+        return;
+      }
+    } else {
+      speedManager.updateSpeed(difficultyProgress);
+      biomeManager.updateBiome(difficultyProgress, speedManager.currentSpeed);
+    }
     _checkMilestones();
     _checkHighScoreBanner();
 
@@ -314,7 +391,8 @@ class DinoGame extends FlameGame with HasCollisionDetection, TapCallbacks, PanDe
     switch (spacePhase) {
       case SpacePhase.launch:
         // Darken sky 0→1 over launch duration
-        spaceTransitionProgress = (1.0 - spacePhaseTimer / spaceLaunchDuration).clamp(0.0, 1.0);
+        spaceTransitionProgress = (1.0 - spacePhaseTimer / spaceLaunchDuration)
+            .clamp(0.0, 1.0);
         if (spacePhaseTimer <= 0) {
           spacePhase = SpacePhase.coinRain;
           spacePhaseTimer = spaceCoinDuration;
@@ -333,7 +411,10 @@ class DinoGame extends FlameGame with HasCollisionDetection, TapCallbacks, PanDe
         break;
       case SpacePhase.returning:
         // Lighten sky 1→0 over return duration
-        spaceTransitionProgress = (spacePhaseTimer / spaceReturnDuration).clamp(0.0, 1.0);
+        spaceTransitionProgress = (spacePhaseTimer / spaceReturnDuration).clamp(
+          0.0,
+          1.0,
+        );
         if (spacePhaseTimer <= 0) {
           _finishExitSpaceMode();
         }
@@ -357,6 +438,7 @@ class DinoGame extends FlameGame with HasCollisionDetection, TapCallbacks, PanDe
   /// Called when returning phase ends — snap back to playing with heroic landing impact!
   void _finishExitSpaceMode() {
     state = GameState.playing;
+    overlays.remove('RunResults');
     spacePhase = SpacePhase.none;
     spaceTransitionProgress = 0;
     spaceTimer = 0;
@@ -368,7 +450,10 @@ class DinoGame extends FlameGame with HasCollisionDetection, TapCallbacks, PanDe
     player.invincibleTimer = 3.0 + (shieldLvl * 0.5);
 
     // Hero touchdown effects on path
-    final footPos = Vector2(player.position.x + (player.size.x * player.scale.x) * 0.45, player.position.y + player.size.y * player.scale.y);
+    final footPos = Vector2(
+      player.position.x + (player.size.x * player.scale.x) * 0.45,
+      player.position.y + player.size.y * player.scale.y,
+    );
     final currentBiome = biomeManager.effectiveBiome.name;
     if (currentBiome == 'DESERT') {
       particlePool.emitDesertLandingImpact(footPos);
@@ -376,15 +461,32 @@ class DinoGame extends FlameGame with HasCollisionDetection, TapCallbacks, PanDe
       particlePool.emitJumpDust(footPos);
     }
     triggerShake(duration: 0.25, intensity: 5.0);
-    HapticFeedback.heavyImpact();
+    GameVibration.heavyImpact();
   }
 
-  void startGame({int? startingStage}) {
+  void startGame({
+    int? startingStage,
+    bool keepMenuOverlay = false,
+    bool? authoredDesert,
+  }) {
     state = GameState.playing;
-    overlays.remove('MainMenuOverlay');
+    if (!keepMenuOverlay) overlays.remove('MainMenuOverlay');
     overlays.remove('PauseMenu');
     overlays.remove('SettingsDialog');
     score = 0;
+    runDistance = 0;
+    smashedObjects = 0;
+    // An explicit request can replay the authored route for review tooling.
+    // Ordinary Retry never repeats onboarding once it has been introduced.
+    _desertRun = authoredDesert ?? (_desertRun && !coinManager.hasSeenTutorial);
+    desertJourney.reset();
+    simulation.reset();
+    hitStopTimer = 0;
+    slowMoTimer = 0;
+    shakeTimer = 0;
+    camera.viewfinder.position = Vector2.zero();
+    _stateBeforePause = null;
+    resumeEngine();
     combo = 0;
     comboTimer = 0;
     spaceTimer = 0;
@@ -397,16 +499,29 @@ class DinoGame extends FlameGame with HasCollisionDetection, TapCallbacks, PanDe
     milestoneOverlay.reset();
     coinManager.resetRunCoins();
     speedManager.reset();
-    biomeManager.reset(startingStage: startingStage ?? biomeManager.currentStage);
+    biomeManager.reset(
+      startingStage: startingStage ?? biomeManager.currentStage,
+    );
+    ground.resetSurface();
     player.reset();
     spawnManager.reset();
+    particlePool.clear();
+    if (state == GameState.playing && cartReviewRequested) {
+      biomeManager.currentStage = 0;
+      spawnManager.startCartLane();
+    } else if (_desertRun && biomeManager.currentStage == 0) {
+      desertJourney.start();
+      unawaited(coinManager.markTutorialSeen());
+    }
     AudioManager.playGameplayBgm();
   }
 
   void reviveGame() {
+    overlays.remove('RunResults');
     overlays.remove('MainMenuOverlay');
     overlays.remove('PauseMenu');
     overlays.remove('SettingsDialog');
+    ground.resetSurface();
     player.revive();
     spawnManager.clearGroundEntities();
     spawnManager.clearMeteors();
@@ -428,7 +543,9 @@ class DinoGame extends FlameGame with HasCollisionDetection, TapCallbacks, PanDe
     if (state == GameState.gameOver) return;
     state = GameState.gameOver;
     coinManager.updateHighScore(score.toInt());
+    unawaited(coinManager.forceSave());
     AudioManager.playGameOverBgm();
+    if (useFlutterResults) overlays.add('RunResults');
   }
 
   GameState? _stateBeforePause;
@@ -439,6 +556,7 @@ class DinoGame extends FlameGame with HasCollisionDetection, TapCallbacks, PanDe
       state = GameState.paused;
       overlays.add('PauseMenu');
       AudioManager.pauseBgm();
+      unawaited(coinManager.forceSave());
       pauseEngine();
     }
   }
@@ -462,6 +580,16 @@ class DinoGame extends FlameGame with HasCollisionDetection, TapCallbacks, PanDe
   }
 
   void exitToMenu() {
+    overlays.remove('RunResults');
+    final selectedStage = biomeManager.currentStage;
+    _desertRun = false;
+    desertJourney.reset();
+    unawaited(coinManager.forceSave());
+    spacePhase = SpacePhase.none;
+    spaceTimer = 0;
+    spacePhaseTimer = 0;
+    spaceTransitionProgress = 0;
+    _stateBeforePause = null;
     state = GameState.menu;
     overlays.remove('PauseMenu');
     overlays.remove('SettingsDialog');
@@ -469,10 +597,31 @@ class DinoGame extends FlameGame with HasCollisionDetection, TapCallbacks, PanDe
     resumeEngine();
     milestoneOverlay.reset();
     speedManager.reset();
-    biomeManager.reset();
+    biomeManager.reset(startingStage: selectedStage);
+    ground.resetSurface();
     player.reset();
     spawnManager.reset();
+    particlePool.clear();
     AudioManager.playTitleBgm();
+  }
+
+  bool handleResultsTap(Vector2 point) {
+    if (state != GameState.gameOver) return false;
+    final cx = size.x / 2, cy = size.y / 2;
+    if ((point.y - (cy + 70)).abs() > 27) return false;
+    if ((point.x - (cx - 116)).abs() <= 54) {
+      startGame();
+      return true;
+    }
+    if ((point.x - cx).abs() <= 54) {
+      exitToMenu();
+      return true;
+    }
+    if ((point.x - (cx + 116)).abs() <= 54) {
+      reviveGame();
+      return true;
+    }
+    return false;
   }
 
   // --- Input handling ---
@@ -480,60 +629,29 @@ class DinoGame extends FlameGame with HasCollisionDetection, TapCallbacks, PanDe
   @override
   void onTapDown(TapDownEvent event) {
     super.onTapDown(event);
-    
-    // Check for pause button tap (bulletproof canvasPosition + localPosition check centered around cy = 44)
-    if (state == GameState.playing) {
-      final cx = size.x / 2;
-      final canvasX = event.canvasPosition.x;
-      final canvasY = event.canvasPosition.y;
-      final localX = event.localPosition.x;
-      final localY = event.localPosition.y;
-
-      final isCanvasHit = (canvasX > cx - 60 && canvasX < cx + 60 && canvasY >= 0 && canvasY <= 100);
-      final isLocalHit = (localX > cx - 60 && localX < cx + 60 && localY >= 0 && localY <= 100);
-
-      if (isCanvasHit || isLocalHit) {
-        pauseGame();
-        return;
-      }
+    if (menuPanelOpen || overlays.isActive('MainMenuOverlay') ||
+        overlays.isActive('SettingsDialog') || overlays.isActive('RunResults')) {
+      return;
     }
+
+    // Check for pause button tap (bulletproof canvasPosition + localPosition check centered around cy = 44)
+    final point = canvasToPlayfield(event.canvasPosition);
+    if (tryPauseAt(point)) return;
 
     // Ensure web browser audio context is active on gesture
     AudioManager.ensureAudioPlaying();
 
     if (state == GameState.menu) {
       AudioManager.playTitleBgm();
-      // Check if tap hit top-right Settings button on menu
-      if (event.canvasPosition.x > size.x - 140 && event.canvasPosition.y < 60) {
-        overlays.add('SettingsDialog');
-        return;
-      }
       // Menu overlay handles its own taps; do not fall through to _handleInputStart() / startGame()
       return;
     }
 
     if (state == GameState.gameOver) {
-      final cx = size.x / 2;
-      final cy = size.y / 2;
-      final tx = event.canvasPosition.x;
-      final ty = event.canvasPosition.y;
-
-      // 1. REVIVE BUTTON HIT-TEST (centered at cy + 20, height 44, width 230)
-      if (tx >= cx - 120 && tx <= cx + 120 && ty >= cy - 5 && ty <= cy + 45) {
-        reviveGame();
-        return;
-      }
-
-      // 2. CONTINUE TEXT HIT-TEST (centered at cy + 94, height 32, width 160)
-      if (tx >= cx - 100 && tx <= cx + 100 && ty >= cy + 75 && ty <= cy + 115) {
-        startGame();
-        return;
-      }
-
-      // Block taps anywhere else on Game Over screen so it doesn't trigger unwanted jumps or restarts!
+      handleResultsTap(point);
       return;
     }
-    
+
     _handleInputStart();
   }
 
@@ -553,15 +671,26 @@ class DinoGame extends FlameGame with HasCollisionDetection, TapCallbacks, PanDe
   void onPanUpdate(DragUpdateInfo info) {
     if (state == GameState.spaceMode) {
       // Horizontal + vertical drag for mobile coin collection
-      player.targetX += info.delta.global.x;
-      player.position.y += info.delta.global.y;
+      final scale = (camera.viewport as FixedResolutionViewport).scale;
+      player.targetX += info.delta.global.x / scale.x;
+      player.position.y += info.delta.global.y / scale.y;
       // Clamp to screen
-      player.position.y = player.position.y.clamp(0, size.y - player.size.y * player.scale.y - 20);
+      player.position.y = player.position.y.clamp(
+        0,
+        size.y - player.size.y * player.scale.y - 20,
+      );
     }
   }
 
   @override
-  KeyEventResult onKeyEvent(KeyEvent event, Set<LogicalKeyboardKey> keysPressed) {
+  KeyEventResult onKeyEvent(
+    KeyEvent event,
+    Set<LogicalKeyboardKey> keysPressed,
+  ) {
+    if (menuPanelOpen || overlays.isActive('MainMenuOverlay') ||
+        overlays.isActive('SettingsDialog') || overlays.isActive('RunResults')) {
+      return KeyEventResult.ignored;
+    }
     if (event is KeyDownEvent) {
       if (event.logicalKey == LogicalKeyboardKey.escape ||
           event.logicalKey == LogicalKeyboardKey.keyP) {

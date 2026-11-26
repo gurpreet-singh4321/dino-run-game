@@ -9,6 +9,7 @@ import 'package:dino_run_epochs/components/ui/main_menu_overlay.dart';
 import 'package:dino_run_epochs/components/ui/settings_dialog.dart';
 import 'package:dino_run_epochs/components/ui/adventure_theme.dart';
 import 'package:dino_run_epochs/game/dino_game.dart';
+import 'package:dino_run_epochs/game/biome_manager.dart';
 import 'package:dino_run_epochs/components/player.dart';
 import 'package:dino_run_epochs/managers/coin_manager.dart';
 import 'package:dino_run_epochs/skins/new_dino_skin.dart';
@@ -35,6 +36,7 @@ void main() {
       await coins.forceSave();
       await tester.runAsync(NewDinoSkin.preload);
       final game = DinoGame(coinManager: coins);
+      game.biomeManager = BiomeManager();
       game.player = Player()..skin = NewDinoSkin();
       await tester.pumpWidget(RepaintBoundary(key: const ValueKey('capture'), child: MaterialApp(debugShowCheckedModeBanner: false, theme: AdventureTheme.data,
         home: Scaffold(body: Stack(children: [Positioned.fill(child: Image.asset('assets/images/biomes/desert_fossil_canyon.png', fit: BoxFit.cover)), MainMenuOverlay(game: game)])))));

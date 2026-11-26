@@ -1,16 +1,9 @@
-import 'package:flutter/services.dart';
-import 'package:vibration/vibration.dart';
+import '../managers/settings_manager.dart';
 
-/// Helper to trigger direct hardware vibration on native devices with fallback to HapticFeedback.
+/// Shared gameplay feedback respects the persistent vibration preference.
 class GameVibration {
   static void vibrate({int duration = 150, int amplitude = -1}) {
-    try {
-      Vibration.vibrate(duration: duration, amplitude: amplitude);
-    } catch (_) {}
-    try {
-      HapticFeedback.vibrate();
-      HapticFeedback.heavyImpact();
-    } catch (_) {}
+    SettingsManager.triggerVibration(duration: duration);
   }
 
   static void heavyImpact() {

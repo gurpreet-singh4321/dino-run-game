@@ -1,3 +1,6 @@
+import '../utils/gear_assets.dart';
+import '../utils/coin_art.dart';
+import '../utils/cart_art.dart';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
@@ -6,13 +9,24 @@ import 'package:flame/collisions.dart';
 import '../game/dino_game.dart';
 import '../game/game_state.dart';
 
-enum CollectibleType { coin, doubleCoin, shield, magnet, gravity, giant, dinoEgg }
+enum CollectibleType {
+  coin,
+  doubleCoin,
+  shield,
+  magnet,
+  gravity,
+  giant,
+  dinoEgg,
+  cart,
+}
 
-class Collectible extends PositionComponent with CollisionCallbacks, HasGameReference<DinoGame> {
+class Collectible extends PositionComponent
+    with CollisionCallbacks, HasGameReference<DinoGame> {
   final CollectibleType collectType;
   double _animTimer = 0;
   double _glintTimer = 0;
   double _floatOffset = 0;
+  double _previousBob = 0;
   bool _collected = false;
 
   // Smoothed magnet attraction state
@@ -33,19 +47,21 @@ class Collectible extends PositionComponent with CollisionCallbacks, HasGameRefe
     _collected = false;
     _animTimer = 0.0;
     _glintTimer = 0.0;
+    _previousBob = 0;
   }
 
   @override
   Future<void> onLoad() async {
     resetCollectible();
-    add(CircleHitbox(radius: 21));
+    // Only active actors (Dino) should collide with pickups, never other coins.
+    add(CircleHitbox(radius: 21, collisionType: CollisionType.passive));
     priority = 6;
     _floatOffset = math.Random().nextDouble() * math.pi * 2;
   }
 
   @override
   void update(double dt) {
-    dt *= game.globalTimeScale;
+    // dt comes from the authoritative simulation clock.
     super.update(dt);
     if (_collected) return;
 
@@ -56,7 +72,9 @@ class Collectible extends PositionComponent with CollisionCallbacks, HasGameRefe
 
     // Float bob
     _floatOffset += dt * 4;
-    position.y += math.sin(_floatOffset) * 0.35;
+    final bob = math.sin(_floatOffset) * 2.5;
+    position.y += bob - _previousBob;
+    _previousBob = bob;
 
     // Continuous 3D spin and glint timers
     _animTimer += dt;
@@ -69,7 +87,12 @@ class Collectible extends PositionComponent with CollisionCallbacks, HasGameRefe
 
     // Giant Dino super collection radius (collects ALL coins touched in 140px radius!)
     if (game.player.giantTimer > 0) {
-      final dinoCenter = game.player.position + Vector2(game.player.size.x * game.player.scale.x / 2, game.player.size.y * game.player.scale.y / 2);
+      final dinoCenter =
+          game.player.position +
+          Vector2(
+            game.player.size.x * game.player.scale.x / 2,
+            game.player.size.y * game.player.scale.y / 2,
+          );
       final coinCenter = position + size / 2;
       final dist = dinoCenter.distanceTo(coinCenter);
       if (dist < 140) {
@@ -79,13 +102,20 @@ class Collectible extends PositionComponent with CollisionCallbacks, HasGameRefe
     }
 
     // Magnet attraction with curved ease-in acceleration (Only pulls coins/doubleCoins)
-    final isCoin = collectType == CollectibleType.coin || collectType == CollectibleType.doubleCoin;
+    final isCoin =
+        collectType == CollectibleType.coin ||
+        collectType == CollectibleType.doubleCoin;
     if (game.player.magnetTimer > 0 && isCoin) {
       final magnetLvl = game.coinManager.magnetLevel;
       final pullRadius = 160.0 + (magnetLvl * 30.0);
       final pullSpeed = 320.0 + (magnetLvl * 40.0);
 
-      final dinoCenter = game.player.position + Vector2((game.player.size.x * game.player.scale.x) / 2, (game.player.size.y * game.player.scale.y) / 2);
+      final dinoCenter =
+          game.player.position +
+          Vector2(
+            (game.player.size.x * game.player.scale.x) / 2,
+            (game.player.size.y * game.player.scale.y) / 2,
+          );
       final coinCenter = position + size / 2;
       final dx = dinoCenter.x - coinCenter.x;
       final dy = dinoCenter.y - coinCenter.y;
@@ -120,35 +150,50 @@ class Collectible extends PositionComponent with CollisionCallbacks, HasGameRefe
     final cosmicLvl = game.coinManager.cosmicLevel;
     final multLvl = game.coinManager.multiplierLevel;
 
-    final cosmicBonus = (game.state == GameState.spaceMode ? (1.0 + cosmicLvl * 0.5) : 1.0);
+    final cosmicBonus = (game.state == GameState.spaceMode
+        ? (1.0 + cosmicLvl * 0.5)
+        : 1.0);
 
     switch (collectType) {
       case CollectibleType.coin:
-        final bonus = (multLvl > 0 && math.Random().nextDouble() < multLvl * 0.2) ? 2 : 1;
+        final bonus =
+            (multLvl > 0 && math.Random().nextDouble() < multLvl * 0.2) ? 2 : 1;
         game.score += (25 * bonus * cosmicBonus).toInt();
-        game.coinManager.addCoins(bonus);
+        game.coinManager.collectCoins(bonus);
         game.hud.triggerCoinPulse();
         break;
       case CollectibleType.doubleCoin:
         final bonus = 2 + (multLvl > 0 ? 1 : 0);
         game.score += (50 * (bonus / 2) * cosmicBonus).toInt();
-        game.coinManager.addCoins(bonus);
+        game.coinManager.collectCoins(bonus);
         game.hud.triggerCoinPulse();
         break;
       case CollectibleType.shield:
         final dur = 8.0 + (shieldLvl * 2.0);
-        game.player.shieldTimer = (game.player.shieldTimer + dur).clamp(0.0, 30.0);
+        game.player.shieldTimer = (game.player.shieldTimer + dur).clamp(
+          0.0,
+          30.0,
+        );
         break;
       case CollectibleType.magnet:
         final dur = 8.0 + (magnetLvl * 2.0);
-        game.player.magnetTimer = (game.player.magnetTimer + dur).clamp(0.0, 30.0);
+        game.player.magnetTimer = (game.player.magnetTimer + dur).clamp(
+          0.0,
+          30.0,
+        );
         break;
       case CollectibleType.gravity:
         game.enterSpaceMode();
         break;
       case CollectibleType.giant:
-        game.player.giantTimer = (game.player.giantTimer + 10.0).clamp(0.0, 25.0);
-        game.player.scale = Vector2.all(3.0);
+        game.player.giantTimer = (game.player.giantTimer + 10.0).clamp(
+          0.0,
+          25.0,
+        );
+        game.player.activateGiant();
+        break;
+      case CollectibleType.cart:
+        game.player.collectCart();
         break;
       case CollectibleType.dinoEgg:
         game.score += (100 * cosmicBonus).toInt();
@@ -183,6 +228,19 @@ class Collectible extends PositionComponent with CollisionCallbacks, HasGameRefe
       case CollectibleType.giant:
         _renderGiant(canvas);
         break;
+      case CollectibleType.cart:
+        canvas.save();
+        canvas.translate(0, 8);
+        canvas.scale(.4);
+        CartArt.rear(canvas, skinId: game.coinManager.equippedCartSkin);
+        CartArt.front(
+          canvas,
+          charges: 3,
+          distance: 0,
+          skinId: game.coinManager.equippedCartSkin,
+        );
+        canvas.restore();
+        break;
       case CollectibleType.dinoEgg:
         _renderDinoEgg(canvas);
         break;
@@ -199,46 +257,11 @@ class Collectible extends PositionComponent with CollisionCallbacks, HasGameRefe
       canvas.drawCircle(
         Offset(-rimOffset, 0),
         15,
-        Paint()..color = const Color(0xFFD84315),
+        Paint()..color = const Color(0xFFA67128),
       );
     }
 
-    // Outer rim
-    canvas.drawCircle(
-      Offset.zero,
-      15,
-      Paint()..color = const Color(0xFFFF8F00),
-    );
-
-    // Inner golden body gradient
-    final coinGradient = const RadialGradient(
-      colors: [Color(0xFFFFF59D), Color(0xFFFFD54F), Color(0xFFFFB300)],
-    );
-    final coinRect = Rect.fromCircle(center: Offset.zero, radius: 13);
-    canvas.drawCircle(
-      Offset.zero,
-      13,
-      Paint()..shader = coinGradient.createShader(coinRect),
-    );
-
-    // Inner rim line
-    canvas.drawCircle(
-      Offset.zero,
-      10,
-      Paint()
-        ..color = const Color(0xFFFF8F00).withValues(alpha: 0.5)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5,
-    );
-
-    // Shiny star highlight
-    if (scaleX > 0.4) {
-      canvas.drawCircle(
-        const Offset(-3, -3),
-        3,
-        Paint()..color = Colors.white.withValues(alpha: 0.7),
-      );
-    }
+    CoinArt.draw(canvas, const Rect.fromLTWH(-15, -15, 30, 30));
 
     // Specular glint sweep across face every ~1.8 seconds
     if (scaleX > 0.3 && _glintTimer < 0.35) {
@@ -251,7 +274,6 @@ class Collectible extends PositionComponent with CollisionCallbacks, HasGameRefe
         ..strokeCap = StrokeCap.round;
       canvas.drawLine(Offset(gx - 4, -8), Offset(gx + 4, 8), glintPaint);
     }
-
     canvas.restore();
   }
 
@@ -300,71 +322,22 @@ class Collectible extends PositionComponent with CollisionCallbacks, HasGameRefe
 
   /// 🚀 JETPACK / ROCKET POWERUP: Sleek cyan/silver rocket with flaming thrusters & badge
   void _renderJetpack(Canvas canvas) {
-    final cx = size.x / 2;
-    final cy = size.y / 2;
-
-    // 1. Pulsing thruster energy aura glow
-    final auraRadius = 20.0 + math.sin(_floatOffset * 3) * 2.0;
     canvas.drawCircle(
-      Offset(cx, cy),
-      auraRadius + 5,
-      Paint()..color = const Color(0xFF00E5FF).withValues(alpha: 0.30),
+      const Offset(21, 21),
+      20,
+      Paint()..color = const Color(0xFF163A56),
     );
-
-    // 2. Circular Cyan/Blue Powerup Container Badge
-    final badgeGradient = const RadialGradient(
-      colors: [Color(0xFF00E5FF), Color(0xFF00838F), Color(0xFF004D40)],
+    canvas.drawCircle(
+      const Offset(21, 21),
+      20,
+      Paint()
+        ..color = const Color(0xFFFFD267)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5,
     );
-    canvas.drawCircle(Offset(cx, cy), 19, Paint()..shader = badgeGradient.createShader(Rect.fromCircle(center: Offset(cx, cy), radius: 19)));
-    canvas.drawCircle(Offset(cx, cy), 19, Paint()..color = Colors.white.withValues(alpha: 0.8)..style = PaintingStyle.stroke..strokeWidth = 1.8);
-
-    // 3. Rocket Thruster Exhaust Flame (Bottom)
-    final flamePath = Path()
-      ..moveTo(cx - 5, cy + 8)
-      ..quadraticBezierTo(cx, cy + 17 + math.sin(_floatOffset * 10) * 3, cx + 5, cy + 8)
-      ..close();
-    canvas.drawPath(flamePath, Paint()..color = const Color(0xFFFF9100));
-    canvas.drawCircle(Offset(cx, cy + 10), 3.0, Paint()..color = const Color(0xFFFFFF00));
-
-    // 4. Sleek Metallic Rocket Body
-    final rocketPath = Path()
-      ..moveTo(cx, cy - 14)
-      ..cubicTo(cx + 9, cy - 8, cx + 8, cy + 8, cx + 6, cy + 10)
-      ..lineTo(cx - 6, cy + 10)
-      ..cubicTo(cx - 8, cy + 8, cx - 9, cy - 8, cx, cy - 14)
-      ..close();
-
-    final rocketGradient = const LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: [Color(0xFFFFFFFF), Color(0xFFCFD8DC), Color(0xFF78909C)],
-    );
-    canvas.drawPath(rocketPath, Paint()..shader = rocketGradient.createShader(Rect.fromLTWH(cx - 9, cy - 14, 18, 24)));
-
-    // Rocket Nose Cone (Red)
-    final nosePath = Path()
-      ..moveTo(cx, cy - 14)
-      ..lineTo(cx + 5, cy - 5)
-      ..lineTo(cx - 5, cy - 5)
-      ..close();
-    canvas.drawPath(nosePath, Paint()..color = const Color(0xFFFF1744));
-
-    // Rocket Wings / Fins (Left & Right)
-    canvas.drawPath(
-      Path()..moveTo(cx - 5, cy + 3)..lineTo(cx - 10, cy + 9)..lineTo(cx - 5, cy + 8)..close(),
-      Paint()..color = const Color(0xFFFF1744),
-    );
-    canvas.drawPath(
-      Path()..moveTo(cx + 5, cy + 3)..lineTo(cx + 10, cy + 9)..lineTo(cx + 5, cy + 8)..close(),
-      Paint()..color = const Color(0xFFFF1744),
-    );
-
-    // Circular Porthole Window
-    canvas.drawCircle(Offset(cx, cy - 1), 3.0, Paint()..color = const Color(0xFF00B0FF));
-    canvas.drawCircle(Offset(cx - 0.8, cy - 1.8), 1.0, Paint()..color = Colors.white);
+    GearAssets.drawJetpack(canvas, const Rect.fromLTWH(10, 2, 24, 36));
   }
 
-  /// 🛡️ DEFENDER SHIELD POWERUP: Metallic Blue/Gold Shield with star emblem
   void _renderShield(Canvas canvas) {
     final cx = size.x / 2;
     final cy = size.y / 2;
@@ -390,7 +363,10 @@ class Collectible extends PositionComponent with CollisionCallbacks, HasGameRefe
       colors: [Color(0xFF0288D1), Color(0xFF01579B)],
     );
     final shieldRect = Rect.fromLTWH(cx - 15, cy - 16, 30, 33);
-    canvas.drawPath(shieldPath, Paint()..shader = shieldGradient.createShader(shieldRect));
+    canvas.drawPath(
+      shieldPath,
+      Paint()..shader = shieldGradient.createShader(shieldRect),
+    );
 
     // Golden Rim Border
     final borderPaint = Paint()
@@ -407,11 +383,20 @@ class Collectible extends PositionComponent with CollisionCallbacks, HasGameRefe
       final rO = 6.5;
       final rI = 2.8;
       if (i == 0) {
-        starPath.moveTo(cx + math.cos(aOuter) * rO, cy - 1 + math.sin(aOuter) * rO);
+        starPath.moveTo(
+          cx + math.cos(aOuter) * rO,
+          cy - 1 + math.sin(aOuter) * rO,
+        );
       } else {
-        starPath.lineTo(cx + math.cos(aOuter) * rO, cy - 1 + math.sin(aOuter) * rO);
+        starPath.lineTo(
+          cx + math.cos(aOuter) * rO,
+          cy - 1 + math.sin(aOuter) * rO,
+        );
       }
-      starPath.lineTo(cx + math.cos(aInner) * rI, cy - 1 + math.sin(aInner) * rI);
+      starPath.lineTo(
+        cx + math.cos(aInner) * rI,
+        cy - 1 + math.sin(aInner) * rI,
+      );
     }
     starPath.close();
     canvas.drawPath(starPath, Paint()..color = const Color(0xFFFFD700));
@@ -431,8 +416,22 @@ class Collectible extends PositionComponent with CollisionCallbacks, HasGameRefe
 
     // 2. Circular Purple Container Badge
     final badgeRect = Rect.fromCircle(center: Offset(cx, cy), radius: 19);
-    canvas.drawCircle(Offset(cx, cy), 19, Paint()..shader = const RadialGradient(colors: [Color(0xFF8E24AA), Color(0xFF4A148C)]).createShader(badgeRect));
-    canvas.drawCircle(Offset(cx, cy), 19, Paint()..color = Colors.white.withValues(alpha: 0.8)..style = PaintingStyle.stroke..strokeWidth = 1.8);
+    canvas.drawCircle(
+      Offset(cx, cy),
+      19,
+      Paint()
+        ..shader = const RadialGradient(
+          colors: [Color(0xFF8E24AA), Color(0xFF4A148C)],
+        ).createShader(badgeRect),
+    );
+    canvas.drawCircle(
+      Offset(cx, cy),
+      19,
+      Paint()
+        ..color = Colors.white.withValues(alpha: 0.8)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.8,
+    );
 
     // 3. Horseshoe Magnet U-Shape
     final uPath = Path()
@@ -470,7 +469,12 @@ class Collectible extends PositionComponent with CollisionCallbacks, HasGameRefe
       ..style = PaintingStyle.stroke;
     final arcPath = Path()
       ..moveTo(cx - 7, cy - 11)
-      ..quadraticBezierTo(cx, cy - 15 + math.sin(_floatOffset * 8) * 2, cx + 7, cy - 11);
+      ..quadraticBezierTo(
+        cx,
+        cy - 15 + math.sin(_floatOffset * 8) * 2,
+        cx + 7,
+        cy - 11,
+      );
     canvas.drawPath(arcPath, arcPaint);
   }
 
@@ -489,8 +493,22 @@ class Collectible extends PositionComponent with CollisionCallbacks, HasGameRefe
 
     // 2. Purple Badge
     final badgeRect = Rect.fromCircle(center: Offset(cx, cy), radius: 19);
-    canvas.drawCircle(Offset(cx, cy), 19, Paint()..shader = const RadialGradient(colors: [Color(0xFFD81B60), Color(0xFF880E4F)]).createShader(badgeRect));
-    canvas.drawCircle(Offset(cx, cy), 19, Paint()..color = const Color(0xFFFFD700)..style = PaintingStyle.stroke..strokeWidth = 2.0);
+    canvas.drawCircle(
+      Offset(cx, cy),
+      19,
+      Paint()
+        ..shader = const RadialGradient(
+          colors: [Color(0xFFD81B60), Color(0xFF880E4F)],
+        ).createShader(badgeRect),
+    );
+    canvas.drawCircle(
+      Offset(cx, cy),
+      19,
+      Paint()
+        ..color = const Color(0xFFFFD700)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.0,
+    );
 
     // 3. Mega Golden 5-Pointed Star
     final starPath = Path();
@@ -508,9 +526,23 @@ class Collectible extends PositionComponent with CollisionCallbacks, HasGameRefe
     }
     starPath.close();
 
-    final starGradient = const RadialGradient(colors: [Color(0xFFFFFF8D), Color(0xFFFFD700), Color(0xFFFFAB00)]);
-    canvas.drawPath(starPath, Paint()..shader = starGradient.createShader(Rect.fromCircle(center: Offset(cx, cy), radius: 12)));
-    canvas.drawPath(starPath, Paint()..color = Colors.white.withValues(alpha: 0.8)..style = PaintingStyle.stroke..strokeWidth = 1.0);
+    final starGradient = const RadialGradient(
+      colors: [Color(0xFFFFFF8D), Color(0xFFFFD700), Color(0xFFFFAB00)],
+    );
+    canvas.drawPath(
+      starPath,
+      Paint()
+        ..shader = starGradient.createShader(
+          Rect.fromCircle(center: Offset(cx, cy), radius: 12),
+        ),
+    );
+    canvas.drawPath(
+      starPath,
+      Paint()
+        ..color = Colors.white.withValues(alpha: 0.8)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.0,
+    );
   }
 
   void _renderDinoEgg(Canvas canvas) {
@@ -544,7 +576,13 @@ class Collectible extends PositionComponent with CollisionCallbacks, HasGameRefe
       ],
       stops: const [0.0, 0.35, 0.75, 1.0],
     );
-    canvas.drawPath(eggPath, Paint()..shader = eggGradient.createShader(Rect.fromCenter(center: Offset(cx, cy), width: 32, height: 40)));
+    canvas.drawPath(
+      eggPath,
+      Paint()
+        ..shader = eggGradient.createShader(
+          Rect.fromCenter(center: Offset(cx, cy), width: 32, height: 40),
+        ),
+    );
 
     // Golden Shell Rim Outline
     canvas.drawPath(
@@ -556,14 +594,29 @@ class Collectible extends PositionComponent with CollisionCallbacks, HasGameRefe
     );
 
     // 3. Prehistoric Turquoise & Emerald Spots
-    final spotPaint1 = Paint()..color = const Color(0xFF00E5FF).withValues(alpha: 0.75);
-    final spotPaint2 = Paint()..color = const Color(0xFF76FF03).withValues(alpha: 0.70);
-    final spotPaint3 = Paint()..color = const Color(0xFFFF4081).withValues(alpha: 0.75);
+    final spotPaint1 = Paint()
+      ..color = const Color(0xFF00E5FF).withValues(alpha: 0.75);
+    final spotPaint2 = Paint()
+      ..color = const Color(0xFF76FF03).withValues(alpha: 0.70);
+    final spotPaint3 = Paint()
+      ..color = const Color(0xFFFF4081).withValues(alpha: 0.75);
 
-    canvas.drawOval(Rect.fromCenter(center: Offset(cx - 5, cy - 6), width: 6.5, height: 8), spotPaint1);
-    canvas.drawOval(Rect.fromCenter(center: Offset(cx + 6, cy + 4), width: 7.5, height: 9), spotPaint2);
-    canvas.drawOval(Rect.fromCenter(center: Offset(cx - 4, cy + 10), width: 5.5, height: 6), spotPaint3);
-    canvas.drawOval(Rect.fromCenter(center: Offset(cx + 5, cy - 10), width: 4.5, height: 5.5), spotPaint2);
+    canvas.drawOval(
+      Rect.fromCenter(center: Offset(cx - 5, cy - 6), width: 6.5, height: 8),
+      spotPaint1,
+    );
+    canvas.drawOval(
+      Rect.fromCenter(center: Offset(cx + 6, cy + 4), width: 7.5, height: 9),
+      spotPaint2,
+    );
+    canvas.drawOval(
+      Rect.fromCenter(center: Offset(cx - 4, cy + 10), width: 5.5, height: 6),
+      spotPaint3,
+    );
+    canvas.drawOval(
+      Rect.fromCenter(center: Offset(cx + 5, cy - 10), width: 4.5, height: 5.5),
+      spotPaint2,
+    );
 
     // 4. Glowing Prehistoric Fossil Crack with Pulsing Energy
     final crackPath = Path()

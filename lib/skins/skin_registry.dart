@@ -30,6 +30,9 @@ class SkinRegistry {
   /// The default skin.
   static CharacterSkin get defaultSkin => _all.first;
 
+  static CharacterSkin createInstance(String id) => NewDinoSkin()
+    ..cosmetics = getById(id).cosmetics;
+
   /// Register a new skin at runtime (e.g., from a DLC or plugin).
   static void register(CharacterSkin skin) {
     if (!_all.any((s) => s.id == skin.id)) {

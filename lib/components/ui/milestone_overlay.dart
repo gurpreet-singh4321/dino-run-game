@@ -26,6 +26,10 @@ class _ScheduledBurst {
 /// Milestone overlays never cover the ground line or obstacles by more than ~10% of screen height.
 /// All timers strictly scale with `globalTimeScale` so they don't drift during hit-stop or slow-mo.
 class MilestoneOverlay extends PositionComponent with HasGameReference<DinoGame> {
+  bool get _quiet {
+    final context = game.buildContext;
+    return context != null && MediaQuery.disableAnimationsOf(context);
+  }
   final math.Random _rng = math.Random();
 
   // --- Biome-entry Cinematic State ---
@@ -124,25 +128,26 @@ class MilestoneOverlay extends PositionComponent with HasGameReference<DinoGame>
     _cinematicStage = targetStage;
     _cinematicPhase = _CinematicPhase.slideIn;
     _cinematicTimer = 0.0;
-    _screenFlashAlpha = 0.15; // 15% flash
+    _screenFlashAlpha = 0; // The scene itself conveys the epoch change.
 
     // FIX: Cache text paints once per transition to avoid heavy GPU blur & layout rebuilds!
     _initCinematicTextPaints(nextBiome);
 
     // Trigger audio sting & transition particles
     AudioManager.playBiomeSting();
-    game.particlePool.emitBiomeTransition(accentColor: nextBiome.accentColor);
+    if (!_quiet) {
+      game.particlePool.emitBiomeTransition(accentColor: nextBiome.accentColor);
+    }
   }
 
   /// Trigger score-milestone celebration fireworks.
   void triggerScoreCelebration({required bool isMajor}) {
+    if (_quiet) return;
     final accent = game.biomeManager.effectiveBiome.accentColor;
     final colors = [
       accent,
       const Color(0xFFFFD700), // Gold
       Colors.white,
-      const Color(0xFF4DEEEA), // Cyan
-      const Color(0xFFFF4081), // Magenta
     ];
 
     _scheduledBursts.clear();
@@ -182,7 +187,7 @@ class MilestoneOverlay extends PositionComponent with HasGameReference<DinoGame>
   @override
   void update(double dt) {
     // Timers scale with game globalTimeScale to prevent drift during hit-stop or slow-mo
-    final scaledDt = dt * game.globalTimeScale;
+    final scaledDt = dt;
     super.update(scaledDt);
 
     if (game.state == GameState.menu || game.state == GameState.gameOver) {
@@ -259,6 +264,10 @@ class MilestoneOverlay extends PositionComponent with HasGameReference<DinoGame>
   }
 
   void _updateFireworks(double dt) {
+    if (_quiet) {
+      _scheduledBursts.clear();
+      return;
+    }
     if (_scheduledBursts.isEmpty) return;
 
     for (int i = _scheduledBursts.length - 1; i >= 0; i--) {
@@ -335,6 +344,7 @@ class MilestoneOverlay extends PositionComponent with HasGameReference<DinoGame>
         return;
     }
 
+    if (_quiet) { progress = 1; alpha = 1; }
     final currentTopH = topBarMax * progress;
     final currentBottomH = bottomBarMax * progress;
 
@@ -427,6 +437,7 @@ class MilestoneOverlay extends PositionComponent with HasGameReference<DinoGame>
         return;
     }
 
+    if (_quiet) { progress = 1; alpha = 1; }
     final currentY = startY + (targetY - startY) * progress;
     final rect = Rect.fromCenter(
       center: Offset(cx, currentY),
@@ -453,7 +464,7 @@ class MilestoneOverlay extends PositionComponent with HasGameReference<DinoGame>
     canvas.drawRRect(rrect, _bannerBorderPaint);
 
     // Shimmer sweep reflection
-    if (_bannerPhase == _BannerPhase.hold && alpha > 0.5) {
+    if (!_quiet && _bannerPhase == _BannerPhase.hold && alpha > 0.5) {
       canvas.save();
       canvas.clipRRect(rrect);
       final shimmerX = rect.left + (rect.width * (_bannerShimmerProgress - 0.5) * 1.6);

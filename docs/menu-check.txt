@@ -1,0 +1,82 @@
+00:00 +0: loading C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/mobile_menu_test.dart
+00:00 +0: Menus fit Size(568.0, 320.0)
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following TestFailure was thrown running a test:
+Expected: null
+  Actual: FlutterError:<A RenderFlex overflowed by 185 pixels on the right.>
+
+When the exception was thrown, this was the stack:
+#4      main.<anonymous closure> (file:///C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work%20-%20Freelance/Games/dino_run_epochs/test/mobile_menu_test.dart:31:7)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1952:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+This was caught by the test expectation on the following line:
+  file:///C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work%20-%20Freelance/Games/dino_run_epochs/test/mobile_menu_test.dart line 31
+The test description was:
+  Menus fit Size(568.0, 320.0)
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:02 +0 -1: Menus fit Size(568.0, 320.0) [E]
+  Test failed. See exception logs above.
+  The test description was: Menus fit Size(568.0, 320.0)
+  
+00:02 +0 -1: Menus fit Size(640.0, 360.0)
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following TestFailure was thrown running a test:
+Expected: null
+  Actual: FlutterError:<A RenderFlex overflowed by 142 pixels on the right.>
+
+When the exception was thrown, this was the stack:
+#4      main.<anonymous closure> (file:///C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work%20-%20Freelance/Games/dino_run_epochs/test/mobile_menu_test.dart:31:7)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1952:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+This was caught by the test expectation on the following line:
+  file:///C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work%20-%20Freelance/Games/dino_run_epochs/test/mobile_menu_test.dart line 31
+The test description was:
+  Menus fit Size(640.0, 360.0)
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:03 +0 -2: Menus fit Size(640.0, 360.0) [E]
+  Test failed. See exception logs above.
+  The test description was: Menus fit Size(640.0, 360.0)
+  
+00:03 +0 -2: Menus fit Size(844.0, 390.0)
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following TestFailure was thrown running a test:
+Expected: null
+  Actual: FlutterError:<A RenderFlex overflowed by 19 pixels on the right.>
+
+When the exception was thrown, this was the stack:
+#4      main.<anonymous closure> (file:///C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work%20-%20Freelance/Games/dino_run_epochs/test/mobile_menu_test.dart:31:7)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1952:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+This was caught by the test expectation on the following line:
+  file:///C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work%20-%20Freelance/Games/dino_run_epochs/test/mobile_menu_test.dart line 31
+The test description was:
+  Menus fit Size(844.0, 390.0)
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:03 +0 -3: Menus fit Size(844.0, 390.0) [E]
+  Test failed. See exception logs above.
+  The test description was: Menus fit Size(844.0, 390.0)
+  
+00:03 +0 -3: Some tests failed.
+
+Failing tests:
+  C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/mobile_menu_test.dart: Menus fit Size(568.0, 320.0)
+  C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/mobile_menu_test.dart: Menus fit Size(640.0, 360.0)
+  C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/mobile_menu_test.dart: Menus fit Size(844.0, 390.0)

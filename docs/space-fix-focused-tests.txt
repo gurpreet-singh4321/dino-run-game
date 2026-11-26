@@ -1,0 +1,19 @@
+00:00 +0: loading C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/dino_gesture_layer_test.dart
+00:00 +0: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/dino_gesture_layer_test.dart: Yawning forearm stays in front of the neck scarf
+00:00 +1: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/epoch_transition_test.dart: Scenery keeps its opaque base and queues rapid epoch navigation
+00:01 +2: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/mobile_menu_test.dart: Scenic menus and last journal/wardrobe items fit Size(568.0, 320.0)
+00:01 +3: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/mobile_menu_test.dart: Scenic menus and last journal/wardrobe items fit Size(568.0, 320.0)
+00:01 +4: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/mobile_menu_test.dart: Scenic menus and last journal/wardrobe items fit Size(568.0, 320.0)
+00:01 +5: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/mobile_menu_test.dart: Scenic menus and last journal/wardrobe items fit Size(568.0, 320.0)
+00:01 +6: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/mobile_menu_test.dart: Scenic menus and last journal/wardrobe items fit Size(568.0, 320.0)
+00:01 +7: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/mobile_menu_test.dart: Scenic menus and last journal/wardrobe items fit Size(568.0, 320.0)
+00:02 +8: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/mobile_menu_test.dart: Scenic menus and last journal/wardrobe items fit Size(568.0, 320.0)
+00:02 +9: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/mobile_menu_test.dart: Scenic menus and last journal/wardrobe items fit Size(568.0, 320.0)
+00:02 +10: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/mobile_menu_test.dart: Scenic menus and last journal/wardrobe items fit Size(568.0, 320.0)
+00:02 +11: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/mobile_menu_test.dart: Scenic menus and last journal/wardrobe items fit Size(568.0, 320.0)
+00:02 +12: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/mobile_menu_test.dart: Scenic menus and last journal/wardrobe items fit Size(568.0, 320.0)
+00:02 +13: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/mobile_menu_test.dart: Scenic menus and last journal/wardrobe items fit Size(568.0, 320.0)
+00:03 +14: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/mobile_menu_test.dart: Scenic menus and last journal/wardrobe items fit Size(640.0, 360.0)
+00:04 +15: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/mobile_menu_test.dart: Scenic menus and last journal/wardrobe items fit Size(844.0, 390.0)
+00:05 +16: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/mobile_menu_test.dart: Scenic menus and last journal/wardrobe items fit Size(1024.0, 600.0)
+00:06 +17: All tests passed!

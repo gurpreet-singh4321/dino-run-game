@@ -1,0 +1,417 @@
+diff --git a/lib/components/ui/main_menu_overlay.dart b/lib/components/ui/main_menu_overlay.dart
+index 1c2bed1..7b5e22c 100644
+--- a/lib/components/ui/main_menu_overlay.dart
++++ b/lib/components/ui/main_menu_overlay.dart
+@@ -380,90 +380,329 @@ class _MainMenuOverlayState extends State<MainMenuOverlay> with TickerProviderSt
+   }
+ 
+   Widget _landscapeHome(CharacterSkin skin, int coins, int best) {
+-    Widget action(IconData icon, String label, VoidCallback tap) => FilledButton.tonalIcon(
+-      onPressed: tap, icon: Icon(icon, size: 18), label: Text(label),
+-      style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 12),
+-        textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800)));
++    // Dynamically shift the entire UI's color story based on the selected Epoch!
++    final activeRealm = _realms[_selectedRealmIndex];
++    final activeColor = activeRealm['color'] as Color;
++
++    // Tactical, beveled action buttons instead of generic rounded pills
++    Widget action(IconData icon, String label, VoidCallback tap) => OutlinedButton.icon(
++      onPressed: tap,
++      icon: Icon(icon, size: 16, color: activeColor),
++      label: Text(label.toUpperCase(), style: const TextStyle(color: Colors.white, letterSpacing: 1.2, fontWeight: FontWeight.w800, fontSize: 11)),
++      style: OutlinedButton.styleFrom(
++        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
++        side: BorderSide(color: activeColor.withValues(alpha: 0.5), width: 1.5),
++        shape: BeveledRectangleBorder(borderRadius: BorderRadius.circular(4)), // Cyberpunk beveled corners
++        backgroundColor: activeColor.withValues(alpha: 0.1),
++      )
++    );
++
+     const art = ['desert_fossil_canyon.png', 'rain_painted_v1.png', 'forest_painted_v1.png', 'ice_painted_v1.png', 'cosmos_painted_v1.png', 'volcano_painted_v1.png'];
+-    return Material(color: Colors.transparent, child: DecoratedBox(
+-      decoration: const BoxDecoration(gradient: LinearGradient(
+-        colors: [Color(0x44152C40), Color(0xDD152C40)],
+-        begin: Alignment.centerLeft, end: Alignment.centerRight)),
+-      child: SafeArea(child: Column(children: [
+-        Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+-          child: Row(children: [
+-            ClipRRect(borderRadius: BorderRadius.circular(10), child: Image.asset('assets/images/app_icon.png', width: 36, height: 36)),
+-            const SizedBox(width: 10),
+-            const Expanded(child: Text('DINO RUN  ·  EPOCHS', style: TextStyle(color: Color(0xFFFFE5A3), fontWeight: FontWeight.w900, fontSize: 16))),
+-            Chip(avatar: const Icon(Icons.monetization_on_rounded, color: Color(0xFFFFCF62)), label: Text('$coins')),
+-            IconButton(tooltip: 'Settings', onPressed: _openSettings, icon: const Icon(Icons.settings_rounded, color: Colors.white)),
+-          ])),
+-        Expanded(child: Padding(padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+-          child: Row(children: [
+-            Expanded(flex: 4, child: Column(children: [
+-              Expanded(child: LayoutBuilder(builder: (context, constraints) {
+-                final height = math.min(constraints.maxHeight, 300.0);
+-                return Stack(alignment: Alignment.center, children: [
+-                  Container(decoration: const BoxDecoration(shape: BoxShape.circle,
+-                    gradient: RadialGradient(colors: [Color(0x66FFCF62), Colors.transparent]))),
+-                  SizedBox(width: height * .83, height: height,
+-                    child: _SkinPreviewWidget(skin: skin, ticker: _runnerAnimController)),
+-                ]);
+-              })),
+-              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+-
+-                Expanded(child: Text(skin.displayName, textAlign: TextAlign.center,
+-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 18))),
+-
+-              ]),
+-            ])),
+-            const SizedBox(width: 16),
+-            Expanded(flex: 6, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+-              Expanded(child: SingleChildScrollView(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+-                Wrap(spacing: 6, runSpacing: 6, children: [
+-                  action(Icons.checkroom_rounded, 'Wardrobe', _openSkins),
+-                  action(Icons.auto_awesome_rounded, 'Upgrades', _openUpgrades),
+-                  action(Icons.auto_stories_rounded, 'Journal', _openEvents),
+-                ]),
+-                const SizedBox(height: 12),
+-                Row(children: [
+-                  const Expanded(child: Text('PICK AN EPOCH', style: TextStyle(color: Color(0xFFFFE5A3), fontWeight: FontWeight.w900, fontSize: 12, letterSpacing: 1))),
+-                  IconButton(tooltip: 'Earlier epochs', onPressed: () => _scrollEpochs(-1), icon: const Icon(Icons.chevron_left_rounded)),
+-                  IconButton(tooltip: 'More epochs', onPressed: () => _scrollEpochs(1), icon: const Icon(Icons.chevron_right_rounded)),
+-                ]),
+-                const SizedBox(height: 8),
+-                SizedBox(height: 90, child: ListView.separated(controller: _epochScroll, scrollDirection: Axis.horizontal,
+-                  itemCount: _realms.length, separatorBuilder: (context, index) => const SizedBox(width: 8),
+-                  itemBuilder: (context, index) {
+-                    final selected = index == _selectedRealmIndex;
+-                    return Semantics(
+-                      selected: selected,
+-                      button: true,
+-                      label: _realms[index]['name'] as String,
+-                      child: InkWell(onTap: () => _selectRealm(index),
+-                      borderRadius: BorderRadius.circular(16), child: Container(width: 140,
+-                        decoration: BoxDecoration(borderRadius: BorderRadius.circular(16),
+-                          border: Border.all(color: selected ? const Color(0xFFFFCF62) : Colors.white24, width: selected ? 3 : 1),
+-                          image: DecorationImage(image: AssetImage('assets/images/biomes/${art[index]}'), fit: BoxFit.cover)),
+-                        child: Container(alignment: Alignment.bottomLeft, padding: const EdgeInsets.all(8),
+-                          decoration: BoxDecoration(borderRadius: BorderRadius.circular(14), gradient: const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Color(0xEE102334)])),
+-                          child: Text('${selected ? "✓ " : ""}${_realms[index]['name']}', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w800))),
+-                      )));
+-                  })),
+-                const SizedBox(height: 12),
+-                _buildDailySupplyCard(),
+-                const SizedBox(height: 12),
+-
+-              ]))),
+-              const SizedBox(height: 8),
+-              SizedBox(height: 50, child: FilledButton.icon(onPressed: _onStartExpedition,
+-                icon: const Icon(Icons.play_arrow_rounded, size: 28),
+-                label: Text('PLAY · ${_realms[_selectedRealmIndex]['name']}', maxLines: 1, overflow: TextOverflow.ellipsis),
+-                style: FilledButton.styleFrom(backgroundColor: const Color(0xFFFFCF62), foregroundColor: const Color(0xFF413020), textStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15)))),
+-            ])),
+-          ]))),
+-      ])),
+-    ));
++
++    return Material(
++      color: Colors.transparent,
++      child: AnimatedContainer(
++        duration: const Duration(milliseconds: 500),
++        curve: Curves.easeOutCubic,
++        // Dynamic radial gradient that pulses from the top right based on the selected Epoch
++        decoration: BoxDecoration(
++          gradient: RadialGradient(
++            center: const Alignment(0.8, -0.5),
++            radius: 1.5,
++            colors: [
++              activeColor.withValues(alpha: 0.25),
++              const Color(0xFF090A0F),
++              const Color(0xFF050608),
++            ],
++            stops: const [0.0, 0.5, 1.0],
++          )
++        ),
++        child: SafeArea(
++          child: Column(
++            children: [
++              // 1. HIGH-TECH TOP BAR
++              Padding(
++                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
++                child: Row(
++                  children: [
++                    Container(
++                      padding: const EdgeInsets.all(2),
++                      decoration: BoxDecoration(
++                        border: Border.all(color: activeColor.withValues(alpha: 0.6), width: 2),
++                        borderRadius: BorderRadius.circular(4),
++                        boxShadow: [BoxShadow(color: activeColor.withValues(alpha: 0.3), blurRadius: 8)],
++                      ),
++                      child: ClipRRect(
++                        borderRadius: BorderRadius.circular(2),
++                        child: Image.asset('assets/images/app_icon.png', width: 32, height: 32)
++                      ),
++                    ),
++                    const SizedBox(width: 16),
++                    Column(
++                      crossAxisAlignment: CrossAxisAlignment.start,
++                      children: [
++                        const Text('DINO RUN', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 18, letterSpacing: 4.0, height: 1.0)),
++                        Text('EPOCHS', style: TextStyle(color: activeColor, fontWeight: FontWeight.w900, fontSize: 10, letterSpacing: 8.0, height: 1.0)),
++                      ]
++                    ),
++                    const Spacer(),
++                    Container(
++                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
++                      decoration: BoxDecoration(
++                        color: Colors.black45,
++                        border: Border.all(color: const Color(0xFFFFCF62).withValues(alpha: 0.5)),
++                        borderRadius: BorderRadius.circular(4),
++                      ),
++                      child: Row(
++                        children: [
++                          const Icon(Icons.monetization_on_rounded, color: Color(0xFFFFCF62), size: 16),
++                          const SizedBox(width: 8),
++                          Text('$coins', style: const TextStyle(color: Color(0xFFFFCF62), fontWeight: FontWeight.w900, fontSize: 14)),
++                        ],
++                      ),
++                    ),
++                    const SizedBox(width: 16),
++                    IconButton(
++                      tooltip: 'Settings',
++                      onPressed: _openSettings,
++                      icon: const Icon(Icons.settings_outlined, color: Colors.white54),
++                      highlightColor: activeColor.withValues(alpha: 0.2),
++                    ),
++                  ]
++                )
++              ),
++
++              // 2. MAIN CONTENT
++              Expanded(
++                child: Padding(
++                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
++                  child: Row(
++                    children: [
++                      // LEFT: Character Preview
++                      Expanded(
++                        flex: 4,
++                        child: Column(
++                          children: [
++                            Expanded(
++                              child: LayoutBuilder(
++                                builder: (context, constraints) {
++                                  final height = math.min(constraints.maxHeight, 350.0);
++                                  return Stack(
++                                    alignment: Alignment.center,
++                                    children: [
++                                      // Glowing dynamic pedestal
++                                      Positioned(
++                                        bottom: 20,
++                                        child: Container(
++                                          width: height * 0.8,
++                                          height: 40,
++                                          decoration: BoxDecoration(
++                                            shape: BoxShape.rectangle,
++                                            borderRadius: BorderRadius.circular(100),
++                                            boxShadow: [
++                                              BoxShadow(color: activeColor.withValues(alpha: 0.6), blurRadius: 40),
++                                            ],
++                                          ),
++                                        ),
++                                      ),
++                                      SizedBox(
++                                        width: height * 0.83,
++                                        height: height,
++                                        child: _SkinPreviewWidget(skin: skin, ticker: _runnerAnimController)
++                                      ),
++                                    ]
++                                  );
++                                }
++                              )
++                            ),
++                            Container(
++                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
++                              decoration: BoxDecoration(
++                                border: Border(bottom: BorderSide(color: activeColor, width: 3)),
++                                gradient: LinearGradient(
++                                  begin: Alignment.topCenter, end: Alignment.bottomCenter,
++                                  colors: [Colors.transparent, activeColor.withValues(alpha: 0.2)]
++                                )
++                              ),
++                              child: Text(
++                                skin.displayName.toUpperCase(),
++                                textAlign: TextAlign.center,
++                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 2.0)
++                              ),
++                            ),
++                            const SizedBox(height: 20),
++                          ]
++                        )
++                      ),
++
++                      const SizedBox(width: 40),
++
++                      // RIGHT: Interactions
++                      Expanded(
++                        flex: 6,
++                        child: Column(
++                          crossAxisAlignment: CrossAxisAlignment.stretch,
++                          children: [
++                            Expanded(
++                              child: SingleChildScrollView(
++                                child: Column(
++                                  crossAxisAlignment: CrossAxisAlignment.stretch,
++                                  children: [
++                                    // Action buttons
++                                    Wrap(
++                                      spacing: 12,
++                                      runSpacing: 12,
++                                      children: [
++                                        action(Icons.checkroom_rounded, 'Wardrobe', _openSkins),
++                                        action(Icons.auto_awesome_rounded, 'Upgrades', _openUpgrades),
++                                        action(Icons.auto_stories_rounded, 'Journal', _openEvents),
++                                      ]
++                                    ),
++                                    const SizedBox(height: 24),
++
++                                    // Epoch Selector Header
++                                    Row(
++                                      children: [
++                                        Text('SELECT EPOCH', style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontWeight: FontWeight.w900, fontSize: 11, letterSpacing: 2)),
++                                        const Expanded(child: Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Divider(color: Colors.white24))),
++                                        IconButton(onPressed: () => _scrollEpochs(-1), icon: const Icon(Icons.chevron_left_rounded, color: Colors.white54)),
++                                        IconButton(onPressed: () => _scrollEpochs(1), icon: const Icon(Icons.chevron_right_rounded, color: Colors.white54)),
++                                      ]
++                                    ),
++                                    const SizedBox(height: 12),
++
++                                    // Epoch Cards (Animated Glassmorphism)
++                                    SizedBox(
++                                      height: 110,
++                                      child: ListView.separated(
++                                        controller: _epochScroll,
++                                        scrollDirection: Axis.horizontal,
++                                        itemCount: _realms.length,
++                                        separatorBuilder: (context, index) => const SizedBox(width: 16),
++                                        itemBuilder: (context, index) {
++                                          final selected = index == _selectedRealmIndex;
++                                          final realmColor = _realms[index]['color'] as Color;
++                                          return Semantics(
++                                            selected: selected,
++                                            button: true,
++                                            label: _realms[index]['name'] as String,
++                                            child: InkWell(
++                                              onTap: () => _selectRealm(index),
++                                              borderRadius: BorderRadius.circular(8),
++                                              child: AnimatedContainer(
++                                                duration: const Duration(milliseconds: 300),
++                                                width: 180,
++                                                decoration: BoxDecoration(
++                                                  borderRadius: BorderRadius.circular(8),
++                                                  border: Border.all(
++                                                    color: selected ? realmColor : Colors.white10,
++                                                    width: selected ? 2 : 1
++                                                  ),
++                                                  boxShadow: selected ? [BoxShadow(color: realmColor.withValues(alpha: 0.3), blurRadius: 12)] : [],
++                                                  image: DecorationImage(
++                                                    image: AssetImage('assets/images/biomes/${art[index]}'),
++                                                    fit: BoxFit.cover,
++                                                    // Darken non-selected epochs for sharp visual hierarchy
++                                                    colorFilter: selected ? null : const ColorFilter.mode(Colors.black54, BlendMode.darken)
++                                                  )
++                                                ),
++                                                child: Container(
++                                                  alignment: Alignment.bottomLeft,
++                                                  padding: const EdgeInsets.all(12),
++                                                  decoration: BoxDecoration(
++                                                    borderRadius: BorderRadius.circular(7),
++                                                    gradient: const LinearGradient(
++                                                      begin: Alignment.topCenter, end: Alignment.bottomCenter,
++                                                      colors: [Colors.transparent, Colors.black87]
++                                                    )
++                                                  ),
++                                                  child: Column(
++                                                    mainAxisSize: MainAxisSize.min,
++                                                    crossAxisAlignment: CrossAxisAlignment.start,
++                                                    children: [
++                                                      if (_realms[index]['tag'] != null)
++                                                        Text(_realms[index]['tag'] as String, style: TextStyle(color: realmColor, fontSize: 8, fontWeight: FontWeight.w900, letterSpacing: 1)),
++                                                      Text(_realms[index]['name'] as String, style: TextStyle(color: selected ? Colors.white : Colors.white70, fontSize: 13, fontWeight: FontWeight.w900)),
++                                                    ],
++                                                  )
++                                                ),
++                                              )
++                                            )
++                                          );
++                                        }
++                                      )
++                                    ),
++
++                                    const SizedBox(height: 24),
++
++                                    // Supply Card styled as a high-tech tactical banner
++                                    if (widget.game.coinManager.canClaimDailyReward)
++                                      InkWell(
++                                        onTap: _claimDailyReward,
++                                        child: Container(
++                                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
++                                          decoration: BoxDecoration(
++                                            color: const Color(0xFF0284C7).withValues(alpha: 0.15),
++                                            border: Border.all(color: const Color(0xFF38BDF8), width: 1),
++                                            borderRadius: BorderRadius.circular(4),
++                                          ),
++                                          child: Row(
++                                            children: [
++                                              const Icon(Icons.shield, color: Color(0xFF38BDF8), size: 18),
++                                              const SizedBox(width: 12),
++                                              const Expanded(
++                                                child: Column(
++                                                  crossAxisAlignment: CrossAxisAlignment.start,
++                                                  children: [
++                                                    Text('DAILY SUPPLY DROP AVAILABLE', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1)),
++                                                    Text('+150 COINS', style: TextStyle(color: Color(0xFFBAE6FD), fontSize: 10, fontWeight: FontWeight.w800)),
++                                                  ],
++                                                ),
++                                              ),
++                                              const Icon(Icons.download, color: Color(0xFF38BDF8), size: 18),
++                                            ],
++                                          ),
++                                        ),
++                                      ),
++                                    const SizedBox(height: 12),
++                                  ]
++                                )
++                              )
++                            ),
++
++                            // PLAY BUTTON
++                            const SizedBox(height: 12),
++                            SizedBox(
++                              height: 60,
++                              child: FilledButton(
++                                onPressed: _onStartExpedition,
++                                style: FilledButton.styleFrom(
++                                  backgroundColor: activeColor,
++                                  foregroundColor: Colors.black,
++                                  shape: BeveledRectangleBorder(borderRadius: BorderRadius.circular(4)), // Tactical bevel
++                                ),
++                                child: Row(
++                                  mainAxisAlignment: MainAxisAlignment.center,
++                                  children: [
++                                    const Icon(Icons.play_arrow_rounded, size: 32),
++                                    const SizedBox(width: 8),
++                                    Text('LAUNCH: ${activeRealm['name'].toString().toUpperCase()}', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 1.5)),
++                                  ],
++                                )
++                              )
++                            ),
++                          ]
++                        )
++                      ),
++                    ]
++                  )
++                )
++              ),
++            ]
++          )
++        ),
++      )
++    );
+   }
+ 
+   // -------------------------------------------------------------

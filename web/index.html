@@ -17,23 +17,26 @@
   <base href="$FLUTTER_BASE_HREF">
 
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="Dino Run Epochs - Infinite Dino Runner Game Across Epochs & Biomes">
   <meta name="keywords" content="Dino Run, Dino Run Epochs, Astro JS, Dino Runner Game, Dinosaur Game, Free Online Games, Endless Runner, Play Dino Game, dino game, free games, free online games, free games online">
   <meta name="google-adsense-account" content="ca-pub-6461062896377292">
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6461062896377292"
      crossorigin="anonymous"></script>
-  <!-- Vercel Speed Insights -->
+  <!-- Vercel Speed Insights & Web Analytics (loaded only on deployed hosts) -->
   <script>
     window.si = window.si || function () { (window.siq = window.siq || []).push(arguments); };
-  </script>
-  <script defer src="/_vercel/speed-insights/script.js"></script>
-
-  <!-- Vercel Web Analytics -->
-  <script>
     window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+    if (location.hostname !== 'localhost' && location.hostname !== '127.0.0.1' && location.protocol !== 'file:') {
+      for (const src of ['/_vercel/speed-insights/script.js', '/_vercel/insights/script.js']) {
+        const s = document.createElement('script');
+        s.defer = true;
+        s.src = src;
+        document.head.appendChild(s);
+      }
+    }
   </script>
-  <script defer src="/_vercel/insights/script.js"></script>
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -51,7 +54,7 @@
   <!-- Preconnect & Preload Emoji and Game Fonts to eliminate pop-in -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&family=Roboto:wght@400;700;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&family=Noto+Color+Emoji&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
 
   <style>
     body, html {
@@ -63,26 +66,6 @@
       overflow: hidden;
     }
 
-    .ad-banner {
-      position: absolute;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 160px;
-      height: 600px;
-      z-index: 9999;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-
-    .ad-banner.left {
-      left: 10px;
-    }
-
-    .ad-banner.right {
-      right: 10px;
-    }
-
     flutter-view {
       position: absolute !important;
       left: 0 !important;
@@ -90,46 +73,51 @@
       width: 100% !important;
       height: 100% !important;
     }
-
-    @media (max-width: 1100px) {
-      .ad-banner {
-        display: none !important;
-      }
-    }
+    #boot-scene {position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px 24px;box-sizing:border-box;background:linear-gradient(180deg,rgba(20,34,53,.70),rgba(18,29,45,.48) 50%,rgba(14,23,36,.72)),url('assets/assets/images/biomes/desert_fossil_canyon.png') center/cover;color:#1f2d42;font-family:Fredoka,Nunito,sans-serif;transition:opacity .28s ease;pointer-events:none;}
+    #boot-scene .boot-wrap {width:min(840px,100%);display:flex;align-items:center;gap:24px;}
+    #boot-scene .boot-dino {flex:4;height:275px;position:relative;display:flex;align-items:flex-end;justify-content:center;padding-bottom:12px;box-sizing:border-box;}
+    #boot-scene .boot-ledge {position:absolute;bottom:2px;width:min(220px,80%);height:28px;border-radius:50%;background:linear-gradient(180deg,#8d6945,#4b3624);border-top:1.5px solid rgba(255,231,179,.45);box-shadow:0 5px 12px rgba(11,16,24,.55);}
+    #boot-scene .boot-dino img {position:relative;height:100%;max-height:263px;width:auto;aspect-ratio:240/280;object-fit:contain;display:block;}
+    #boot-scene .boot-panel {flex:5;min-width:0;display:flex;flex-direction:column;align-items:center;gap:12px;}
+    #boot-scene .boot-crest {padding:9px 24px 14px;border-radius:14px;background:linear-gradient(180deg,#2b3e59,#152132);border:2px solid #0c121a;box-shadow:0 5px 0 #0a1018,inset 0 0 0 1.4px rgba(216,174,94,.85);text-align:center;}
+    #boot-scene h1 {margin:0;font-size:clamp(26px,3.6vw,36px);line-height:1.15;font-weight:700;color:#fff8e6;text-shadow:0 2px 4px rgba(11,17,26,.85);}
+    #boot-scene h1 span {color:#ffcb55;}
+    #boot-scene .boot-card {width:100%;box-sizing:border-box;padding:14px 18px 16px;border-radius:22px;background:linear-gradient(180deg,#fffcf3,#f3e7cd);border:2.2px solid #5d462b;box-shadow:0 4px 0 #43311d,0 8px 16px rgba(16,24,36,.35),inset 0 0 0 1.8px #d5b070;text-align:center;}
+    #boot-scene .boot-card p {margin:0 0 12px;font-size:17px;font-weight:700;color:#1f2d42;}
+    .boot-track {height:10px;padding:2.5px;background:#1d2c42;border:1.6px solid #c2974d;border-radius:10px;overflow:hidden;}
+    .boot-track-fill {width:6%;height:100%;border-radius:6px;background:linear-gradient(180deg,#ffe08a,#ffcb55);animation:boot-warmup 2.0s ease-out forwards;}
+    #boot-scene .boot-status {margin:9px 0 0;font-size:13px;font-weight:700;color:#3e4c61;font-family:Nunito,sans-serif;}
+    @media(max-width:560px) {#boot-scene .boot-wrap {flex-direction:column;gap:10px;} #boot-scene .boot-dino {flex:none;width:100%;height:175px;}}
+    @keyframes boot-warmup {from {width:6%;}to {width:28%;}}
+    @media(prefers-reduced-motion:reduce) {.boot-track-fill {animation:none;width:28%;}}
   </style>
 </head>
 <body>
+  <div id="boot-scene" role="status" aria-label="Loading Dino Run Epochs">
+    <div class="boot-wrap">
+      <div class="boot-dino">
+        <div class="boot-ledge"></div>
+        <img src="assets/assets/images/boot_dino.png" alt="" width="240" height="280">
+      </div>
+      <div class="boot-panel">
+        <div class="boot-crest"><h1>Dino Run <span>Epochs</span></h1></div>
+        <div class="boot-card">
+          <p>Adventure awaits.</p>
+          <div class="boot-track"><div class="boot-track-fill"></div></div>
+          <div class="boot-status">Waking up Dino…</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    window.finishDinoBoot = function() {
+      const scene=document.getElementById('boot-scene');
+      if(scene) scene.remove();
+    };
+  </script>
   <!-- Hidden DOM element forces browser to eagerly fetch and cache Noto Color Emoji font at page load -->
   <div style="font-family: 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif; position: absolute; left: -9999px; top: -9999px; opacity: 0; pointer-events: none;" aria-hidden="true">
     🪙💰🏆❤️🛡️⭐🚀🏜️🌧️🌲❄️🌌🔥🌋☁️🏔️🌊🐟🌈🐉🦖🦕🎮🎵🔊🔇⚙️🎲🌍🗺️✨🎪🌑🌙☀️⛈️🪐🌠💀👑🎭🎨🧪🔬💊🧬🌸🍄🦴🐊🦎🐢🦏🐘🦣🐆🦁🐺🐍🦅🦇🐝🦋🐛🐌🐙🦑🐳🐠🦈🐋
-  </div>
-
-  <!-- Left Ad Banner -->
-  <div class="ad-banner left">
-    <!-- dino web -->
-    <ins class="adsbygoogle"
-         style="display:block; width:160px; height:600px"
-         data-ad-client="ca-pub-6461062896377292"
-         data-ad-slot="8999529758"
-         data-ad-format="auto"
-         data-full-width-responsive="true"></ins>
-    <script>
-      try { (adsbygoogle = window.adsbygoogle || []).push({}); } catch (_) {}
-    </script>
-  </div>
-
-  <!-- Right Ad Banner -->
-  <div class="ad-banner right">
-    <!-- dino web -->
-    <ins class="adsbygoogle"
-         style="display:block; width:160px; height:600px"
-         data-ad-client="ca-pub-6461062896377292"
-         data-ad-slot="8999529758"
-         data-ad-format="auto"
-         data-full-width-responsive="true"></ins>
-    <script>
-      try { (adsbygoogle = window.adsbygoogle || []).push({}); } catch (_) {}
-    </script>
   </div>
 
   <script>
@@ -140,23 +128,29 @@
       }
     });
 
-    // Safeguard for web/debug mode: auto-execute Flutter entrypoint if DWDS doesn't trigger it
-    (function ensureFlutterBoot() {
+    // The web-server debug target can expose its entrypoint without running it
+    // when no debugging extension is attached. Wait for normal boot first,
+    // then guard both the fallback and any late DWDS call with the same latch.
+    (function debugBootFallback() {
       let checks = 0;
       const timer = setInterval(function() {
-        checks++;
-        if (typeof window.$dartRunMain === 'function' && !window.$dartMainExecuted) {
-          try {
-            window.$dartRunMain();
-          } catch (e) {
-            console.warn('[AutoBoot] Exception starting app:', e);
-          }
-        }
-        if (checks > 80 || document.querySelector('flutter-view')) {
+        if (document.querySelector('flutter-view') || ++checks > 80) {
           clearInterval(timer);
+          return;
         }
+        if (checks < 40 || typeof window.$dartRunMain !== 'function') return;
+        const original = window.$dartRunMain;
+        let started = false;
+        window.$dartRunMain = function() {
+          if (started) return;
+          started = true;
+          return original.apply(window, arguments);
+        };
+        clearInterval(timer);
+        window.$dartRunMain();
       }, 100);
     })();
+
   </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>

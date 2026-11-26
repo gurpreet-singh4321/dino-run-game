@@ -1,0 +1,10 @@
+Analyzing dino_run_epochs...                                    
+
+warning - Dead code. Try removing the code, or fixing the code before it so that it can be reached - lib\components\ui\game_over_screen.dart:61:18 - dead_code
+warning - Dead code. Try removing the code, or fixing the code before it so that it can be reached - lib\components\ui\game_over_screen.dart:80:37 - dead_code
+warning - Dead code. Try removing the code, or fixing the code before it so that it can be reached - lib\components\ui\game_over_screen.dart:81:28 - dead_code
+warning - Dead code. Try removing the code, or fixing the code before it so that it can be reached - lib\components\ui\game_over_screen.dart:85:27 - dead_code
+warning - Dead code. Try removing the code, or fixing the code before it so that it can be reached - lib\components\ui\game_over_screen.dart:102:44 - dead_code
+warning - Dead code. Try removing the code, or fixing the code before it so that it can be reached - lib\components\ui\game_over_screen.dart:111:17 - dead_code
+
+6 issues found. (ran in 8.5s)

@@ -1,3 +1,4 @@
+import '../game/desert_journey.dart';
 import 'dart:math' as math;
 import 'package:flame/components.dart';
 import '../game/dino_game.dart';
@@ -10,21 +11,52 @@ import '../components/falling_stone.dart';
 import '../components/rolling_ball.dart';
 
 class SpawnManager extends Component with HasGameReference<DinoGame> {
+  static const maxSpacePickups = 48;
+  bool cartLane = false;
+  void startCartLane() {
+    cartLane = true;
+    final floor = game.ground.groundY;
+    final pickup = Collectible(
+      collectType: CollectibleType.cart,
+      position: Vector2(200, floor - 50),
+    );
+    game.world.add(pickup);
+    _coins.add(pickup);
+    for (final x in [430.0, 700.0, 970.0, 1280.0]) {
+      final rock = Obstacle(type: ObstacleType.rock, speed: 200)
+        ..size = Vector2(58, 48)
+        ..position = Vector2(x, floor - 48)
+        ..entranceTimer = 1;
+      registerGroundHazard(rock);
+    }
+    game.ground.addGap(1750, 135);
+  }
+
   double obstacleTimer = 0;
   double coinTimer = 0;
   double meteorTimer = 0;
   int _spacePatternIndex = 0;
-  final math.Random _rng = math.Random();
+  final math.Random _rng;
+  SpawnManager({int? seed}) : _rng = math.Random(seed);
 
   final List<Obstacle> _obstacles = [];
   final List<Collectible> _coins = [];
   final List<Meteor> _meteors = [];
   final List<FallingStone> _fallingStones = [];
+  final List<PositionComponent> _groundHazards = [];
+  List<PositionComponent> get groundHazards =>
+      List.unmodifiable(_groundHazards);
+
+  void registerGroundHazard(PositionComponent hazard) {
+    _groundHazards.add(hazard);
+    game.world.add(hazard);
+  }
+
   CollectibleType? _lastPowerupType;
 
   @override
   void update(double dt) {
-    dt *= game.globalTimeScale;
+    // dt comes from the authoritative simulation clock.
     super.update(dt);
     if (game.state == GameState.playing) {
       _updateGroundSpawning(dt);
@@ -33,13 +65,25 @@ class SpawnManager extends Component with HasGameReference<DinoGame> {
     }
 
     // Clean up removed entities
-    _obstacles.removeWhere((o) => o.isRemoved);
+    _obstacles.removeWhere(
+      (o) => o.isRemoved || o.isRemoving || o.parent == null,
+    );
     _coins.removeWhere((c) => c.isRemoved);
     _meteors.removeWhere((m) => m.isRemoved);
-    _fallingStones.removeWhere((f) => f.isRemoved);
+    _fallingStones.removeWhere(
+      (f) => f.isRemoved || f.isRemoving || f.parent == null,
+    );
+    _groundHazards.removeWhere(
+      (h) => h.isRemoved || h.isRemoving || h.parent == null,
+    );
   }
 
   void _updateGroundSpawning(double dt) {
+    if (game.desertJourney.active) {
+      _updateDesertJourney();
+      return;
+    }
+    if (cartLane) return;
     obstacleTimer -= dt;
     if (obstacleTimer <= 0) {
       if (_isTooCloseToExistingObstacle()) {
@@ -56,10 +100,10 @@ class SpawnManager extends Component with HasGameReference<DinoGame> {
       } else if (currentBiomeName == 'ICE' && r < 0.25) {
         _spawnRollingBall(isIce: true);
         obstacleTimer = 2.0 + _rng.nextDouble() * 1.0;
-      } else if (game.score > 300 && r < 0.18) {
+      } else if (game.difficultyProgress > 300 && r < 0.18) {
         _spawnGap();
         obstacleTimer = 2.0 + _rng.nextDouble() * 1.1;
-      } else if (game.score > 800 && r < 0.30) {
+      } else if (game.difficultyProgress > 800 && r < 0.30) {
         _spawnFallingStone();
         obstacleTimer = 2.0 + _rng.nextDouble() * 1.1;
       } else {
@@ -75,11 +119,49 @@ class SpawnManager extends Component with HasGameReference<DinoGame> {
     }
   }
 
+  void _updateDesertJourney() {
+    final journey = game.desertJourney;
+    final ahead = game.size.x + 40 - game.player.position.x;
+    while (journey.nextBeat < DesertJourney.beats.length &&
+        DesertJourney.beats[journey.nextBeat].distance <=
+            game.runDistance + ahead) {
+      final beat = DesertJourney.beats[journey.nextBeat++];
+      final x = beat.distance - game.runDistance + game.player.position.x;
+      final floor = game.ground.groundY;
+      switch (beat.kind) {
+        case DesertBeatKind.pickup:
+          final item = Collectible(
+            collectType: beat.pickup!,
+            position: Vector2(x, floor - beat.height),
+          );
+          game.world.add(item);
+          _coins.add(item);
+        case DesertBeatKind.obstacle:
+          final rock =
+              Obstacle(type: beat.obstacle!, speed: DesertJourney.speed)
+                ..size = Vector2(beat.width, beat.height)
+                ..position = Vector2(x, floor - beat.height)
+                ..entranceTimer = 1;
+          if (beat.obstacle == ObstacleType.pillar) {
+            rock.isFallingFromSky = true;
+            rock.targetGroundY = floor - beat.height;
+            rock.position.y = -beat.height - 120;
+          } else if (beat.obstacle == ObstacleType.ceilingPipe) {
+            rock.position.y = 0;
+          }
+          registerGroundHazard(rock);
+        case DesertBeatKind.gap:
+          game.ground.addGap(x, beat.width, erupts: false);
+      }
+    }
+  }
+
   bool _isTooCloseToExistingObstacle() {
     final screenRight = game.size.x;
-    const minDistance = 255.0; // Increased obstacle distance by ~6% for better spacing
+    const minDistance =
+        255.0; // Increased obstacle distance by ~6% for better spacing
 
-    for (final obs in _obstacles) {
+    for (final obs in _groundHazards) {
       if (obs.position.x + obs.size.x > screenRight - minDistance) {
         return true;
       }
@@ -100,12 +182,29 @@ class SpawnManager extends Component with HasGameReference<DinoGame> {
   void _updateMeteorSpawning(double dt) {
     // Only spawn coins during the coin rain phase, and stop spawning 2.5s before timer ends!
     if (game.spacePhase != SpacePhase.coinRain) return;
-    if (game.spaceTimer <= 2.5) return; // Coins stop spawning 2.5s before timer finishes
+    if (game.spaceTimer <= 2.5) {
+      return; // Coins stop spawning 2.5s before timer finishes
+    }
 
     coinTimer -= dt;
     if (coinTimer <= 0) {
+      // Keep complete coin trails separated in world distance. The old 0.4s
+      // timer overlaid long patterns, multiplying colliders and hiding routes.
+      final spawnX = game.size.x + 30;
+      for (final coin in _coins) {
+        if (!coin.isRemoving &&
+            !coin.isRemoved &&
+            coin.position.x + coin.size.x > spawnX - 72) {
+          coinTimer = .12;
+          return;
+        }
+      }
+      if (_coins.length + 12 > maxSpacePickups) {
+        coinTimer = .12;
+        return;
+      }
       _spawnSpaceCoinsFilled();
-      coinTimer = 0.4; // Rapid spawning so space is filled with coins
+      coinTimer = .12;
     }
   }
 
@@ -119,10 +218,18 @@ class SpawnManager extends Component with HasGameReference<DinoGame> {
         double y1 = 80 + _rng.nextDouble() * 100;
         double y2 = y1 + 100;
         for (int i = 0; i < 6; i++) {
-          final coin1 = Collectible(collectType: CollectibleType.coin, position: Vector2(startX + i * 40, y1));
-          final coin2 = Collectible(collectType: CollectibleType.coin, position: Vector2(startX + i * 40, y2));
-          game.add(coin1); _coins.add(coin1);
-          game.add(coin2); _coins.add(coin2);
+          final coin1 = Collectible(
+            collectType: CollectibleType.coin,
+            position: Vector2(startX + i * 40, y1),
+          );
+          final coin2 = Collectible(
+            collectType: CollectibleType.coin,
+            position: Vector2(startX + i * 40, y2),
+          );
+          game.world.add(coin1);
+          _coins.add(coin1);
+          game.world.add(coin2);
+          _coins.add(coin2);
         }
         break;
 
@@ -131,8 +238,12 @@ class SpawnManager extends Component with HasGameReference<DinoGame> {
         double baseY = 150 + _rng.nextDouble() * (game.size.y - 300);
         for (int i = 0; i < 8; i++) {
           double wy = baseY + math.sin(i * 0.6) * 60;
-          final coin = Collectible(collectType: CollectibleType.coin, position: Vector2(startX + i * 38, wy));
-          game.add(coin); _coins.add(coin);
+          final coin = Collectible(
+            collectType: CollectibleType.coin,
+            position: Vector2(startX + i * 38, wy),
+          );
+          game.world.add(coin);
+          _coins.add(coin);
         }
         break;
 
@@ -141,9 +252,15 @@ class SpawnManager extends Component with HasGameReference<DinoGame> {
         double gridY = 100 + _rng.nextDouble() * (game.size.y - 250);
         for (int row = 0; row < 3; row++) {
           for (int col = 0; col < 3; col++) {
-            final type = (row == 1 && col == 1) ? CollectibleType.magnet : CollectibleType.coin;
-            final coin = Collectible(collectType: type, position: Vector2(startX + col * 42, gridY + row * 42));
-            game.add(coin); _coins.add(coin);
+            final type = (row == 1 && col == 1)
+                ? CollectibleType.magnet
+                : CollectibleType.coin;
+            final coin = Collectible(
+              collectType: type,
+              position: Vector2(startX + col * 42, gridY + row * 42),
+            );
+            game.world.add(coin);
+            _coins.add(coin);
           }
         }
         break;
@@ -153,8 +270,12 @@ class SpawnManager extends Component with HasGameReference<DinoGame> {
         double archCenterY = 120 + _rng.nextDouble() * (game.size.y - 240);
         for (int i = 0; i < 7; i++) {
           double dy = math.sin((i / 6.0) * math.pi) * -70;
-          final coin = Collectible(collectType: CollectibleType.coin, position: Vector2(startX + i * 40, archCenterY + dy));
-          game.add(coin); _coins.add(coin);
+          final coin = Collectible(
+            collectType: CollectibleType.coin,
+            position: Vector2(startX + i * 40, archCenterY + dy),
+          );
+          game.world.add(coin);
+          _coins.add(coin);
         }
         break;
     }
@@ -182,10 +303,7 @@ class SpawnManager extends Component with HasGameReference<DinoGame> {
         ]);
         break;
       case 'ICE':
-        types.addAll([
-          ObstacleType.rock,
-          ObstacleType.pillar,
-        ]);
+        types.addAll([ObstacleType.rock, ObstacleType.pillar]);
         break;
       case 'FOREST':
       case 'RAIN':
@@ -196,10 +314,8 @@ class SpawnManager extends Component with HasGameReference<DinoGame> {
         ]);
         break;
       case 'SPACE':
-        types.addAll([
-          ObstacleType.pillar,
-          ObstacleType.rock,
-        ]);
+      case 'COSMOS':
+        types.addAll([ObstacleType.pillar, ObstacleType.rock]);
         break;
       default:
         types.addAll([
@@ -211,21 +327,25 @@ class SpawnManager extends Component with HasGameReference<DinoGame> {
         ]);
     }
 
-    if (game.score > 250) {
+    if (game.difficultyProgress > 150) {
+      types.add(ObstacleType.ceilingPipe);
+    }
+    if (game.difficultyProgress > 550) {
       types.add(ObstacleType.pipePair);
     }
-    if (game.score > 1000) {
+    if (game.difficultyProgress > 1000) {
       types.add(ObstacleType.bird);
     }
-    
+
     final type = types[_rng.nextInt(types.length)];
-    
+
     int count = 1;
-    if (game.score > 500 && (type == ObstacleType.cactusSmall || type == ObstacleType.cactusTall)) {
-       final r = _rng.nextDouble();
-       if (r < 0.25) {
-         count = 2; // Capped to max 2 cacti so hurdle width is jumpable
-       }
+    if (game.difficultyProgress > 500 &&
+        (type == ObstacleType.cactusSmall || type == ObstacleType.cactusTall)) {
+      final r = _rng.nextDouble();
+      if (r < 0.25) {
+        count = 2; // Capped to max 2 cacti so hurdle width is jumpable
+      }
     }
 
     final groundY = game.ground.groundY;
@@ -251,7 +371,9 @@ class SpawnManager extends Component with HasGameReference<DinoGame> {
           break;
         case ObstacleType.ceilingPipe:
           // Hanging pipe extending down from top edge of screen (y = 0)
-          final clearanceGap = 105.0 + _rng.nextDouble() * 35.0; // 105-140px clearance gap above ground
+          final clearanceGap =
+              105.0 +
+              _rng.nextDouble() * 35.0; // 105-140px clearance gap above ground
           obs.size = Vector2(obs.size.x, groundY - clearanceGap);
           obs.position = Vector2(offsetX, 0);
           break;
@@ -268,13 +390,17 @@ class SpawnManager extends Component with HasGameReference<DinoGame> {
           obs.gapTopY = math.max(25.0, obs.gapBottomY - gapHeight);
           break;
         case ObstacleType.bird:
-          obs.position = Vector2(offsetX, groundY - 100 - _rng.nextDouble() * 60);
+          obs.position = Vector2(
+            offsetX,
+            groundY - 100 - _rng.nextDouble() * 60,
+          );
           break;
       }
 
       // Remove any existing coin that overlaps this newly spawned obstacle!
       for (final coin in List<Collectible>.from(_coins)) {
-        if (coin.position.x >= offsetX - 50 && coin.position.x <= offsetX + obs.size.x + 50) {
+        if (coin.position.x >= offsetX - 50 &&
+            coin.position.x <= offsetX + obs.size.x + 50) {
           final coinRect = coin.toRect();
           final obsRect = obs.toRect();
           if (coinRect.overlaps(obsRect.inflate(15))) {
@@ -284,25 +410,27 @@ class SpawnManager extends Component with HasGameReference<DinoGame> {
         }
       }
 
-      game.add(obs);
+      registerGroundHazard(obs);
       _obstacles.add(obs);
     }
   }
 
-
   void _spawnFallingStone() {
-    final count = 3 + _rng.nextInt(2);
+    const count = 1;
     final stone = FallingStone(
       initialSpeedX: game.speedManager.currentSpeed,
       stoneCount: count,
     );
-    game.add(stone);
+    registerGroundHazard(stone);
     _fallingStones.add(stone);
   }
 
   void _spawnRollingBall({required bool isIce}) {
-    final ball = RollingBall(isIce: isIce, rollSpeed: 240.0 + _rng.nextDouble() * 60.0);
-    game.add(ball);
+    final ball = RollingBall(
+      isIce: isIce,
+      rollSpeed: 240.0 + _rng.nextDouble() * 60.0,
+    );
+    registerGroundHazard(ball);
   }
 
   void _spawnCollectible() {
@@ -328,7 +456,7 @@ class SpawnManager extends Component with HasGameReference<DinoGame> {
       if (!positionValid) continue;
 
       // Check obstacles — scan range covers startX to startX + 130
-      for (final obs in _obstacles) {
+      for (final obs in _groundHazards) {
         final obsLeft = obs.position.x - 60;
         final obsRight = obs.position.x + obs.size.x + 60;
         if (startX + 130 > obsLeft && startX < obsRight) {
@@ -353,7 +481,9 @@ class SpawnManager extends Component with HasGameReference<DinoGame> {
 
     final groundY = game.ground.groundY;
 
-    final coinType = (game.score >= 10000) ? CollectibleType.doubleCoin : CollectibleType.coin;
+    final coinType = (game.difficultyProgress >= 10000)
+        ? CollectibleType.doubleCoin
+        : CollectibleType.coin;
 
     if (roll < 0.70) {
       // Spawn a group of 3 coins in a gentle arc or flat line, close to ground.
@@ -368,8 +498,11 @@ class SpawnManager extends Component with HasGameReference<DinoGame> {
           // Flat line 30-55px above ground — easy to grab while running/jumping
           cy = groundY - 30 - _rng.nextDouble() * 25;
         }
-        final coin = Collectible(collectType: coinType, position: Vector2(cx, cy));
-        game.add(coin);
+        final coin = Collectible(
+          collectType: coinType,
+          position: Vector2(cx, cy),
+        );
+        game.world.add(coin);
         _coins.add(coin);
       }
     } else {
@@ -380,6 +513,8 @@ class SpawnManager extends Component with HasGameReference<DinoGame> {
         CollectibleType.giant,
         CollectibleType.gravity,
         CollectibleType.dinoEgg,
+        if (game.player.cart.charges == 0 && game.player.giantTimer <= 0)
+          CollectibleType.cart,
       ];
       if (_lastPowerupType != null && availablePowerups.length > 1) {
         availablePowerups.remove(_lastPowerupType);
@@ -391,7 +526,7 @@ class SpawnManager extends Component with HasGameReference<DinoGame> {
       // Powerups 40-70px above ground — visible & reachable on a normal jump
       final pos = Vector2(startX, groundY - 40 - _rng.nextDouble() * 30);
       final item = Collectible(collectType: type, position: pos);
-      game.add(item);
+      game.world.add(item);
       _coins.add(item);
     }
   }
@@ -402,7 +537,7 @@ class SpawnManager extends Component with HasGameReference<DinoGame> {
   }
 
   void clearGroundEntities() {
-    for (final o in _obstacles) {
+    for (final o in _groundHazards) {
       o.removeFromParent();
     }
     for (final c in _coins) {
@@ -414,6 +549,7 @@ class SpawnManager extends Component with HasGameReference<DinoGame> {
     _obstacles.clear();
     _coins.clear();
     _fallingStones.clear();
+    _groundHazards.clear();
     game.ground.clearGaps();
   }
 
@@ -431,6 +567,7 @@ class SpawnManager extends Component with HasGameReference<DinoGame> {
   }
 
   void reset() {
+    cartLane = false;
     clearGroundEntities();
     clearMeteors();
     obstacleTimer = 1.8;

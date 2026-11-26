@@ -1,3 +1,4 @@
+import '../skins/cart_skins.dart';
 import '../skins/skin_registry.dart';
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -6,6 +7,17 @@ import '../skins/cosmetics.dart';
 /// Manages persistent coin balance, upgrades, unlocked skins, daily rewards, and missions.
 class CoinManager {
   static const String _coinKey = 'dino_coins';
+  static const String _tutorialKey = 'dino_tutorial_seen';
+  bool _hasSeenTutorial = false;
+  bool get hasSeenTutorial => _hasSeenTutorial;
+
+  Future<void> markTutorialSeen() async {
+    if (_hasSeenTutorial) return;
+    _hasSeenTutorial = true;
+    _dirty = true;
+    await forceSave();
+  }
+
   static const String _skinsKey = 'dino_unlocked_skins';
   static const String _activeSkinKey = 'dino_active_skin';
   static const String _highScoreKey = 'dino_high_score';
@@ -32,7 +44,8 @@ class CoinManager {
   Set<String> _unlockedSkins = {'new_dino'};
   final Set<String> _ownedCosmetics = {'red_scarf'};
   final Map<CosmeticSlot, String> _equippedCosmetics = {};
-  Map<CosmeticSlot, String> get equippedCosmetics => Map.unmodifiable(_equippedCosmetics);
+  Map<CosmeticSlot, String> get equippedCosmetics =>
+      Map.unmodifiable(_equippedCosmetics);
   bool ownsCosmetic(String id) => _ownedCosmetics.contains(id);
 
   Future<bool> purchaseCosmetic(String id) async {
@@ -61,6 +74,31 @@ class CoinManager {
     await _save();
     await forceSave();
   }
+
+  final Set<String> _ownedCartSkins = {'fossil_rover'};
+  String _equippedCartSkin = 'fossil_rover';
+  String get equippedCartSkin => _equippedCartSkin;
+  bool ownsCartSkin(String id) => _ownedCartSkins.contains(id);
+  Future<bool> purchaseCartSkin(String id) async {
+    final item = CartSkinCatalog.find(id);
+    if (item == null) return false;
+    if (ownsCartSkin(id)) return true;
+    if (_coins < item.price) return false;
+    _coins -= item.price;
+    _ownedCartSkins.add(id);
+    await _save();
+    await forceSave();
+    return true;
+  }
+
+  Future<bool> equipCartSkin(String id) async {
+    if (!ownsCartSkin(id) || CartSkinCatalog.find(id) == null) return false;
+    _equippedCartSkin = id;
+    await _save();
+    await forceSave();
+    return true;
+  }
+
   String _activeSkinId = 'new_dino';
 
   // Upgrades (Level 0 = base, max level = 5)
@@ -78,6 +116,8 @@ class CoinManager {
   int _totalJumps = 0;
   int _shieldHits = 0;
   int _spaceTrips = 0;
+  int _collectedCoins = 0;
+  int get collectedCoins => _collectedCoins;
 
   int get coins => _coins;
   int get runCoins => _runCoins;
@@ -113,25 +153,41 @@ class CoinManager {
   Future<void> load() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      _coins = prefs.getInt(_coinKey) ?? 2350; // generous starting coins for testing
+      _coins = prefs.getInt(_coinKey) ?? 0;
       _highScore = prefs.getInt(_highScoreKey) ?? 0;
+      // Existing runners should not be sent back into onboarding.
+      _hasSeenTutorial = prefs.getBool(_tutorialKey) ?? (_highScore > 0);
       _activeSkinId = prefs.getString(_activeSkinKey) ?? 'new_dino';
       if (!SkinRegistry.isAvailable(_activeSkinId)) _activeSkinId = 'new_dino';
-      
+
       final skinsList = prefs.getStringList(_skinsKey);
       if (skinsList != null) {
         _unlockedSkins = skinsList.toSet();
       }
       _unlockedSkins.add('new_dino');
-      _ownedCosmetics.addAll((prefs.getStringList('dino_owned_cosmetics') ?? [])
-          .where((id) => CosmeticCatalog.find(id) != null));
+      _ownedCosmetics.addAll(
+        (prefs.getStringList('dino_owned_cosmetics') ?? []).where(
+          (id) => CosmeticCatalog.find(id) != null,
+        ),
+      );
       _equippedCosmetics.clear();
-      for (final id in prefs.getStringList('dino_equipped_cosmetics') ?? <String>[]) {
+      for (final id
+          in prefs.getStringList('dino_equipped_cosmetics') ?? <String>[]) {
         final item = CosmeticCatalog.find(id);
         if (item != null && _ownedCosmetics.contains(id)) {
           _equippedCosmetics[item.slot] = id;
         }
       }
+
+      _ownedCartSkins.addAll(
+        (prefs.getStringList('dino_owned_cart_skins') ?? []).where(
+          (id) => CartSkinCatalog.find(id) != null,
+        ),
+      );
+      final cartId = prefs.getString('dino_equipped_cart_skin');
+      _equippedCartSkin = cartId != null && ownsCartSkin(cartId)
+          ? cartId
+          : 'fossil_rover';
 
       _magnetLevel = prefs.getInt(_magnetLevelKey) ?? 0;
       _shieldLevel = prefs.getInt(_shieldLevelKey) ?? 0;
@@ -149,6 +205,8 @@ class CoinManager {
       _totalJumps = prefs.getInt(_totalJumpsKey) ?? 0;
       _shieldHits = prefs.getInt(_shieldHitsKey) ?? 0;
       _spaceTrips = prefs.getInt(_spaceTripsKey) ?? 0;
+      // Old wallets include grants and spending: never infer collection from them.
+      _collectedCoins = prefs.getInt('dino_stat_collected_coins') ?? 0;
     } catch (_) {
       // SharedPreferences fallback
     }
@@ -157,6 +215,7 @@ class CoinManager {
   // Debounced save — batch writes, max once per 2 seconds
   bool _dirty = false;
   Timer? _saveTimer;
+  Future<void> _pendingSave = Future.value();
 
   Future<void> _save() async {
     _dirty = true;
@@ -169,22 +228,32 @@ class CoinManager {
   Future<void> forceSave() async {
     _saveTimer?.cancel();
     _saveTimer = null;
-    if (_dirty) {
-      await _flushSave();
-    }
+    await _flushSave();
   }
 
-  Future<void> _flushSave() async {
-    _dirty = false;
+  Future<void> _flushSave() {
     _saveTimer = null;
+    return _pendingSave = _pendingSave.then((_) => _writeDirtyProgress());
+  }
+
+  Future<void> _writeDirtyProgress() async {
+    if (!_dirty) return;
+    _dirty = false;
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt(_coinKey, _coins);
       await prefs.setInt(_highScoreKey, _highScore);
+      await prefs.setBool(_tutorialKey, _hasSeenTutorial);
       await prefs.setString(_activeSkinKey, _activeSkinId);
       await prefs.setStringList(_skinsKey, _unlockedSkins.toList());
-      await prefs.setStringList('dino_owned_cosmetics', _ownedCosmetics.toList());
-      await prefs.setStringList('dino_equipped_cosmetics', _equippedCosmetics.values.toList());
+      await prefs.setStringList(
+        'dino_owned_cosmetics',
+        _ownedCosmetics.toList(),
+      );
+      await prefs.setStringList(
+        'dino_equipped_cosmetics',
+        _equippedCosmetics.values.toList(),
+      );
 
       await prefs.setInt(_magnetLevelKey, _magnetLevel);
       await prefs.setInt(_shieldLevelKey, _shieldLevel);
@@ -204,13 +273,31 @@ class CoinManager {
       await prefs.setInt(_totalJumpsKey, _totalJumps);
       await prefs.setInt(_shieldHitsKey, _shieldHits);
       await prefs.setInt(_spaceTripsKey, _spaceTrips);
-    } catch (_) {}
+      await prefs.setInt('dino_stat_collected_coins', _collectedCoins);
+      await prefs.setStringList(
+        'dino_owned_cart_skins',
+        _ownedCartSkins.toList(),
+      );
+      await prefs.setString('dino_equipped_cart_skin', _equippedCartSkin);
+      await prefs.setInt('dino_save_version', 3);
+      if (_dirty) await _writeDirtyProgress();
+    } catch (_) {
+      _dirty = true;
+    }
   }
 
   void addCoins(int amount) {
-    _runCoins += amount;
+    if (amount <= 0) return;
     _coins += amount;
     _save();
+  }
+
+  /// Only gameplay pickups count towards collection goals and run rewards.
+  void collectCoins(int amount) {
+    if (amount <= 0) return;
+    _runCoins += amount;
+    _collectedCoins += amount;
+    addCoins(amount);
   }
 
   bool spendCoins(int amount) {

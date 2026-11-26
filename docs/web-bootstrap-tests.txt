@@ -1,0 +1,11 @@
+✔ Fallback launches once and guards a late normal debug launch (2.617ms)
+✔ Normal startup stops fallback without invoking the entrypoint (1.2995ms)
+✔ Release pages without a debug entrypoint stop polling (1.0748ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 14.3221

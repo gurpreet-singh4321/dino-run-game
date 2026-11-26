@@ -1,0 +1,32 @@
+00:00 +0: loading C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/tool/menu_motion_review_test.dart
+00:00 +0: Menus fit Size(390.0, 844.0)
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following TestFailure was thrown running a test:
+Expected: null
+  Actual: MissingPluginException:<MissingPluginException(No implementation found for method listen
+on channel xyz.luan/audioplayers.global/events)>
+
+When the exception was thrown, this was the stack:
+#4      main.<anonymous closure> (file:///C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work%20-%20Freelance/Games/dino_run_epochs/tool/menu_motion_review_test.dart:122:7)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1952:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+This was caught by the test expectation on the following line:
+  file:///C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work%20-%20Freelance/Games/dino_run_epochs/tool/menu_motion_review_test.dart line 122
+The test description was:
+  Menus fit Size(390.0, 844.0)
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:02 +0 -1: Menus fit Size(390.0, 844.0) [E]
+  Test failed. See exception logs above.
+  The test description was: Menus fit Size(390.0, 844.0)
+  
+00:02 +0 -1: Menus fit Size(844.0, 390.0)
+00:04 +1 -1: Some tests failed.
+
+Failing tests:
+  C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/tool/menu_motion_review_test.dart: Menus fit Size(390.0, 844.0)

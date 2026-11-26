@@ -1,0 +1,21 @@
+00:00 +0: loading C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/gameplay_fairness_test.dart
+00:00 +0: (setUpAll)
+00:00 +0: Menu reveal can finish its fade while a fresh run begins
+00:00 +1: Actual collision collects once during damage and space-return immunity
+00:00 +2: Damage, shield absorption, recovery and giant crush assert real outcomes
+00:00 +3: A multi-hitbox hazard smashes once during giant recovery and preserves shield
+00:00 +4: Recovery does not spend shield or claim an untouched hazard; normal contact claims once
+00:00 +5: Paused and entrance contacts stay unclaimed; sibling falling rocks own separate impacts
+00:00 +6: Real giant collisions score once at 30, 60 and 120 updates during immunity
+00:00 +7: Meteor impact stays ahead at both speeds and leaves one scrolling crater
+00:00 +8: Each falling stone owns a moving collider; empty cluster space is safe
+00:00 +9: Every space phase pauses by touch and keeps its timer and physics frozen
+00:00 +10: Rolling hazards clear on launch, revive, restart and menu exit
+00:00 +11: Space trails stay bounded, passive, collectable and clear on return
+00:00 +12: Hit stop freezes hazard schedule, distance and power duration together
+00:00 +13: Immunity rescues a gap fall and giant changes preserve floor contact
+00:00 +14: Viewport mapping preserves logical physics at every landscape size
+00:00 +15: Game over flushes earned rewards and stats before a fresh manager reload
+00:00 +16: Production jump and progression agree at 30/60/120 FPS and long frames
+00:00 +17: (tearDownAll)
+00:00 +17: All tests passed!

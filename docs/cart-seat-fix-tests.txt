@@ -1,0 +1,9 @@
+00:00 +0: loading C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/dino_preview_test.dart
+00:00 +0: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/dino_preview_test.dart: Previews own advancing clocks and never mutate gameplay motion
+00:01 +1: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/dino_preview_test.dart: Previews own advancing clocks and never mutate gameplay motion
+00:01 +2: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/dino_gesture_layer_test.dart: Yawning forearm stays in front of the neck scarf
+00:01 +3: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/menu_transactions_test.dart: Try-on never edits saved outfit and cart unlock requires Equip
+00:04 +4: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/menu_transactions_test.dart: Wardrobe purchase, equip and take-off persist through the actual controls
+00:04 +5: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/menu_transactions_test.dart: Upgrade and journal actions save purchases and claim rewards only once
+00:05 +6: C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/menu_transactions_test.dart: Journal toast belongs to its dialog and disappears when closed
+00:05 +7: All tests passed!

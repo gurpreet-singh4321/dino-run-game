@@ -42,3 +42,11 @@ flutter:
     - assets/images/dino_sprite.png
     - assets/images/app_icon.png
     - assets/audio/
+
+  fonts:
+    - family: Fredoka
+      fonts:
+        - asset: assets/fonts/Fredoka.ttf
+    - family: Nunito
+      fonts:
+        - asset: assets/fonts/Nunito.ttf

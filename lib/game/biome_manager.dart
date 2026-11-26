@@ -100,7 +100,7 @@ class BiomeManager extends Component with HasGameReference<DinoGame> {
 
   @override
   void update(double dt) {
-    dt *= game.globalTimeScale;
+    // dt comes from the authoritative simulation clock.
     super.update(dt);
 
     if (isTransitioning) {

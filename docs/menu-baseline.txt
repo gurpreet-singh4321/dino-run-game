@@ -1,0 +1,14 @@
+00:00 +0: loading C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/mobile_menu_test.dart
+00:00 +0 -1: loading C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/mobile_menu_test.dart [E]
+  Failed to load "C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/mobile_menu_test.dart":
+  Compilation failed for testPath=C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/mobile_menu_test.dart: lib/game/dino_game.dart:107:15: Error: Method not found: 'FixedResolutionViewport'.
+      viewport: FixedResolutionViewport(resolution: Vector2(640, 360)))) {
+                ^^^^^^^^^^^^^^^^^^^^^^^
+  lib/game/dino_game.dart:589:41: Error: 'FixedResolutionViewport' isn't a type.
+        final scale = (camera.viewport as FixedResolutionViewport).scale;
+                                          ^^^^^^^^^^^^^^^^^^^^^^^
+  .
+00:00 +0 -1: Some tests failed.
+
+Failing tests:
+  C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/mobile_menu_test.dart: loading C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/mobile_menu_test.dart

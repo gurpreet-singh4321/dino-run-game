@@ -1,0 +1,5 @@
+00:00 +0: loading C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/test/menu_transactions_test.dart
+00:00 +0: Wardrobe purchase, equip and take-off persist through the actual controls
+00:00 +1: Upgrade and journal actions save purchases and claim rewards only once
+00:01 +2: Journal toast belongs to its dialog and disappears when closed
+00:01 +3: All tests passed!

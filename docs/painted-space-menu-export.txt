@@ -1,0 +1,3 @@
+00:00 +0: loading C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/tool/living_menu_review_test.dart
+00:00 +0: Export living menu and new cosmetic review fixtures
+00:04 +1: All tests passed!

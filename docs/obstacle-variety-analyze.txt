@@ -1,0 +1,9 @@
+Analyzing dino_run_epochs...                                    
+
+   info - Statements in an if should be enclosed in a block. Try wrapping the statement in a block - lib\components\obstacle.dart:1568:13 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block. Try wrapping the statement in a block - lib\components\obstacle.dart:1599:13 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block. Try wrapping the statement in a block - lib\components\obstacle.dart:1610:9 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block. Try wrapping the statement in a block - test\gameplay_fairness_test.dart:111:15 - curly_braces_in_flow_control_structures
+warning - Unused import: 'package:dino_run_epochs/components/obstacle.dart'. Try removing the import directive - tool\desert_journey_review_test.dart:1:8 - unused_import
+
+5 issues found. (ran in 61.8s)

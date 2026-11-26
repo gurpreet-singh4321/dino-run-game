@@ -1,10 +1,11 @@
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flame/components.dart';
 import '../game/dino_game.dart';
 import '../game/game_state.dart';
+import 'orbital_scenery.dart';
+import '../utils/scenery_cache.dart';
 
 /// Full-screen gradient sky that seamlessly transitions between biomes.
 /// Renders multi-layer detailed environments: Pyramids, God Rays, Active Volcanoes, Ringed Planets, Northern Lights, and Weather.
@@ -37,22 +38,15 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
   ui.Image? _iceBgImage;
   ui.Image? _volcanoBgImage;
   ui.Image? _cosmosBgImage;
-  ui.Image? _spaceBgImage;
+  ui.Image? _orbitBgImage;
 
   Future<ui.Image?> _loadImageSafely(List<String> paths) async {
     for (final path in paths) {
       try {
-        final data = await rootBundle.load(path);
-        final bytes = data.buffer.asUint8List();
-        final codec = await ui.instantiateImageCodec(bytes);
-        final frame = await codec.getNextFrame();
-        return frame.image;
-      } catch (_) {}
-      try {
         final flamePath = path.startsWith('assets/images/')
             ? path.substring('assets/images/'.length)
             : path;
-        final img = await game.images.load(flamePath);
+        final img = await SceneryCache.load(flamePath.split('/').last);
         return img;
       } catch (_) {}
     }
@@ -71,7 +65,7 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       _loadImageSafely(['assets/images/biomes/ice_painted_v1.png']),
       _loadImageSafely(['assets/images/biomes/volcano_painted_v1.png']),
       _loadImageSafely(['assets/images/biomes/cosmos_painted_v1.png']),
-      _loadImageSafely(['assets/images/biomes/cosmos_painted_v1.png']),
+      _loadImageSafely(['assets/images/biomes/orbit_painted_v1.png']),
     ]);
 
     _desertBgImage = results[0];
@@ -80,99 +74,115 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     _iceBgImage = results[3];
     _volcanoBgImage = results[4];
     _cosmosBgImage = results[5];
-    _spaceBgImage = results[6];
+    _orbitBgImage = results[6];
 
     // Spawn pterodactyls for prehistoric skies
     for (int i = 0; i < 3; i++) {
-      _pterodactyls.add(_Pterodactyl(
-        x: _rng.nextDouble() * size.x,
-        y: 35 + _rng.nextDouble() * 95,
-        speed: 30 + _rng.nextDouble() * 22,
-        wingPhase: _rng.nextDouble() * math.pi * 2,
-        scale: 0.70 + _rng.nextDouble() * 0.40,
-      ));
+      _pterodactyls.add(
+        _Pterodactyl(
+          x: _rng.nextDouble() * size.x,
+          y: 35 + _rng.nextDouble() * 95,
+          speed: 30 + _rng.nextDouble() * 22,
+          wingPhase: _rng.nextDouble() * math.pi * 2,
+          scale: 0.70 + _rng.nextDouble() * 0.40,
+        ),
+      );
     }
 
     // Spawn initial clouds
     for (int i = 0; i < 6; i++) {
-      _clouds.add(_Cloud(
-        x: _rng.nextDouble() * size.x,
-        y: 20 + _rng.nextDouble() * (size.y * 0.3),
-        width: 60 + _rng.nextDouble() * 80,
-        speed: 8 + _rng.nextDouble() * 15,
-      ));
+      _clouds.add(
+        _Cloud(
+          x: _rng.nextDouble() * size.x,
+          y: 20 + _rng.nextDouble() * (size.y * 0.3),
+          width: 60 + _rng.nextDouble() * 80,
+          speed: 8 + _rng.nextDouble() * 15,
+        ),
+      );
     }
 
     // Spawn stars for Cosmos & Dark biomes
     for (int i = 0; i < 45; i++) {
-      _stars.add(_Star(
-        x: _rng.nextDouble() * size.x,
-        y: _rng.nextDouble() * size.y * 0.7,
-        brightness: _rng.nextDouble(),
-        twinkleSpeed: 1 + _rng.nextDouble() * 3,
-      ));
+      _stars.add(
+        _Star(
+          x: _rng.nextDouble() * size.x,
+          y: _rng.nextDouble() * size.y * 0.7,
+          brightness: _rng.nextDouble(),
+          twinkleSpeed: 1 + _rng.nextDouble() * 3,
+        ),
+      );
     }
 
     // Spawn snowflakes for Ice Age
     for (int i = 0; i < 45; i++) {
-      _snowFlakes.add(_SnowFlake(
-        x: _rng.nextDouble() * size.x,
-        y: _rng.nextDouble() * size.y,
-        radius: 1.5 + _rng.nextDouble() * 2.5,
-        speedY: 25 + _rng.nextDouble() * 45,
-        swaySpeed: 1.5 + _rng.nextDouble() * 2.0,
-        swayWidth: 15 + _rng.nextDouble() * 20,
-        phase: _rng.nextDouble() * math.pi * 2,
-      ));
+      _snowFlakes.add(
+        _SnowFlake(
+          x: _rng.nextDouble() * size.x,
+          y: _rng.nextDouble() * size.y,
+          radius: 1.5 + _rng.nextDouble() * 2.5,
+          speedY: 25 + _rng.nextDouble() * 45,
+          swaySpeed: 1.5 + _rng.nextDouble() * 2.0,
+          swayWidth: 15 + _rng.nextDouble() * 20,
+          phase: _rng.nextDouble() * math.pi * 2,
+        ),
+      );
     }
 
     // Spawn volcanic ash embers
     for (int i = 0; i < 30; i++) {
-      _ashParticles.add(_AshParticle(
-        x: _rng.nextDouble() * size.x,
-        y: _rng.nextDouble() * size.y,
-        radius: 1.0 + _rng.nextDouble() * 2.0,
-        speedY: 30 + _rng.nextDouble() * 50,
-        speedX: -20 - _rng.nextDouble() * 30,
-      ));
+      _ashParticles.add(
+        _AshParticle(
+          x: _rng.nextDouble() * size.x,
+          y: _rng.nextDouble() * size.y,
+          radius: 1.0 + _rng.nextDouble() * 2.0,
+          speedY: 30 + _rng.nextDouble() * 50,
+          speedX: -20 - _rng.nextDouble() * 30,
+        ),
+      );
     }
 
     // Spawn forest glowing spores
     for (int i = 0; i < 25; i++) {
-      _forestSpores.add(_ForestSpore(
-        x: _rng.nextDouble() * size.x,
-        y: 50 + _rng.nextDouble() * (size.y * 0.6),
-        radius: 1.5 + _rng.nextDouble() * 2.0,
-        floatSpeed: 0.8 + _rng.nextDouble() * 1.5,
-        phase: _rng.nextDouble() * math.pi * 2,
-      ));
+      _forestSpores.add(
+        _ForestSpore(
+          x: _rng.nextDouble() * size.x,
+          y: 50 + _rng.nextDouble() * (size.y * 0.6),
+          radius: 1.5 + _rng.nextDouble() * 2.0,
+          floatSpeed: 0.8 + _rng.nextDouble() * 1.5,
+          phase: _rng.nextDouble() * math.pi * 2,
+        ),
+      );
     }
 
     // Spawn desert rolling bushes
     for (int i = 0; i < 2; i++) {
-      _rollingBushes.add(_RollingBush(
-        x: _rng.nextDouble() * size.x,
-        speed: 80 + _rng.nextDouble() * 40,
-        radius: 16 + _rng.nextDouble() * 8,
-      ));
+      _rollingBushes.add(
+        _RollingBush(
+          x: _rng.nextDouble() * size.x,
+          speed: 80 + _rng.nextDouble() * 40,
+          radius: 16 + _rng.nextDouble() * 8,
+        ),
+      );
     }
 
     // Spawn desert airborne micro sand dust
     for (int i = 0; i < 45; i++) {
-      _desertSandDust.add(_DesertSandDust(
-        x: _rng.nextDouble() * size.x,
-        y: 35 + _rng.nextDouble() * (size.y * 0.72),
-        radius: 0.8 + _rng.nextDouble() * 1.8,
-        speedX: 100 + _rng.nextDouble() * 120,
-        waveAmp: 2.0 + _rng.nextDouble() * 4.0,
-        phase: _rng.nextDouble() * math.pi * 2,
-        alpha: 0.20 + _rng.nextDouble() * 0.35,
-        color: (i % 3 == 0)
-            ? const Color(0xFFFFF9C4)
-            : (i % 2 == 0)
-                ? const Color(0xFFFFE082)
-                : const Color(0xFFEAA63F),
-      ));
+      _desertSandDust.add(
+        _DesertSandDust(
+          x: _rng.nextDouble() * size.x,
+          y: 35 + _rng.nextDouble() * (size.y * 0.72),
+          radius: 0.8 + _rng.nextDouble() * 1.8,
+          speedX: 100 + _rng.nextDouble() * 120,
+          waveAmp: 2.0 + _rng.nextDouble() * 4.0,
+          phase: _rng.nextDouble() * math.pi * 2,
+          alpha: 0.20 + _rng.nextDouble() * 0.35,
+          color: (i % 3 == 0)
+              ? const Color(0xFFFFF9C4)
+              : (i % 2 == 0)
+              ? const Color(0xFFFFE082)
+              : const Color(0xFFEAA63F),
+        ),
+      );
     }
   }
 
@@ -217,15 +227,17 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     if (game.biomeManager.isRaining) {
       if (_rainDrops.length < 150) {
         for (int i = 0; i < 5; i++) {
-          _rainDrops.add(_RainDrop(
-            x: _rng.nextDouble() * game.size.x * 1.5,
-            y: -20 - _rng.nextDouble() * 50,
-            speed: 600 + _rng.nextDouble() * 400,
-            length: 15 + _rng.nextDouble() * 20,
-          ));
+          _rainDrops.add(
+            _RainDrop(
+              x: _rng.nextDouble() * game.size.x * 1.5,
+              y: -20 - _rng.nextDouble() * 50,
+              speed: 600 + _rng.nextDouble() * 400,
+              length: 15 + _rng.nextDouble() * 20,
+            ),
+          );
         }
       }
-      
+
       for (final drop in _rainDrops) {
         drop.x -= drop.speed * 0.35 * dt;
         drop.y += drop.speed * dt;
@@ -328,7 +340,11 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     }
   }
 
-  Gradient _getGroundGradient(String currentBiome, Color skyTop, Color skyBottom) {
+  Gradient _getGroundGradient(
+    String currentBiome,
+    Color skyTop,
+    Color skyBottom,
+  ) {
     if (currentBiome == 'DESERT') {
       return const LinearGradient(
         begin: Alignment.topCenter,
@@ -358,10 +374,16 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     final currentBiome = game.biomeManager.effectiveBiome.name;
     final rect = Rect.fromLTWH(0, 0, size.x, size.y);
 
-    final isReturning = (game.state == GameState.spaceMode && game.spacePhase == SpacePhase.returning);
+    final isReturning =
+        (game.state == GameState.spaceMode &&
+        game.spacePhase == SpacePhase.returning);
 
     if (isReturning) {
-      final returnProgress = (1.0 - (game.spacePhaseTimer / DinoGame.spaceReturnDuration)).clamp(0.0, 1.0);
+      final returnProgress =
+          (1.0 - (game.spacePhaseTimer / DinoGame.spaceReturnDuration)).clamp(
+            0.0,
+            1.0,
+          );
 
       // 1. Draw Space Cosmic Background as base layer
       final spaceGradient = const LinearGradient(
@@ -379,9 +401,23 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
 
         if (easeT >= 0.99) {
           // Fully revealed ground biome
-          final groundGrad = _getGroundGradient(currentBiome, skyTop, skyBottom);
-          canvas.drawRect(rect, Paint()..shader = groundGrad.createShader(rect));
-          _drawBiomeElements(canvas, currentBiome, skyTop, skyBottom, rect, 1.0);
+          final groundGrad = _getGroundGradient(
+            currentBiome,
+            skyTop,
+            skyBottom,
+          );
+          canvas.drawRect(
+            rect,
+            Paint()..shader = groundGrad.createShader(rect),
+          );
+          _drawBiomeElements(
+            canvas,
+            currentBiome,
+            skyTop,
+            skyBottom,
+            rect,
+            1.0,
+          );
         } else {
           // Expanding aperture from Center expanding upwards to Top!
           final cx = size.x * 0.5;
@@ -392,17 +428,33 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
           final ryBottom = size.y * (0.02 + easeT * 0.85);
 
           final revealPath = Path()
-            ..addOval(Rect.fromLTRB(cx - rx, cy - ryTop, cx + rx, cy + ryBottom));
+            ..addOval(
+              Rect.fromLTRB(cx - rx, cy - ryTop, cx + rx, cy + ryBottom),
+            );
 
           canvas.save();
           canvas.clipPath(revealPath);
 
           // Draw ground sky gradient inside aperture
-          final groundGrad = _getGroundGradient(currentBiome, skyTop, skyBottom);
-          canvas.drawRect(rect, Paint()..shader = groundGrad.createShader(rect));
+          final groundGrad = _getGroundGradient(
+            currentBiome,
+            skyTop,
+            skyBottom,
+          );
+          canvas.drawRect(
+            rect,
+            Paint()..shader = groundGrad.createShader(rect),
+          );
 
           // Draw full biome visual layers inside aperture
-          _drawBiomeElements(canvas, currentBiome, skyTop, skyBottom, rect, 1.0);
+          _drawBiomeElements(
+            canvas,
+            currentBiome,
+            skyTop,
+            skyBottom,
+            rect,
+            1.0,
+          );
           canvas.restore();
 
           // Luminous Atmospheric Re-entry shockwave glow rim around aperture
@@ -424,9 +476,15 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
           if (revealT < 0.45) {
             final flashAlpha = (1.0 - (revealT / 0.45)).clamp(0.0, 1.0);
             final flashPaint = Paint()
-              ..color = const Color(0xFFFFE082).withValues(alpha: flashAlpha * 0.6)
+              ..color = const Color(
+                0xFFFFE082,
+              ).withValues(alpha: flashAlpha * 0.6)
               ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 24);
-            canvas.drawCircle(Offset(cx, cy), 50.0 + revealT * 200.0, flashPaint);
+            canvas.drawCircle(
+              Offset(cx, cy),
+              50.0 + revealT * 200.0,
+              flashPaint,
+            );
           }
         }
       }
@@ -458,16 +516,33 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
 
     // --- BIOME ELEMENTS ---
     if (biomeAlpha > 0.01) {
-      _drawBiomeElements(canvas, currentBiome, skyTop, skyBottom, rect, biomeAlpha);
+      _drawBiomeElements(
+        canvas,
+        currentBiome,
+        skyTop,
+        skyBottom,
+        rect,
+        biomeAlpha,
+      );
     }
 
     // Sweeping Cloud & Fog Layer during world change
     _drawBiomeTransitionFog(canvas);
   }
 
-  void _drawBiomeElements(Canvas canvas, String currentBiome, Color skyTop, Color skyBottom, Rect rect, double alpha) {
+  void _drawBiomeElements(
+    Canvas canvas,
+    String currentBiome,
+    Color skyTop,
+    Color skyBottom,
+    Rect rect,
+    double alpha,
+  ) {
     if (alpha < 0.99) {
-      canvas.saveLayer(rect, Paint()..color = Colors.white.withValues(alpha: alpha));
+      canvas.saveLayer(
+        rect,
+        Paint()..color = Colors.white.withValues(alpha: alpha),
+      );
     }
 
     // Cosmic space nebulae & ringed planet (procedural fallback only)
@@ -491,9 +566,16 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
 
     // Stars (visible in space/night procedural fallbacks)
     final skyBrightness = skyTop.computeLuminance();
-    if (skyBrightness < 0.35 && currentBiome != 'DESERT' && _cosmosBgImage == null && _iceBgImage == null) {
+    if (skyBrightness < 0.35 &&
+        currentBiome != 'DESERT' &&
+        _cosmosBgImage == null &&
+        _iceBgImage == null) {
       for (final star in _stars) {
-        final starAlpha = ((math.sin(star.brightness) + 1) / 2 * (1 - skyBrightness)).clamp(0.0, 1.0);
+        final starAlpha =
+            ((math.sin(star.brightness) + 1) / 2 * (1 - skyBrightness)).clamp(
+              0.0,
+              1.0,
+            );
         canvas.drawCircle(
           Offset(star.x, star.y),
           1.5,
@@ -508,7 +590,12 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     }
 
     // Clouds (Procedural fallback only)
-    if (_desertBgImage == null && _rainBgImage == null && _forestBgImage == null && _iceBgImage == null && _volcanoBgImage == null && _cosmosBgImage == null) {
+    if (_desertBgImage == null &&
+        _rainBgImage == null &&
+        _forestBgImage == null &&
+        _iceBgImage == null &&
+        _volcanoBgImage == null &&
+        _cosmosBgImage == null) {
       final cloudAlpha = skyBrightness > 0.2 ? 0.75 : 0.2;
       for (final cloud in _clouds) {
         _drawCloud(canvas, cloud, cloudAlpha);
@@ -540,7 +627,7 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
         ..color = const Color(0x44FFFFFF)
         ..strokeWidth = 1.2
         ..strokeCap = StrokeCap.round;
-        
+
       for (int i = 0; i < _rainDrops.length; i++) {
         final drop = _rainDrops[i];
         final p = (i % 2 == 0) ? rainPaintNear : rainPaintFar;
@@ -554,17 +641,26 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       if (_lightningFlashAlpha > 0.05) {
         canvas.drawRect(
           rect,
-          Paint()..color = const Color(0xFFE0F7FA).withValues(alpha: _lightningFlashAlpha * 0.35),
+          Paint()
+            ..color = const Color(
+              0xFFE0F7FA,
+            ).withValues(alpha: _lightningFlashAlpha * 0.35),
         );
 
         if (_lightningBoltPoints.length > 1) {
-          final boltPath = Path()..moveTo(_lightningBoltPoints[0].dx, _lightningBoltPoints[0].dy);
+          final boltPath = Path()
+            ..moveTo(_lightningBoltPoints[0].dx, _lightningBoltPoints[0].dy);
           for (int i = 1; i < _lightningBoltPoints.length; i++) {
-            boltPath.lineTo(_lightningBoltPoints[i].dx, _lightningBoltPoints[i].dy);
+            boltPath.lineTo(
+              _lightningBoltPoints[i].dx,
+              _lightningBoltPoints[i].dy,
+            );
           }
 
           final boltGlow = Paint()
-            ..color = const Color(0xFF4DEEEA).withValues(alpha: _lightningFlashAlpha)
+            ..color = const Color(
+              0xFF4DEEEA,
+            ).withValues(alpha: _lightningFlashAlpha)
             ..strokeWidth = 6.0
             ..style = ui.PaintingStyle.stroke
             ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
@@ -589,8 +685,10 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
 
     // Volcanic ash embers for VOLCANO
     if (currentBiome == 'VOLCANO') {
-      final ashOrange = Paint()..color = const Color(0xFFFF5722).withValues(alpha: 0.7);
-      final ashYellow = Paint()..color = const Color(0xFFFFEB3B).withValues(alpha: 0.8);
+      final ashOrange = Paint()
+        ..color = const Color(0xFFFF5722).withValues(alpha: 0.7);
+      final ashYellow = Paint()
+        ..color = const Color(0xFFFFEB3B).withValues(alpha: 0.8);
       for (int i = 0; i < _ashParticles.length; i++) {
         final ash = _ashParticles[i];
         canvas.drawCircle(
@@ -629,21 +727,18 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     final w = size.x;
     final h = size.y;
 
-    // 1. Deep Space Low-Earth Orbit Image Layer (Continuous panoramic Earth orbit)
-    final spaceImg = _spaceBgImage ?? _cosmosBgImage;
-    if (spaceImg != null) {
-      _drawTiledParallaxImage(
-        canvas,
-        spaceImg,
-        mirrorTiling: true,
-        scrollSpeed: 0.35,
-        alpha: sp,
-        targetHeight: h,
-      );
+    final orbit = _orbitBgImage;
+    if (orbit == null) {
+      OrbitalScenery.draw(canvas, Size(w, h), sp);
     } else {
-      _drawDeepSpaceNebulae(canvas, sp);
-      _drawDeepSpaceRingedPlanet(canvas, sp);
-      _drawDeepSpaceMoon(canvas, sp);
+      canvas.drawImageRect(
+        orbit,
+        Rect.fromLTWH(0, 0, orbit.width.toDouble(), orbit.height.toDouble()),
+        Rect.fromLTWH(0, 0, w, h),
+        Paint()
+          ..color = Colors.white.withValues(alpha: sp)
+          ..filterQuality = FilterQuality.low,
+      );
     }
 
     // 2. Multi-Layered Twinkling Starfield & Colored Giant Stars with 4-point diamond diffraction spikes
@@ -662,125 +757,16 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     }
   }
 
-  void _drawDeepSpaceNebulae(Canvas canvas, double sp) {
-    final w = size.x;
-    final h = size.y;
-
-    // Cyan & Electric Indigo Nebula
-    final n1Center = Offset(w * 0.28 + math.sin(_time * 0.08) * 20, h * 0.25 + math.cos(_time * 0.06) * 12);
-    final n1Rect = Rect.fromCircle(center: n1Center, radius: 180);
-    final n1Shader = RadialGradient(
-      colors: [
-        const Color(0xFF00E5FF).withValues(alpha: 0.22 * sp),
-        const Color(0xFF7C4DFF).withValues(alpha: 0.12 * sp),
-        Colors.transparent,
-      ],
-      stops: const [0.0, 0.45, 1.0],
-    ).createShader(n1Rect);
-    canvas.drawCircle(n1Center, 180, Paint()..shader = n1Shader);
-
-    // Magenta & Radiant Purple Nebula
-    final n2Center = Offset(w * 0.75 + math.cos(_time * 0.09) * 18, h * 0.40 + math.sin(_time * 0.07) * 10);
-    final n2Rect = Rect.fromCircle(center: n2Center, radius: 210);
-    final n2Shader = RadialGradient(
-      colors: [
-        const Color(0xFFFF4081).withValues(alpha: 0.20 * sp),
-        const Color(0xFF9C27B0).withValues(alpha: 0.10 * sp),
-        Colors.transparent,
-      ],
-      stops: const [0.0, 0.50, 1.0],
-    ).createShader(n2Rect);
-    canvas.drawCircle(n2Center, 210, Paint()..shader = n2Shader);
-  }
-
-  void _drawDeepSpaceRingedPlanet(Canvas canvas, double sp) {
-    final planetCenter = Offset(size.x * 0.84, size.y * 0.22 + math.sin(_time * 0.1) * 6);
-    canvas.save();
-    canvas.translate(planetCenter.dx, planetCenter.dy);
-    canvas.rotate(-math.pi / 7);
-
-    // 1. Atmosphere Celestial Aura
-    final auraRect = Rect.fromCircle(center: Offset.zero, radius: 46);
-    final auraShader = RadialGradient(
-      colors: [
-        const Color(0xFF4DEEEA).withValues(alpha: 0.35 * sp),
-        const Color(0xFF00B0FF).withValues(alpha: 0.12 * sp),
-        Colors.transparent,
-      ],
-      stops: const [0.0, 0.65, 1.0],
-    ).createShader(auraRect);
-    canvas.drawCircle(Offset.zero, 46, Paint()..shader = auraShader);
-
-    // 2. Planet Sphere Body with 3D Spherical Light
-    final bodyRect = Rect.fromCircle(center: Offset.zero, radius: 32);
-    final bodyShader = RadialGradient(
-      center: const Alignment(-0.45, -0.45),
-      colors: [
-        const Color(0xFF80DEEA).withValues(alpha: sp),
-        const Color(0xFF00838F).withValues(alpha: sp),
-        const Color(0xFF004D40).withValues(alpha: sp),
-        const Color(0xFF001518).withValues(alpha: sp),
-      ],
-      stops: const [0.0, 0.45, 0.80, 1.0],
-    ).createShader(bodyRect);
-    canvas.drawCircle(Offset.zero, 32, Paint()..shader = bodyShader);
-
-    // 3. Multi-Band 3D Planetary Rings
-    final ringOuterPaint = Paint()
-      ..color = const Color(0xFF80DEEA).withValues(alpha: 0.55 * sp)
-      ..style = ui.PaintingStyle.stroke
-      ..strokeWidth = 4.5;
-    canvas.drawOval(const Rect.fromLTWH(-68, -13, 136, 26), ringOuterPaint);
-
-    final ringInnerPaint = Paint()
-      ..color = const Color(0xFFFFD54F).withValues(alpha: 0.35 * sp)
-      ..style = ui.PaintingStyle.stroke
-      ..strokeWidth = 2.0;
-    canvas.drawOval(const Rect.fromLTWH(-56, -10, 112, 20), ringInnerPaint);
-
-    canvas.restore();
-  }
-
-  void _drawDeepSpaceMoon(Canvas canvas, double sp) {
-    final moonCenter = Offset(size.x * 0.16, size.y * 0.28 + math.cos(_time * 0.12) * 5);
-    final moonRect = Rect.fromCircle(center: moonCenter, radius: 22);
-
-    // Celestial Soft Moon Glow
-    final glowShader = RadialGradient(
-      colors: [
-        const Color(0xFFE1BEE7).withValues(alpha: 0.30 * sp),
-        Colors.transparent,
-      ],
-      stops: const [0.0, 1.0],
-    ).createShader(Rect.fromCircle(center: moonCenter, radius: 36));
-    canvas.drawCircle(moonCenter, 36, Paint()..shader = glowShader);
-
-    // Moon Crescent Body
-    final moonShader = RadialGradient(
-      center: const Alignment(-0.4, -0.4),
-      colors: [
-        const Color(0xFFF3E5F5).withValues(alpha: sp),
-        const Color(0xFFBA68C8).withValues(alpha: sp),
-        const Color(0xFF4A148C).withValues(alpha: sp),
-      ],
-      stops: const [0.0, 0.55, 1.0],
-    ).createShader(moonRect);
-    canvas.drawCircle(moonCenter, 22, Paint()..shader = moonShader);
-
-    // Surface Crater Accents
-    final craterPaint = Paint()..color = const Color(0xFF38006B).withValues(alpha: 0.40 * sp);
-    canvas.drawCircle(Offset(moonCenter.dx + 4, moonCenter.dy - 3), 4.0, craterPaint);
-    canvas.drawCircle(Offset(moonCenter.dx - 6, moonCenter.dy + 5), 3.0, craterPaint);
-    canvas.drawCircle(Offset(moonCenter.dx + 6, moonCenter.dy + 6), 2.5, craterPaint);
-  }
-
   void _drawDeepSpaceStarfield(Canvas canvas, double sp) {
     final w = size.x;
     final h = size.y;
 
     // 1. Far Twinkling Micro Stars
     for (final star in _stars) {
-      final twinkle = ((math.sin(star.brightness + _time * 2.5) + 1) / 2).clamp(0.0, 1.0);
+      final twinkle = ((math.sin(star.brightness + _time * 2.5) + 1) / 2).clamp(
+        0.0,
+        1.0,
+      );
       final starAlpha = sp * (0.35 + twinkle * 0.65);
       final starSize = 1.0 + twinkle * 1.6;
       canvas.drawCircle(
@@ -812,12 +798,16 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       final pulse = 0.85 + 0.15 * math.sin(_time * 3.0 + i * 1.7);
 
       // Star core
-      canvas.drawCircle(pos, 3.2 * pulse, Paint()..color = Colors.white.withValues(alpha: sp));
+      canvas.drawCircle(
+        pos,
+        3.2 * pulse,
+        Paint()..color = Colors.white.withValues(alpha: sp),
+      );
       // Color halo
       canvas.drawCircle(
         pos,
         8.0 * pulse,
-        Paint()..color = color.withValues(alpha: 0.35 * sp)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
+        Paint()..color = color.withValues(alpha: 0.16 * sp),
       );
       // 4-Point Diamond Cross Spikes
       final spikePaint = Paint()
@@ -825,8 +815,16 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
         ..strokeWidth = 1.2
         ..strokeCap = StrokeCap.round;
       final spikeLen = 11.0 * pulse;
-      canvas.drawLine(Offset(pos.dx - spikeLen, pos.dy), Offset(pos.dx + spikeLen, pos.dy), spikePaint);
-      canvas.drawLine(Offset(pos.dx, pos.dy - spikeLen), Offset(pos.dx, pos.dy + spikeLen), spikePaint);
+      canvas.drawLine(
+        Offset(pos.dx - spikeLen, pos.dy),
+        Offset(pos.dx + spikeLen, pos.dy),
+        spikePaint,
+      );
+      canvas.drawLine(
+        Offset(pos.dx, pos.dy - spikeLen),
+        Offset(pos.dx, pos.dy + spikeLen),
+        spikePaint,
+      );
     }
   }
 
@@ -861,13 +859,18 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       );
 
       // Comet Glowing Head
-      canvas.drawCircle(head, 3.5, Paint()..color = Colors.white.withValues(alpha: cometAlpha));
+      canvas.drawCircle(
+        head,
+        3.5,
+        Paint()..color = Colors.white.withValues(alpha: cometAlpha),
+      );
       canvas.drawCircle(
         head,
         7.0,
         Paint()
-          ..color = const Color(0xFF80D8FF).withValues(alpha: 0.45 * cometAlpha)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
+          ..color = const Color(
+            0xFF80D8FF,
+          ).withValues(alpha: 0.18 * cometAlpha),
       );
     }
   }
@@ -894,9 +897,20 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       final fx = (seed / 997.0) * w;
       final lineLen = 40.0 + (seed % 60);
       // Animate position based on time
-      final baseY = (_time * (400 + (seed % 200)) * direction + seed * 3.7) % (h + lineLen * 2) - lineLen;
-      canvas.drawLine(Offset(fx, baseY), Offset(fx, baseY + lineLen * direction), linePaint);
-      canvas.drawLine(Offset(fx, baseY), Offset(fx, baseY + lineLen * direction * 0.6), glowPaint);
+      final baseY =
+          (_time * (400 + (seed % 200)) * direction + seed * 3.7) %
+              (h + lineLen * 2) -
+          lineLen;
+      canvas.drawLine(
+        Offset(fx, baseY),
+        Offset(fx, baseY + lineLen * direction),
+        linePaint,
+      );
+      canvas.drawLine(
+        Offset(fx, baseY),
+        Offset(fx, baseY + lineLen * direction * 0.6),
+        glowPaint,
+      );
     }
   }
 
@@ -937,13 +951,29 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
 
     for (int i = 0; i < 9; i++) {
       final cx = (i * (w / 5.5) - sweepOffset) % (w + 350) - 175;
-      final cy = (i % 3 == 0) ? h * 0.22 : (i % 3 == 1) ? h * 0.42 : h * 0.62;
+      final cy = (i % 3 == 0)
+          ? h * 0.22
+          : (i % 3 == 1)
+          ? h * 0.42
+          : h * 0.62;
       final r = 85.0 + (i % 4) * 30.0;
 
       canvas.drawCircle(Offset(cx, cy), r, cloudPaint);
-      canvas.drawCircle(Offset(cx + r * 0.65, cy - r * 0.22), r * 0.75, cloudPaint);
-      canvas.drawCircle(Offset(cx - r * 0.65, cy + r * 0.12), r * 0.70, cloudPaint);
-      canvas.drawCircle(Offset(cx + r * 1.15, cy + r * 0.15), r * 0.60, cloudPaint);
+      canvas.drawCircle(
+        Offset(cx + r * 0.65, cy - r * 0.22),
+        r * 0.75,
+        cloudPaint,
+      );
+      canvas.drawCircle(
+        Offset(cx - r * 0.65, cy + r * 0.12),
+        r * 0.70,
+        cloudPaint,
+      );
+      canvas.drawCircle(
+        Offset(cx + r * 1.15, cy + r * 0.15),
+        r * 0.60,
+        cloudPaint,
+      );
     }
 
     // 4. Low ground mist rolls
@@ -1004,7 +1034,11 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       center: Alignment(-0.4, -0.4),
       colors: [Color(0xFF80DEEA), Color(0xFF00838F), Color(0xFF004D40)],
     );
-    canvas.drawCircle(Offset.zero, 28, Paint()..shader = bodyGradient.createShader(bodyRect));
+    canvas.drawCircle(
+      Offset.zero,
+      28,
+      Paint()..shader = bodyGradient.createShader(bodyRect),
+    );
 
     // Planetary Rings
     final ringPaint = Paint()
@@ -1031,9 +1065,14 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     final r = rb.radius;
 
     // 1. Static Ground Shadow with edgeAlpha
-    final shadowPaint = Paint()..color = Colors.black.withValues(alpha: 0.16 * edgeAlpha);
+    final shadowPaint = Paint()
+      ..color = Colors.black.withValues(alpha: 0.16 * edgeAlpha);
     canvas.drawOval(
-      Rect.fromCenter(center: Offset(rb.x, yGround - 1), width: r * 2.4, height: r * 0.45),
+      Rect.fromCenter(
+        center: Offset(rb.x, yGround - 1),
+        width: r * 2.4,
+        height: r * 0.45,
+      ),
       shadowPaint,
     );
 
@@ -1043,10 +1082,14 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     canvas.rotate(rb.rotation);
 
     // Warm desert sagebrush palette
-    final shadowFoliagePaint = Paint()..color = const Color(0xFF4E5830).withValues(alpha: edgeAlpha);
-    final midFoliagePaint = Paint()..color = const Color(0xFF76834E).withValues(alpha: edgeAlpha);
-    final lightFoliagePaint = Paint()..color = const Color(0xFF9EAC6F).withValues(alpha: edgeAlpha);
-    final sunlitFoliagePaint = Paint()..color = const Color(0xFFC7D493).withValues(alpha: edgeAlpha);
+    final shadowFoliagePaint = Paint()
+      ..color = const Color(0xFF4E5830).withValues(alpha: edgeAlpha);
+    final midFoliagePaint = Paint()
+      ..color = const Color(0xFF76834E).withValues(alpha: edgeAlpha);
+    final lightFoliagePaint = Paint()
+      ..color = const Color(0xFF9EAC6F).withValues(alpha: edgeAlpha);
+    final sunlitFoliagePaint = Paint()
+      ..color = const Color(0xFFC7D493).withValues(alpha: edgeAlpha);
     final twigPaint = Paint()
       ..color = const Color(0xFF4A3418).withValues(alpha: 0.85 * edgeAlpha)
       ..strokeWidth = 1.6
@@ -1064,7 +1107,10 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       final forkAngle = angle + (i % 2 == 0 ? 0.35 : -0.35);
       canvas.drawLine(
         Offset(tx * 0.55, ty * 0.55),
-        Offset(tx * 0.55 + math.cos(forkAngle) * r * 0.32, ty * 0.55 + math.sin(forkAngle) * r * 0.32),
+        Offset(
+          tx * 0.55 + math.cos(forkAngle) * r * 0.32,
+          ty * 0.55 + math.sin(forkAngle) * r * 0.32,
+        ),
         twigPaint..strokeWidth = 1.1,
       );
     }
@@ -1074,7 +1120,11 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       final angle = (i / 7) * math.pi * 2;
       final dist = r * 0.52;
       final puffR = r * 0.44;
-      canvas.drawCircle(Offset(math.cos(angle) * dist, math.sin(angle) * dist), puffR, shadowFoliagePaint);
+      canvas.drawCircle(
+        Offset(math.cos(angle) * dist, math.sin(angle) * dist),
+        puffR,
+        shadowFoliagePaint,
+      );
     }
 
     // 2c. Mid-layer sage foliage puffs (8 offset lobes)
@@ -1082,7 +1132,11 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       final angle = (i / 8) * math.pi * 2 + 0.38;
       final dist = r * 0.42;
       final puffR = r * 0.38;
-      canvas.drawCircle(Offset(math.cos(angle) * dist, math.sin(angle) * dist), puffR, midFoliagePaint);
+      canvas.drawCircle(
+        Offset(math.cos(angle) * dist, math.sin(angle) * dist),
+        puffR,
+        midFoliagePaint,
+      );
     }
 
     // 2d. Light top foliage clusters (5 central-offset lobes)
@@ -1090,7 +1144,11 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       final angle = (i / 5) * math.pi * 2 + 0.2;
       final dist = r * 0.28;
       final puffR = r * 0.32;
-      canvas.drawCircle(Offset(math.cos(angle) * dist - 1.5, math.sin(angle) * dist - 1.5), puffR, lightFoliagePaint);
+      canvas.drawCircle(
+        Offset(math.cos(angle) * dist - 1.5, math.sin(angle) * dist - 1.5),
+        puffR,
+        lightFoliagePaint,
+      );
     }
 
     // 2e. Sunlit golden top highlights
@@ -1098,7 +1156,11 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       final angle = (i / 4) * math.pi * 2 - 0.4;
       final dist = r * 0.18;
       final puffR = r * 0.22;
-      canvas.drawCircle(Offset(math.cos(angle) * dist - 2.0, math.sin(angle) * dist - 2.5), puffR, sunlitFoliagePaint);
+      canvas.drawCircle(
+        Offset(math.cos(angle) * dist - 2.0, math.sin(angle) * dist - 2.5),
+        puffR,
+        sunlitFoliagePaint,
+      );
     }
 
     // 2f. Center dense core puff
@@ -1111,7 +1173,8 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
   void _drawDesertWind(Canvas canvas) {
     for (final dust in _desertSandDust) {
       final curY = dust.y + math.sin(_time * 2.2 + dust.phase) * dust.waveAmp;
-      final dustPaint = Paint()..color = dust.color.withValues(alpha: dust.alpha);
+      final dustPaint = Paint()
+        ..color = dust.color.withValues(alpha: dust.alpha);
       canvas.drawCircle(Offset(dust.x, curY), dust.radius, dustPaint);
     }
   }
@@ -1239,10 +1302,7 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       final capShadowShader = LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: const [
-          Color(0xFFFFB300),
-          Color(0xFFFF8F00),
-        ],
+        colors: const [Color(0xFFFFB300), Color(0xFFFF8F00)],
       ).createShader(Rect.fromLTRB(capRidgeX, apex.dy, capRx, capBaseY));
       canvas.drawPath(capShadowPath, Paint()..shader = capShadowShader);
 
@@ -1256,15 +1316,35 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     final glintPaint = Paint()..color = Colors.white.withValues(alpha: 0.90);
     final hPath = Path()
       ..moveTo(center.dx - size, center.dy)
-      ..quadraticBezierTo(center.dx, center.dy, center.dx, center.dy - size * 0.25)
+      ..quadraticBezierTo(
+        center.dx,
+        center.dy,
+        center.dx,
+        center.dy - size * 0.25,
+      )
       ..quadraticBezierTo(center.dx, center.dy, center.dx + size, center.dy)
-      ..quadraticBezierTo(center.dx, center.dy, center.dx, center.dy + size * 0.25)
+      ..quadraticBezierTo(
+        center.dx,
+        center.dy,
+        center.dx,
+        center.dy + size * 0.25,
+      )
       ..close();
     final vPath = Path()
       ..moveTo(center.dx, center.dy - size)
-      ..quadraticBezierTo(center.dx, center.dy, center.dx + size * 0.25, center.dy)
+      ..quadraticBezierTo(
+        center.dx,
+        center.dy,
+        center.dx + size * 0.25,
+        center.dy,
+      )
       ..quadraticBezierTo(center.dx, center.dy, center.dx, center.dy + size)
-      ..quadraticBezierTo(center.dx, center.dy, center.dx - size * 0.25, center.dy)
+      ..quadraticBezierTo(
+        center.dx,
+        center.dy,
+        center.dx - size * 0.25,
+        center.dy,
+      )
       ..close();
     canvas.drawPath(hPath, glintPaint);
     canvas.drawPath(vPath, glintPaint);
@@ -1307,8 +1387,22 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     // 3. Midground Sweeping Sand Dunes (Rich S-crests with golden light & shadow - seamlessly matching at 0 and w)
     final midDunePath = Path()
       ..moveTo(0, yGround - 40)
-      ..cubicTo(w * 0.16, yGround - 62, w * 0.32, yGround - 26, w * 0.48, yGround - 52)
-      ..cubicTo(w * 0.62, yGround - 74, w * 0.76, yGround - 28, w * 0.90, yGround - 58)
+      ..cubicTo(
+        w * 0.16,
+        yGround - 62,
+        w * 0.32,
+        yGround - 26,
+        w * 0.48,
+        yGround - 52,
+      )
+      ..cubicTo(
+        w * 0.62,
+        yGround - 74,
+        w * 0.76,
+        yGround - 28,
+        w * 0.90,
+        yGround - 58,
+      )
       ..lineTo(w, yGround - 40)
       ..lineTo(w, size.y)
       ..lineTo(0, size.y);
@@ -1327,8 +1421,22 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     // Dune Ridge Golden Highlight & Shadow Crest Sweep
     final ridgePath = Path()
       ..moveTo(0, yGround - 40)
-      ..cubicTo(w * 0.16, yGround - 62, w * 0.32, yGround - 26, w * 0.48, yGround - 52)
-      ..cubicTo(w * 0.62, yGround - 74, w * 0.76, yGround - 28, w * 0.90, yGround - 58)
+      ..cubicTo(
+        w * 0.16,
+        yGround - 62,
+        w * 0.32,
+        yGround - 26,
+        w * 0.48,
+        yGround - 52,
+      )
+      ..cubicTo(
+        w * 0.62,
+        yGround - 74,
+        w * 0.76,
+        yGround - 28,
+        w * 0.90,
+        yGround - 58,
+      )
       ..lineTo(w, yGround - 40);
 
     // Golden sun glint on the ridge edge
@@ -1391,11 +1499,7 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     final fgDuneShader = LinearGradient(
       begin: Alignment.topCenter,
       end: Alignment.bottomCenter,
-      colors: const [
-        Color(0xFFFBE48A),
-        Color(0xFFE5B946),
-        Color(0xFFCA9428),
-      ],
+      colors: const [Color(0xFFFBE48A), Color(0xFFE5B946), Color(0xFFCA9428)],
       stops: const [0.0, 0.4, 1.0],
     ).createShader(Rect.fromLTWH(0, yGround - 30, w, 60));
     canvas.drawPath(fgDunePath, Paint()..shader = fgDuneShader);
@@ -1420,9 +1524,11 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     canvas.scale(scale);
 
     // Soft cast shadow on dune
-    final shadowPath = Path()
-      ..addOval(const Rect.fromLTWH(-55, 18, 120, 16));
-    canvas.drawPath(shadowPath, Paint()..color = const Color(0xFF8A5D18).withValues(alpha: 0.35));
+    final shadowPath = Path()..addOval(const Rect.fromLTWH(-55, 18, 120, 16));
+    canvas.drawPath(
+      shadowPath,
+      Paint()..color = const Color(0xFF8A5D18).withValues(alpha: 0.35),
+    );
 
     // Sphinx Lion Body (Rich golden sandstone gradient)
     final bodyPath = Path()
@@ -1443,7 +1549,10 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       stops: [0.0, 0.5, 1.0],
     );
     final bounds = const Rect.fromLTWH(-60, -50, 130, 80);
-    canvas.drawPath(bodyPath, Paint()..shader = sphinxGrad.createShader(bounds));
+    canvas.drawPath(
+      bodyPath,
+      Paint()..shader = sphinxGrad.createShader(bounds),
+    );
 
     // Curved Tail resting against flank
     final tailPath = Path()
@@ -1461,8 +1570,20 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
 
     // Front Paws with defined claws
     final pawPaint = Paint()..color = const Color(0xFFF5CE6E);
-    canvas.drawRRect(RRect.fromRectAndRadius(const Rect.fromLTWH(36, 16, 26, 9), const Radius.circular(3)), pawPaint);
-    canvas.drawRRect(RRect.fromRectAndRadius(const Rect.fromLTWH(26, 18, 22, 7), const Radius.circular(3)), Paint()..color = const Color(0xFFD8A53B));
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        const Rect.fromLTWH(36, 16, 26, 9),
+        const Radius.circular(3),
+      ),
+      pawPaint,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        const Rect.fromLTWH(26, 18, 22, 7),
+        const Radius.circular(3),
+      ),
+      Paint()..color = const Color(0xFFD8A53B),
+    );
 
     // Royal Nemes Headdress (Egyptian pharaoh cloth with blue & gold bands)
     final nemesPath = Path()
@@ -1506,7 +1627,11 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     }
 
     // Uraeus Cobra crest on brow
-    canvas.drawCircle(const Offset(25, -56), 2.0, Paint()..color = const Color(0xFFFFD700));
+    canvas.drawCircle(
+      const Offset(25, -56),
+      2.0,
+      Paint()..color = const Color(0xFFFFD700),
+    );
 
     canvas.restore();
   }
@@ -1530,7 +1655,11 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     const scoutX = 145.0;
     final scoutPaint = Paint()..color = const Color(0xFF4E342E);
     // Flowing desert keffiyeh headwear
-    canvas.drawCircle(const Offset(scoutX, -18), 4.0, Paint()..color = const Color(0xFFFFF8E1));
+    canvas.drawCircle(
+      const Offset(scoutX, -18),
+      4.0,
+      Paint()..color = const Color(0xFFFFF8E1),
+    );
     canvas.drawCircle(const Offset(scoutX, -18), 2.5, scoutPaint);
     // Flowing Robe (Galabeya)
     final robePath = Path()
@@ -1541,17 +1670,31 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       ..close();
     canvas.drawPath(robePath, Paint()..color = const Color(0xFFECEFF1));
     // Walking legs
-    canvas.drawLine(const Offset(scoutX - 3, 8), const Offset(scoutX - 5, 16), scoutPaint..strokeWidth = 2.0);
-    canvas.drawLine(const Offset(scoutX + 3, 8), const Offset(scoutX + 5, 16), scoutPaint..strokeWidth = 2.0);
+    canvas.drawLine(
+      const Offset(scoutX - 3, 8),
+      const Offset(scoutX - 5, 16),
+      scoutPaint..strokeWidth = 2.0,
+    );
+    canvas.drawLine(
+      const Offset(scoutX + 3, 8),
+      const Offset(scoutX + 5, 16),
+      scoutPaint..strokeWidth = 2.0,
+    );
     // Shepherd staff
     canvas.drawLine(
       const Offset(scoutX + 7, -24),
       const Offset(scoutX + 7, 16),
-      Paint()..color = const Color(0xFF795548)..strokeWidth = 1.5,
+      Paint()
+        ..color = const Color(0xFF795548)
+        ..strokeWidth = 1.5,
     );
 
     // Lead rope to first camel
-    canvas.drawLine(const Offset(scoutX - 4, -6), const Offset(108, -12), ropePaint);
+    canvas.drawLine(
+      const Offset(scoutX - 4, -6),
+      const Offset(108, -12),
+      ropePaint,
+    );
 
     for (int c = 0; c < 4; c++) {
       final cx = 100.0 - c * 40.0;
@@ -1578,23 +1721,20 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       final cPath = Path()
         ..moveTo(-16, 2)
         ..cubicTo(-18, -4, -16, -10, -10, -12) // Rear flank
-        ..cubicTo(-6, -12, -4, -20, 2, -20)   // Rounded Single Hump
-        ..cubicTo(7, -20, 9, -12, 13, -10)    // Shoulder
-        ..lineTo(16, -22)                     // Arched neck
-        ..cubicTo(18, -26, 24, -26, 24, -21)  // Head & muzzle
+        ..cubicTo(-6, -12, -4, -20, 2, -20) // Rounded Single Hump
+        ..cubicTo(7, -20, 9, -12, 13, -10) // Shoulder
+        ..lineTo(16, -22) // Arched neck
+        ..cubicTo(18, -26, 24, -26, 24, -21) // Head & muzzle
         ..lineTo(22, -18)
-        ..lineTo(17, -14)                     // Throat
-        ..cubicTo(14, -6, 13, 0, 10, 2)       // Chest
-        ..cubicTo(0, 5, -8, 5, -16, 2)        // Belly
+        ..lineTo(17, -14) // Throat
+        ..cubicTo(14, -6, 13, 0, 10, 2) // Chest
+        ..cubicTo(0, 5, -8, 5, -16, 2) // Belly
         ..close();
 
       final camelGradient = LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-        colors: const [
-          Color(0xFFD4A552),
-          Color(0xFFB58230),
-        ],
+        colors: const [Color(0xFFD4A552), Color(0xFFB58230)],
       ).createShader(const Rect.fromLTWH(-18, -26, 45, 35));
       canvas.drawPath(cPath, Paint()..shader = camelGradient);
 
@@ -1608,7 +1748,9 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       canvas.drawLine(
         const Offset(-5, -10),
         const Offset(9, -10),
-        Paint()..color = const Color(0xFFFFD700)..strokeWidth = 1.4,
+        Paint()
+          ..color = const Color(0xFFFFD700)
+          ..strokeWidth = 1.4,
       );
 
       // Articulated legs with knees & hooves
@@ -1624,7 +1766,11 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       canvas.drawLine(const Offset(11, 2), const Offset(14, 14), legPaint);
 
       // Head bridle detail
-      canvas.drawCircle(const Offset(22, -22), 1.0, Paint()..color = const Color(0xFF3E2723));
+      canvas.drawCircle(
+        const Offset(22, -22),
+        1.0,
+        Paint()..color = const Color(0xFF3E2723),
+      );
 
       canvas.restore();
     }
@@ -1637,7 +1783,11 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     canvas.translate(pos.dx, pos.dy);
 
     // 1. Soft glowing shoreline moisture ring
-    final shoreRect = Rect.fromCenter(center: Offset.zero, width: width * 1.15, height: width * 0.42);
+    final shoreRect = Rect.fromCenter(
+      center: Offset.zero,
+      width: width * 1.15,
+      height: width * 0.42,
+    );
     final shoreShader = RadialGradient(
       center: Alignment.center,
       colors: [
@@ -1648,7 +1798,11 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     canvas.drawOval(shoreRect, Paint()..shader = shoreShader);
 
     // 2. Crystal clear turquoise spring pool
-    final poolRect = Rect.fromCenter(center: Offset.zero, width: width, height: width * 0.36);
+    final poolRect = Rect.fromCenter(
+      center: Offset.zero,
+      width: width,
+      height: width * 0.36,
+    );
     final poolPath = Path()..addOval(poolRect);
 
     final waterShader = RadialGradient(
@@ -1669,8 +1823,28 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       ..style = ui.PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
       ..strokeWidth = 1.6;
-    canvas.drawArc(Rect.fromCenter(center: const Offset(-10, -5), width: width * 0.52, height: width * 0.16), 0.2, 2.2, false, ripplePaint);
-    canvas.drawArc(Rect.fromCenter(center: const Offset(12, 4), width: width * 0.38, height: width * 0.12), 0.6, 1.8, false, ripplePaint);
+    canvas.drawArc(
+      Rect.fromCenter(
+        center: const Offset(-10, -5),
+        width: width * 0.52,
+        height: width * 0.16,
+      ),
+      0.2,
+      2.2,
+      false,
+      ripplePaint,
+    );
+    canvas.drawArc(
+      Rect.fromCenter(
+        center: const Offset(12, 4),
+        width: width * 0.38,
+        height: width * 0.12,
+      ),
+      0.6,
+      1.8,
+      false,
+      ripplePaint,
+    );
 
     // 4. Smooth shoreline river rocks with highlights & shadows
     final stones = [
@@ -1680,21 +1854,38 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       (Offset(width * 0.14, width * 0.17), 13.0, 7.5, const Color(0xFF795548)),
       (Offset(width * 0.42, width * 0.08), 12.0, 7.0, const Color(0xFF8D6E63)),
       (Offset(width * 0.46, -width * 0.06), 9.0, 6.0, const Color(0xFFA1887F)),
-      (Offset(-width * 0.22, -width * 0.16), 11.0, 6.5, const Color(0xFF6D4C41)),
+      (
+        Offset(-width * 0.22, -width * 0.16),
+        11.0,
+        6.5,
+        const Color(0xFF6D4C41),
+      ),
       (Offset(width * 0.22, -width * 0.17), 12.0, 7.0, const Color(0xFF795548)),
     ];
     for (final stone in stones) {
-      final stoneRect = Rect.fromCenter(center: stone.$1, width: stone.$2, height: stone.$3);
+      final stoneRect = Rect.fromCenter(
+        center: stone.$1,
+        width: stone.$2,
+        height: stone.$3,
+      );
       // Cast shadow
       canvas.drawOval(
-        Rect.fromCenter(center: stone.$1 + const Offset(1, 2), width: stone.$2, height: stone.$3),
+        Rect.fromCenter(
+          center: stone.$1 + const Offset(1, 2),
+          width: stone.$2,
+          height: stone.$3,
+        ),
         Paint()..color = const Color(0xFF4E342E).withValues(alpha: 0.4),
       );
       // Stone body
       canvas.drawOval(stoneRect, Paint()..color = stone.$4);
       // Stone sunlit top highlight
       canvas.drawOval(
-        Rect.fromCenter(center: stone.$1 - const Offset(1, 1.5), width: stone.$2 * 0.7, height: stone.$3 * 0.5),
+        Rect.fromCenter(
+          center: stone.$1 - const Offset(1, 1.5),
+          width: stone.$2 * 0.7,
+          height: stone.$3 * 0.5,
+        ),
         Paint()..color = Colors.white.withValues(alpha: 0.28),
       );
     }
@@ -1707,7 +1898,12 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     canvas.restore();
   }
 
-  void _drawPalmTree(Canvas canvas, Offset rootPos, {required double scale, required double tilt}) {
+  void _drawPalmTree(
+    Canvas canvas,
+    Offset rootPos, {
+    required double scale,
+    required double tilt,
+  }) {
     canvas.save();
     canvas.translate(rootPos.dx, rootPos.dy);
     canvas.scale(scale);
@@ -1847,7 +2043,10 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     // Battlements & Crenellations across curtain wall
     for (int i = 0; i < 5; i++) {
       canvas.drawRRect(
-        RRect.fromRectAndRadius(Rect.fromLTWH(-36 + i * 15, -34, 9, 8), const Radius.circular(1.5)),
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(-36 + i * 15, -34, 9, 8),
+          const Radius.circular(1.5),
+        ),
         litPaint,
       );
     }
@@ -1866,15 +2065,15 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     final domeShader = LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
-      colors: const [
-        Color(0xFFFFF9C4),
-        Color(0xFFFFD54F),
-        Color(0xFFFF8F00),
-      ],
+      colors: const [Color(0xFFFFF9C4), Color(0xFFFFD54F), Color(0xFFFF8F00)],
     ).createShader(const Rect.fromLTWH(-18, -78, 36, 26));
     canvas.drawPath(domePath, Paint()..shader = domeShader);
     // Dome crescent finial
-    canvas.drawCircle(const Offset(0, -81), 2.2, Paint()..color = const Color(0xFFFFD700));
+    canvas.drawCircle(
+      const Offset(0, -81),
+      2.2,
+      Paint()..color = const Color(0xFFFFD700),
+    );
 
     // Left Watchtower with Conical Spire
     canvas.drawRect(const Rect.fromLTWH(-50, -44, 18, 52), litPaint);
@@ -1912,9 +2111,27 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
 
     // Decorative Arched Windows / Arrow Slits
     final winPaint = Paint()..color = const Color(0xFF4A3412);
-    canvas.drawRRect(RRect.fromRectAndRadius(const Rect.fromLTWH(-45, -32, 7, 12), const Radius.circular(3.5)), winPaint);
-    canvas.drawRRect(RRect.fromRectAndRadius(const Rect.fromLTWH(38, -32, 7, 12), const Radius.circular(3.5)), winPaint);
-    canvas.drawRRect(RRect.fromRectAndRadius(const Rect.fromLTWH(-5, -44, 10, 14), const Radius.circular(5)), winPaint);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        const Rect.fromLTWH(-45, -32, 7, 12),
+        const Radius.circular(3.5),
+      ),
+      winPaint,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        const Rect.fromLTWH(38, -32, 7, 12),
+        const Radius.circular(3.5),
+      ),
+      winPaint,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        const Rect.fromLTWH(-5, -44, 10, 14),
+        const Radius.circular(5),
+      ),
+      winPaint,
+    );
 
     canvas.restore();
   }
@@ -1966,15 +2183,16 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     canvas.restore();
   }
 
-
-
   /// Draw Northern Lights (Aurora Borealis) wave ribbon across the sky in ICE biome
   void _drawAuroraBorealis(Canvas canvas) {
     final auroraPath = Path();
     auroraPath.moveTo(0, 40);
 
     for (double x = 0; x <= size.x; x += 30) {
-      final y = 40 + math.sin(_time * 1.2 + x * 0.008) * 22 + math.cos(_time * 0.8 + x * 0.004) * 15;
+      final y =
+          40 +
+          math.sin(_time * 1.2 + x * 0.008) * 22 +
+          math.cos(_time * 0.8 + x * 0.004) * 15;
       auroraPath.lineTo(x, y);
     }
     auroraPath.lineTo(size.x, 140);
@@ -2010,7 +2228,11 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       ],
       stops: const [0.0, 0.35, 0.7, 1.0],
     ).createShader(Rect.fromCircle(center: sunCenter, radius: 120 * sunPulse));
-    canvas.drawCircle(sunCenter, 120 * sunPulse, Paint()..shader = sunCoronaShader);
+    canvas.drawCircle(
+      sunCenter,
+      120 * sunPulse,
+      Paint()..shader = sunCoronaShader,
+    );
 
     // 2. Distant Wandering Camel Caravan on Horizon
     _drawCamelCaravan(canvas, yGround);
@@ -2033,9 +2255,11 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
   }
 
   void _drawCamelCaravan(Canvas canvas, double yGround) {
-    final caravanX = ((size.x * 1.6 - _bgScrollOffset * 0.5) % (size.x + 350)) - 150;
+    final caravanX =
+        ((size.x * 1.6 - _bgScrollOffset * 0.5) % (size.x + 350)) - 150;
     final caravanY = yGround - 24;
-    final camelPaint = Paint()..color = const Color(0xAA42240C); // Warm silhouette
+    final camelPaint = Paint()
+      ..color = const Color(0xAA42240C); // Warm silhouette
     final ropePaint = Paint()
       ..color = const Color(0x6642240C)
       ..strokeWidth = 0.8
@@ -2047,7 +2271,10 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       final legWalk = math.sin(_time * 4.5 + c * 1.2) * 2.5;
 
       // Body & Hump
-      canvas.drawOval(Rect.fromCenter(center: Offset(cx, cy), width: 18, height: 10), camelPaint);
+      canvas.drawOval(
+        Rect.fromCenter(center: Offset(cx, cy), width: 18, height: 10),
+        camelPaint,
+      );
       canvas.drawCircle(Offset(cx - 2, cy - 6), 5.0, camelPaint); // Hump
 
       // Neck & Head
@@ -2058,16 +2285,39 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
         ..lineTo(cx + 8, cy + 2)
         ..close();
       canvas.drawPath(neckPath, camelPaint);
-      canvas.drawOval(Rect.fromCenter(center: Offset(cx + 12, cy - 14), width: 6, height: 4), camelPaint);
+      canvas.drawOval(
+        Rect.fromCenter(center: Offset(cx + 12, cy - 14), width: 6, height: 4),
+        camelPaint,
+      );
 
       // Tail
-      canvas.drawLine(Offset(cx - 8, cy), Offset(cx - 12, cy + 5), camelPaint..strokeWidth = 1.0);
+      canvas.drawLine(
+        Offset(cx - 8, cy),
+        Offset(cx - 12, cy + 5),
+        camelPaint..strokeWidth = 1.0,
+      );
 
       // 4 Walking Legs
-      canvas.drawLine(Offset(cx - 5, cy + 4), Offset(cx - 6 + legWalk, cy + 13), camelPaint..strokeWidth = 1.4);
-      canvas.drawLine(Offset(cx - 2, cy + 4), Offset(cx - 3 - legWalk, cy + 13), camelPaint..strokeWidth = 1.4);
-      canvas.drawLine(Offset(cx + 3, cy + 4), Offset(cx + 2 - legWalk, cy + 13), camelPaint..strokeWidth = 1.4);
-      canvas.drawLine(Offset(cx + 6, cy + 4), Offset(cx + 7 + legWalk, cy + 13), camelPaint..strokeWidth = 1.4);
+      canvas.drawLine(
+        Offset(cx - 5, cy + 4),
+        Offset(cx - 6 + legWalk, cy + 13),
+        camelPaint..strokeWidth = 1.4,
+      );
+      canvas.drawLine(
+        Offset(cx - 2, cy + 4),
+        Offset(cx - 3 - legWalk, cy + 13),
+        camelPaint..strokeWidth = 1.4,
+      );
+      canvas.drawLine(
+        Offset(cx + 3, cy + 4),
+        Offset(cx + 2 - legWalk, cy + 13),
+        camelPaint..strokeWidth = 1.4,
+      );
+      canvas.drawLine(
+        Offset(cx + 6, cy + 4),
+        Offset(cx + 7 + legWalk, cy + 13),
+        camelPaint..strokeWidth = 1.4,
+      );
 
       // Lead rope connecting to next camel
       if (c < 2) {
@@ -2120,12 +2370,7 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
         // a seamless overlap on both normal-to-mirrored and mirrored-to-normal boundaries.
         canvas.translate(startX + tileW + overlap, 0);
         canvas.scale(-1.0, 1.0);
-        canvas.drawImageRect(
-          img,
-          srcRect,
-          destRectLocal,
-          paint,
-        );
+        canvas.drawImageRect(img, srcRect, destRectLocal, paint);
         canvas.restore();
       } else {
         canvas.drawImageRect(
@@ -2239,10 +2484,20 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       final bgMountainPath = Path()
         ..moveTo(0, yGround)
         ..lineTo(size.x * 0.1, yGround - 90)
-        ..quadraticBezierTo(size.x * 0.18, yGround - 140, size.x * 0.25, yGround - 110)
+        ..quadraticBezierTo(
+          size.x * 0.18,
+          yGround - 140,
+          size.x * 0.25,
+          yGround - 110,
+        )
         ..lineTo(size.x * 0.35, yGround - 180) // Distant peak
         ..lineTo(size.x * 0.48, yGround - 100)
-        ..quadraticBezierTo(size.x * 0.65, yGround - 160, size.x * 0.78, yGround - 90)
+        ..quadraticBezierTo(
+          size.x * 0.65,
+          yGround - 160,
+          size.x * 0.78,
+          yGround - 90,
+        )
         ..lineTo(size.x * 0.9, yGround - 130)
         ..lineTo(size.x, yGround - 60)
         ..lineTo(size.x, size.y)
@@ -2261,14 +2516,34 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       final mainVolcanoPath = Path()
         ..moveTo(0, yGround)
         ..lineTo(size.x * 0.08, yGround)
-        ..quadraticBezierTo(size.x * 0.18, yGround - 50, size.x * 0.25, yGround - 80)
-        ..quadraticBezierTo(size.x * 0.32, yGround - 110, craterLeft, craterY) // Left rugged slope
+        ..quadraticBezierTo(
+          size.x * 0.18,
+          yGround - 50,
+          size.x * 0.25,
+          yGround - 80,
+        )
+        ..quadraticBezierTo(
+          size.x * 0.32,
+          yGround - 110,
+          craterLeft,
+          craterY,
+        ) // Left rugged slope
         // Jagged open crater caldera lip
         ..lineTo(craterLeft + 15, craterY + 18)
-        ..quadraticBezierTo(size.x * 0.55, craterY + 28, craterRight - 15, craterY + 14)
+        ..quadraticBezierTo(
+          size.x * 0.55,
+          craterY + 28,
+          craterRight - 15,
+          craterY + 14,
+        )
         ..lineTo(craterRight, craterY)
         // Right rugged slope with rocky ridges
-        ..quadraticBezierTo(size.x * 0.76, yGround - 100, size.x * 0.84, yGround - 60)
+        ..quadraticBezierTo(
+          size.x * 0.76,
+          yGround - 100,
+          size.x * 0.84,
+          yGround - 60,
+        )
         ..quadraticBezierTo(size.x * 0.92, yGround - 30, size.x, yGround)
         ..lineTo(size.x, size.y)
         ..lineTo(0, size.y);
@@ -2282,7 +2557,13 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
           Color(0xFF140D0D),
         ],
       );
-      canvas.drawPath(mainVolcanoPath, Paint()..shader = volcanoGradient.createShader(Rect.fromLTWH(0, craterY, size.x, yGround - craterY + 100)));
+      canvas.drawPath(
+        mainVolcanoPath,
+        Paint()
+          ..shader = volcanoGradient.createShader(
+            Rect.fromLTWH(0, craterY, size.x, yGround - craterY + 100),
+          ),
+      );
 
       // 4. Rocky Crag Shading & Cliff Highlight Detail Lines
       final cragPaint = Paint()
@@ -2296,7 +2577,12 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
         ..quadraticBezierTo(size.x * 0.4, yGround - 90, size.x * 0.35, yGround);
       final r2 = Path()
         ..moveTo(craterRight - 25, craterY + 18)
-        ..quadraticBezierTo(size.x * 0.65, yGround - 90, size.x * 0.72, yGround);
+        ..quadraticBezierTo(
+          size.x * 0.65,
+          yGround - 90,
+          size.x * 0.72,
+          yGround,
+        );
       final r3 = Path()
         ..moveTo(size.x * 0.55, craterY + 28)
         ..quadraticBezierTo(size.x * 0.52, yGround - 80, size.x * 0.5, yGround);
@@ -2306,7 +2592,12 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       canvas.drawPath(r3, cragPaint);
 
       // 5. Molten Glowing Lava Lake Inside Crater Caldera
-      final calderaRect = Rect.fromLTWH(craterLeft + 10, craterY + 8, craterRight - craterLeft - 20, 24);
+      final calderaRect = Rect.fromLTWH(
+        craterLeft + 10,
+        craterY + 8,
+        craterRight - craterLeft - 20,
+        24,
+      );
       final calderaGradient = const RadialGradient(
         center: Alignment(0, 0.2),
         colors: [
@@ -2344,25 +2635,60 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       // River 1 (Main Central Cascade)
       final riv1 = Path()
         ..moveTo(size.x * 0.54, craterY + 25)
-        ..quadraticBezierTo(size.x * 0.51, yGround - 110, size.x * 0.53, yGround - 70)
-        ..quadraticBezierTo(size.x * 0.56, yGround - 35, size.x * 0.52, yGround);
+        ..quadraticBezierTo(
+          size.x * 0.51,
+          yGround - 110,
+          size.x * 0.53,
+          yGround - 70,
+        )
+        ..quadraticBezierTo(
+          size.x * 0.56,
+          yGround - 35,
+          size.x * 0.52,
+          yGround,
+        );
 
       // River 2 (Left Branching Stream)
       final riv2 = Path()
         ..moveTo(craterLeft + 20, craterY + 22)
-        ..quadraticBezierTo(size.x * 0.38, yGround - 120, size.x * 0.33, yGround - 80)
-        ..quadraticBezierTo(size.x * 0.28, yGround - 40, size.x * 0.22, yGround);
+        ..quadraticBezierTo(
+          size.x * 0.38,
+          yGround - 120,
+          size.x * 0.33,
+          yGround - 80,
+        )
+        ..quadraticBezierTo(
+          size.x * 0.28,
+          yGround - 40,
+          size.x * 0.22,
+          yGround,
+        );
 
       // River 3 (Right Branching Stream)
       final riv3 = Path()
         ..moveTo(craterRight - 20, craterY + 20)
-        ..quadraticBezierTo(size.x * 0.69, yGround - 110, size.x * 0.74, yGround - 75)
-        ..quadraticBezierTo(size.x * 0.79, yGround - 35, size.x * 0.83, yGround);
+        ..quadraticBezierTo(
+          size.x * 0.69,
+          yGround - 110,
+          size.x * 0.74,
+          yGround - 75,
+        )
+        ..quadraticBezierTo(
+          size.x * 0.79,
+          yGround - 35,
+          size.x * 0.83,
+          yGround,
+        );
 
       // River 4 (Tributary stream splitting off River 1)
       final riv4 = Path()
         ..moveTo(size.x * 0.53, yGround - 70)
-        ..quadraticBezierTo(size.x * 0.45, yGround - 50, size.x * 0.42, yGround);
+        ..quadraticBezierTo(
+          size.x * 0.45,
+          yGround - 50,
+          size.x * 0.42,
+          yGround,
+        );
 
       void drawLavaRiver(Path p) {
         canvas.drawPath(p, lavaOuterPaint);
@@ -2387,19 +2713,48 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       // Animated rising smoke clouds
       final t = _time * 1.5;
       final cX = size.x * 0.55;
-      canvas.drawCircle(Offset(cX + math.sin(t) * 15, craterY - 30), 45, smokeGlowPaint);
-      canvas.drawCircle(Offset(cX + math.sin(t) * 15, craterY - 30), 40, smokePaint);
+      canvas.drawCircle(
+        Offset(cX + math.sin(t) * 15, craterY - 30),
+        45,
+        smokeGlowPaint,
+      );
+      canvas.drawCircle(
+        Offset(cX + math.sin(t) * 15, craterY - 30),
+        40,
+        smokePaint,
+      );
 
-      canvas.drawCircle(Offset(cX - 25 + math.cos(t * 1.2) * 20, craterY - 70), 55, smokeGlowPaint);
-      canvas.drawCircle(Offset(cX - 25 + math.cos(t * 1.2) * 20, craterY - 70), 50, smokePaint);
+      canvas.drawCircle(
+        Offset(cX - 25 + math.cos(t * 1.2) * 20, craterY - 70),
+        55,
+        smokeGlowPaint,
+      );
+      canvas.drawCircle(
+        Offset(cX - 25 + math.cos(t * 1.2) * 20, craterY - 70),
+        50,
+        smokePaint,
+      );
 
-      canvas.drawCircle(Offset(cX + 20 + math.sin(t * 0.9) * 25, craterY - 115), 65, smokeGlowPaint);
-      canvas.drawCircle(Offset(cX + 20 + math.sin(t * 0.9) * 25, craterY - 115), 60, smokePaint);
+      canvas.drawCircle(
+        Offset(cX + 20 + math.sin(t * 0.9) * 25, craterY - 115),
+        65,
+        smokeGlowPaint,
+      );
+      canvas.drawCircle(
+        Offset(cX + 20 + math.sin(t * 0.9) * 25, craterY - 115),
+        60,
+        smokePaint,
+      );
     } else if (biome == 'FOREST') {
       // Prehistoric lush forest tree canopy silhouettes
       final forestPath = Path()
         ..moveTo(0, yGround)
-        ..quadraticBezierTo(size.x * 0.2, yGround - 50, size.x * 0.4, yGround - 20)
+        ..quadraticBezierTo(
+          size.x * 0.2,
+          yGround - 50,
+          size.x * 0.4,
+          yGround - 20,
+        )
         ..quadraticBezierTo(size.x * 0.7, yGround - 65, size.x, yGround - 30)
         ..lineTo(size.x, size.y)
         ..lineTo(0, size.y);
@@ -2425,7 +2780,11 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       stops: const [0.0, 0.35, 0.7, 1.0],
     );
     final haloRect = Rect.fromCircle(center: sunCenter, radius: 85);
-    canvas.drawCircle(sunCenter, 85, Paint()..shader = outerHaloGradient.createShader(haloRect));
+    canvas.drawCircle(
+      sunCenter,
+      85,
+      Paint()..shader = outerHaloGradient.createShader(haloRect),
+    );
 
     // 2. Rotating Solar Corona Rays (16 dynamic rays)
     final rayPaint = Paint()
@@ -2438,8 +2797,14 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       final r1 = 30.0;
       final r2 = 45.0 + math.sin(t * 3.0 + i) * 6.0;
       canvas.drawLine(
-        Offset(sunCenter.dx + math.cos(angle) * r1, sunCenter.dy + math.sin(angle) * r1),
-        Offset(sunCenter.dx + math.cos(angle) * r2, sunCenter.dy + math.sin(angle) * r2),
+        Offset(
+          sunCenter.dx + math.cos(angle) * r1,
+          sunCenter.dy + math.sin(angle) * r1,
+        ),
+        Offset(
+          sunCenter.dx + math.cos(angle) * r2,
+          sunCenter.dy + math.sin(angle) * r2,
+        ),
         rayPaint,
       );
     }
@@ -2455,7 +2820,11 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       stops: [0.0, 0.45, 0.8, 1.0],
     );
     final coreRect = Rect.fromCircle(center: sunCenter, radius: 28);
-    canvas.drawCircle(sunCenter, 28, Paint()..shader = coreGradient.createShader(coreRect));
+    canvas.drawCircle(
+      sunCenter,
+      28,
+      Paint()..shader = coreGradient.createShader(coreRect),
+    );
 
     // Sun Surface Flare Rim
     final rimPaint = Paint()
@@ -2504,13 +2873,21 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     );
 
     final cloudPath = Path();
-    cloudPath.addRRect(RRect.fromRectAndRadius(
-      Rect.fromLTWH(0, h * 0.35, w, h * 0.65),
-      Radius.circular(h * 0.32),
-    ));
-    cloudPath.addOval(Rect.fromCircle(center: Offset(w * 0.28, h * 0.4), radius: h * 0.42));
-    cloudPath.addOval(Rect.fromCircle(center: Offset(w * 0.52, h * 0.28), radius: h * 0.52));
-    cloudPath.addOval(Rect.fromCircle(center: Offset(w * 0.76, h * 0.45), radius: h * 0.38));
+    cloudPath.addRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(0, h * 0.35, w, h * 0.65),
+        Radius.circular(h * 0.32),
+      ),
+    );
+    cloudPath.addOval(
+      Rect.fromCircle(center: Offset(w * 0.28, h * 0.4), radius: h * 0.42),
+    );
+    cloudPath.addOval(
+      Rect.fromCircle(center: Offset(w * 0.52, h * 0.28), radius: h * 0.52),
+    );
+    cloudPath.addOval(
+      Rect.fromCircle(center: Offset(w * 0.76, h * 0.45), radius: h * 0.38),
+    );
 
     final cloudGradient = LinearGradient(
       begin: Alignment.topCenter,
@@ -2521,7 +2898,10 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       ],
     );
     final bounds = Rect.fromLTWH(0, 0, w, h * 1.1);
-    canvas.drawPath(cloudPath, Paint()..shader = cloudGradient.createShader(bounds));
+    canvas.drawPath(
+      cloudPath,
+      Paint()..shader = cloudGradient.createShader(bounds),
+    );
 
     final highlightPaint = Paint()
       ..color = Colors.white.withValues(alpha: alpha * 0.8)
@@ -2597,15 +2977,28 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       final tw = 120.0 - tier * 18.0;
       final th = 18.0;
       final ty = -75.0 - (tier + 1) * th;
-      final tRect = Rect.fromCenter(center: Offset(0, ty + th / 2), width: tw, height: th);
-      canvas.drawRRect(RRect.fromRectAndRadius(tRect, const Radius.circular(3)), Paint()..color = stoneMid);
+      final tRect = Rect.fromCenter(
+        center: Offset(0, ty + th / 2),
+        width: tw,
+        height: th,
+      );
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(tRect, const Radius.circular(3)),
+        Paint()..color = stoneMid,
+      );
 
       // Cornice carved ledge
-      canvas.drawRect(Rect.fromLTWH(-tw / 2 - 4, ty + th - 3, tw + 8, 3), Paint()..color = stoneDark);
+      canvas.drawRect(
+        Rect.fromLTWH(-tw / 2 - 4, ty + th - 3, tw + 8, 3),
+        Paint()..color = stoneDark,
+      );
 
       // Creeping moss patch
       canvas.drawRRect(
-        RRect.fromRectAndRadius(Rect.fromLTWH(-tw / 2 + 6, ty + 2, 22, 6), const Radius.circular(2)),
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(-tw / 2 + 6, ty + 2, 22, 6),
+          const Radius.circular(2),
+        ),
         Paint()..color = mossGreen.withValues(alpha: 0.65),
       );
     }
@@ -2731,7 +3124,13 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       ..lineTo(90, 0)
       ..close();
     canvas.drawPath(wallPath, Paint()..color = stoneWall);
-    canvas.drawLine(const Offset(-50, -35), const Offset(90, -35), Paint()..color = stoneDark..strokeWidth = 1.5);
+    canvas.drawLine(
+      const Offset(-50, -35),
+      const Offset(90, -35),
+      Paint()
+        ..color = stoneDark
+        ..strokeWidth = 1.5,
+    );
 
     // Cascading Waterfalls from wall ledge
     final waterPaint = Paint()
@@ -2748,7 +3147,9 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     _drawMeerkatWithUmbrella(canvas, const Offset(18, -75), scale: 1.05);
 
     // Bioluminescent Cyan Glowing Mushrooms along the ledge
-    final mushStalk = Paint()..color = const Color(0xFFB2EBF2)..strokeWidth = 1.6;
+    final mushStalk = Paint()
+      ..color = const Color(0xFFB2EBF2)
+      ..strokeWidth = 1.6;
     final mushCap = Paint()
       ..color = const Color(0xFF00E5FF)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
@@ -2762,7 +3163,11 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     canvas.restore();
   }
 
-  void _drawMeerkatWithUmbrella(Canvas canvas, Offset pos, {required double scale}) {
+  void _drawMeerkatWithUmbrella(
+    Canvas canvas,
+    Offset pos, {
+    required double scale,
+  }) {
     canvas.save();
     canvas.translate(pos.dx, pos.dy);
     canvas.scale(scale);
@@ -2781,16 +3186,33 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     canvas.drawPath(bodyPath, Paint()..color = furLight);
 
     // Belly patch & dark back stripes
-    canvas.drawOval(const Rect.fromLTWH(-2.5, -18, 5, 12), Paint()..color = const Color(0xFFEFEBE9));
+    canvas.drawOval(
+      const Rect.fromLTWH(-2.5, -18, 5, 12),
+      Paint()..color = const Color(0xFFEFEBE9),
+    );
     for (int s = 0; s < 3; s++) {
       final sy = -16.0 + s * 4.0;
-      canvas.drawLine(Offset(1, sy), Offset(4, sy), Paint()..color = furDark..strokeWidth = 1.4);
+      canvas.drawLine(
+        Offset(1, sy),
+        Offset(4, sy),
+        Paint()
+          ..color = furDark
+          ..strokeWidth = 1.4,
+      );
     }
 
     // Meerkat Head & Snout
     canvas.drawCircle(const Offset(0, -25), 4.5, Paint()..color = furLight);
-    canvas.drawCircle(const Offset(2.5, -25), 1.2, Paint()..color = eyeBlack); // Eye
-    canvas.drawCircle(const Offset(4.0, -24), 0.8, Paint()..color = eyeBlack); // Snout nose
+    canvas.drawCircle(
+      const Offset(2.5, -25),
+      1.2,
+      Paint()..color = eyeBlack,
+    ); // Eye
+    canvas.drawCircle(
+      const Offset(4.0, -24),
+      0.8,
+      Paint()..color = eyeBlack,
+    ); // Snout nose
     // Dark ear
     canvas.drawCircle(const Offset(-3.5, -27), 1.5, Paint()..color = furDark);
 
@@ -2798,13 +3220,27 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     final tailPath = Path()
       ..moveTo(-3, -2)
       ..quadraticBezierTo(-10, -2, -12, 0);
-    canvas.drawPath(tailPath, Paint()..color = furDark..strokeWidth = 1.8..style = ui.PaintingStyle.stroke);
+    canvas.drawPath(
+      tailPath,
+      Paint()
+        ..color = furDark
+        ..strokeWidth = 1.8
+        ..style = ui.PaintingStyle.stroke,
+    );
 
     // Umbrella Handle (held by meerkat)
-    final handlePaint = Paint()..color = const Color(0xFF4E342E)..strokeWidth = 1.4;
+    final handlePaint = Paint()
+      ..color = const Color(0xFF4E342E)
+      ..strokeWidth = 1.4;
     canvas.drawLine(const Offset(1, -12), const Offset(1, -38), handlePaint);
     // Umbrella Hook Handle at bottom
-    canvas.drawArc(const Rect.fromLTWH(-1, -14, 4, 4), 0, math.pi, false, handlePaint..style = ui.PaintingStyle.stroke);
+    canvas.drawArc(
+      const Rect.fromLTWH(-1, -14, 4, 4),
+      0,
+      math.pi,
+      false,
+      handlePaint..style = ui.PaintingStyle.stroke,
+    );
 
     // Green Rainforest Leaf Umbrella Canopy
     final umbrellaCanopy = Path()
@@ -2815,10 +3251,7 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     final umbrellaGrad = LinearGradient(
       begin: Alignment.topCenter,
       end: Alignment.bottomCenter,
-      colors: const [
-        Color(0xFF81C784),
-        Color(0xFF388E3C),
-      ],
+      colors: const [Color(0xFF81C784), Color(0xFF388E3C)],
     ).createShader(const Rect.fromLTWH(-15, -48, 32, 14));
     canvas.drawPath(umbrellaCanopy, Paint()..shader = umbrellaGrad);
 
@@ -2828,14 +3261,21 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     canvas.restore();
   }
 
-  static final _rainSporePaint = Paint()..color = const Color(0xFF00E5FF).withValues(alpha: 0.45);
-  static final _forestSporeYellow = Paint()..color = const Color(0xFFFFF59D).withValues(alpha: 0.55);
-  static final _forestSporeGreen = Paint()..color = const Color(0xFFA5D6A7).withValues(alpha: 0.45);
-  static final _iceFrostPaint = Paint()..color = const Color(0xFFE0F7FA).withValues(alpha: 0.6);
-  static final _volcanoEmberPaint = Paint()..color = const Color(0xFFFF9100).withValues(alpha: 0.75);
+  static final _rainSporePaint = Paint()
+    ..color = const Color(0xFF00E5FF).withValues(alpha: 0.45);
+  static final _forestSporeYellow = Paint()
+    ..color = const Color(0xFFFFF59D).withValues(alpha: 0.55);
+  static final _forestSporeGreen = Paint()
+    ..color = const Color(0xFFA5D6A7).withValues(alpha: 0.45);
+  static final _iceFrostPaint = Paint()
+    ..color = const Color(0xFFE0F7FA).withValues(alpha: 0.6);
+  static final _volcanoEmberPaint = Paint()
+    ..color = const Color(0xFFFF9100).withValues(alpha: 0.75);
   static final _volcanoCoreEmber = Paint()..color = const Color(0xFFFFF59D);
-  static final _cosmosCyanDust = Paint()..color = const Color(0xFF00E5FF).withValues(alpha: 0.6);
-  static final _cosmosVioletDust = Paint()..color = const Color(0xFFE040FB).withValues(alpha: 0.5);
+  static final _cosmosCyanDust = Paint()
+    ..color = const Color(0xFF00E5FF).withValues(alpha: 0.6);
+  static final _cosmosVioletDust = Paint()
+    ..color = const Color(0xFFE040FB).withValues(alpha: 0.5);
 
   void _drawRainAtmosphere(Canvas canvas, double w, double yGround) {
     // Soft bioluminescent floating spores & mist
@@ -2855,7 +3295,11 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     // 2. Floating golden pollen and emerald spores drifting through the prehistoric canopy
     for (int i = 0; i < 22; i++) {
       final sx = ((i * 67 + _time * (12 + (i % 5) * 3)) % w);
-      final sy = yGround - 40 - math.sin(_time * 1.6 + i * 0.8) * 35 - (i * 12) % (size.y * 0.5);
+      final sy =
+          yGround -
+          40 -
+          math.sin(_time * 1.6 + i * 0.8) * 35 -
+          (i * 12) % (size.y * 0.5);
       final r = 1.2 + (i % 3) * 0.8;
       final paint = (i % 2 == 0) ? _forestSporeYellow : _forestSporeGreen;
       canvas.drawCircle(Offset(sx, sy), r, paint);
@@ -2867,9 +3311,9 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       final peekProgress = (cycle < 0.10)
           ? (cycle / 0.10) // Pop up
           : (cycle > 0.32)
-              ? (1.0 - (cycle - 0.32) / 0.10) // Duck down
-              : 1.0; // Stay looking around
-      
+          ? (1.0 - (cycle - 0.32) / 0.10) // Duck down
+          : 1.0; // Stay looking around
+
       final dinoX = (w * 0.58);
       final dinoY = yGround - 8 - (peekProgress * 26);
 
@@ -2881,12 +3325,19 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       final bellyPaint = Paint()..color = const Color(0xFFC8E6C9);
       final eyeWhite = Paint()..color = Colors.white;
       final eyePupil = Paint()..color = const Color(0xFF1B5E20);
-      final blushPaint = Paint()..color = const Color(0xFFFF80AB).withValues(alpha: 0.65);
+      final blushPaint = Paint()
+        ..color = const Color(0xFFFF80AB).withValues(alpha: 0.65);
 
       // Head
       canvas.drawCircle(Offset.zero, 12, dinoPaint);
       // Cute Snout
-      canvas.drawRRect(RRect.fromRectAndRadius(const Rect.fromLTWH(2, -4, 13, 9), const Radius.circular(4.5)), dinoPaint);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          const Rect.fromLTWH(2, -4, 13, 9),
+          const Radius.circular(4.5),
+        ),
+        dinoPaint,
+      );
       canvas.drawOval(const Rect.fromLTWH(4, 0, 9, 4), bellyPaint);
 
       // Little Triceratops Crown Frill
@@ -2896,12 +3347,25 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
         ..lineTo(2, -10)
         ..lineTo(6, -17)
         ..lineTo(8, -9);
-      canvas.drawPath(frillPath, Paint()..color = const Color(0xFF81C784)..style = PaintingStyle.stroke..strokeWidth = 2.6..strokeCap = StrokeCap.round);
+      canvas.drawPath(
+        frillPath,
+        Paint()
+          ..color = const Color(0xFF81C784)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.6
+          ..strokeCap = StrokeCap.round,
+      );
 
       // Big glossy happy blinking eye
       final blink = (math.sin(_time * 6) > 0.94);
       if (blink) {
-        canvas.drawLine(const Offset(6, -4), const Offset(10, -4), eyePupil..strokeWidth = 2.0..strokeCap = StrokeCap.round);
+        canvas.drawLine(
+          const Offset(6, -4),
+          const Offset(10, -4),
+          eyePupil
+            ..strokeWidth = 2.0
+            ..strokeCap = StrokeCap.round,
+        );
       } else {
         canvas.drawCircle(const Offset(8, -4), 3.2, eyeWhite);
         canvas.drawCircle(const Offset(8.6, -4), 1.9, eyePupil);
@@ -2915,14 +3379,27 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       final mouthPath = Path()
         ..moveTo(8, 2)
         ..quadraticBezierTo(10, 4.5, 12, 2);
-      canvas.drawPath(mouthPath, Paint()..color = const Color(0xFF2E7D32)..style = PaintingStyle.stroke..strokeWidth = 1.3..strokeCap = StrokeCap.round);
+      canvas.drawPath(
+        mouthPath,
+        Paint()
+          ..color = const Color(0xFF2E7D32)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.3
+          ..strokeCap = StrokeCap.round,
+      );
 
       // Little waving dino hand
       final waveAng = math.sin(_time * 14) * 0.45;
       canvas.save();
       canvas.translate(9, 7);
       canvas.rotate(waveAng);
-      canvas.drawRRect(RRect.fromRectAndRadius(const Rect.fromLTWH(0, 0, 5, 7), const Radius.circular(2.5)), dinoPaint);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          const Rect.fromLTWH(0, 0, 5, 7),
+          const Radius.circular(2.5),
+        ),
+        dinoPaint,
+      );
       canvas.restore();
 
       canvas.restore();
@@ -2933,7 +3410,11 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     // Swirling ice crystalline diamond dust and frosty mist
     for (int i = 0; i < 25; i++) {
       final sx = ((i * 59 + _time * 24) % w);
-      final sy = yGround - 30 - math.sin(_time * 2.0 + i) * 35 - (i * 14) % (size.y * 0.6);
+      final sy =
+          yGround -
+          30 -
+          math.sin(_time * 2.0 + i) * 35 -
+          (i * 14) % (size.y * 0.6);
       canvas.drawCircle(Offset(sx, sy), 1.2 + (i % 3) * 0.6, _iceFrostPaint);
     }
   }
@@ -2953,7 +3434,11 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     // Floating cosmic stardust and starlight energy motes
     for (int i = 0; i < 24; i++) {
       final cx = ((i * 71 + _time * 18) % w);
-      final cy = yGround - 50 - math.sin(_time * 1.8 + i) * 40 - (i * 16) % (size.y * 0.65);
+      final cy =
+          yGround -
+          50 -
+          math.sin(_time * 1.8 + i) * 40 -
+          (i * 16) % (size.y * 0.65);
       final cr = 1.2 + (i % 3) * 0.7;
       final paint = (i % 2 == 0) ? _cosmosCyanDust : _cosmosVioletDust;
       canvas.drawCircle(Offset(cx, cy), cr, paint);
@@ -2968,18 +3453,20 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     final wingFlap = math.sin(pt.wingPhase);
     final wingY = wingFlap * 13.0;
 
-    final bodyPaint = Paint()..color = const Color(0xFF263238).withValues(alpha: 0.80);
-    final wingPaint = Paint()..color = const Color(0xFF37474F).withValues(alpha: 0.75);
+    final bodyPaint = Paint()
+      ..color = const Color(0xFF263238).withValues(alpha: 0.80);
+    final wingPaint = Paint()
+      ..color = const Color(0xFF37474F).withValues(alpha: 0.75);
     final eyePaint = Paint()..color = const Color(0xFFFFD54F);
 
     // 1. Long Aerodynamic Body & Tail
     final bodyPath = Path()
       ..moveTo(15, -2) // Beak tip
-      ..lineTo(7, -4)  // Head top
-      ..lineTo(1, -6)  // Crest back
-      ..lineTo(4, -1)  // Neck
+      ..lineTo(7, -4) // Head top
+      ..lineTo(1, -6) // Crest back
+      ..lineTo(4, -1) // Neck
       ..lineTo(-18, 1) // Tail
-      ..lineTo(4, 2)   // Belly
+      ..lineTo(4, 2) // Belly
       ..close();
     canvas.drawPath(bodyPath, bodyPaint);
 
@@ -3010,7 +3497,10 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       ..lineTo(7, -15 + wingY)
       ..lineTo(-2, -2 + wingY * 0.5)
       ..close();
-    canvas.drawPath(rightWing, bodyPaint..color = const Color(0xFF455A64).withValues(alpha: 0.65));
+    canvas.drawPath(
+      rightWing,
+      bodyPaint..color = const Color(0xFF455A64).withValues(alpha: 0.65),
+    );
 
     canvas.restore();
   }
@@ -3029,35 +3519,67 @@ class _Pterodactyl {
 
 class _Cloud {
   double x, y, width, speed;
-  _Cloud({required this.x, required this.y, required this.width, required this.speed});
+  _Cloud({
+    required this.x,
+    required this.y,
+    required this.width,
+    required this.speed,
+  });
 }
 
 class _Star {
   double x, y, brightness, twinkleSpeed;
-  _Star({required this.x, required this.y, required this.brightness, required this.twinkleSpeed});
+  _Star({
+    required this.x,
+    required this.y,
+    required this.brightness,
+    required this.twinkleSpeed,
+  });
 }
 
 class _RainDrop {
   double x, y, speed, length;
-  _RainDrop({required this.x, required this.y, required this.speed, required this.length});
+  _RainDrop({
+    required this.x,
+    required this.y,
+    required this.speed,
+    required this.length,
+  });
 }
 
 class _SnowFlake {
   double x, y, radius, speedY, swaySpeed, swayWidth, phase;
   _SnowFlake({
-    required this.x, required this.y, required this.radius,
-    required this.speedY, required this.swaySpeed, required this.swayWidth, required this.phase,
+    required this.x,
+    required this.y,
+    required this.radius,
+    required this.speedY,
+    required this.swaySpeed,
+    required this.swayWidth,
+    required this.phase,
   });
 }
 
 class _AshParticle {
   double x, y, radius, speedY, speedX;
-  _AshParticle({required this.x, required this.y, required this.radius, required this.speedY, required this.speedX});
+  _AshParticle({
+    required this.x,
+    required this.y,
+    required this.radius,
+    required this.speedY,
+    required this.speedX,
+  });
 }
 
 class _ForestSpore {
   double x, y, radius, floatSpeed, phase;
-  _ForestSpore({required this.x, required this.y, required this.radius, required this.floatSpeed, required this.phase});
+  _ForestSpore({
+    required this.x,
+    required this.y,
+    required this.radius,
+    required this.floatSpeed,
+    required this.phase,
+  });
 }
 
 class _RollingBush {

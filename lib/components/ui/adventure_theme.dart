@@ -1,28 +1,78 @@
 import 'package:flutter/material.dart';
+import 'menu_chrome.dart';
+import 'illustrated_menu.dart';
+import 'menu_motion.dart';
 
-/// Shared storybook palette and generous touch targets across game menus.
 class AdventureTheme {
-  static ThemeData get data => ThemeData(
+  static ThemeData get data => forAccent(MenuPalette.forest);
+  static ThemeData forAccent(Color accent) => ThemeData(
     useMaterial3: true,
-    fontFamily: 'Roboto',
-    brightness: Brightness.dark,
-    colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFFFCF62),
-      brightness: Brightness.dark, primary: const Color(0xFFFFCF62),
-      secondary: const Color(0xFF8FE2CC), surface: const Color(0xFF183848)),
-    scaffoldBackgroundColor: const Color(0xFF102B3B),
-    filledButtonTheme: FilledButtonThemeData(style: FilledButton.styleFrom(
-      backgroundColor: const Color(0xFF245566),
-      foregroundColor: const Color(0xFFFFE5A3),
-      minimumSize: const Size(48, 48),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      textStyle: const TextStyle(fontWeight: FontWeight.w800))),
-    elevatedButtonTheme: ElevatedButtonThemeData(style: ElevatedButton.styleFrom(
-      minimumSize: const Size(48, 48),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)))),
-    chipTheme: ChipThemeData(backgroundColor: const Color(0xFF244A59),
-      labelStyle: const TextStyle(color: Color(0xFFFFEDC1), fontWeight: FontWeight.w700),
-      side: const BorderSide(color: Color(0xFF54737B)),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-    dialogTheme: const DialogThemeData(backgroundColor: Color(0xFF183848)),
+    fontFamily: 'Nunito',
+    brightness: Brightness.light,
+    colorScheme: ColorScheme.fromSeed(
+      seedColor: accent,
+      primary: accent,
+      secondary: MenuPalette.gold,
+      surface: MenuPalette.paper,
+      onSurface: MenuPalette.ink,
+    ),
+    scaffoldBackgroundColor: MenuPalette.paper,
+    textTheme: ThemeData.light().textTheme.apply(
+      fontFamily: 'Nunito',
+      bodyColor: MenuPalette.ink,
+      displayColor: MenuPalette.ink,
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: adventureButtonStyle(accent),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: MenuPalette.ink,
+        minimumSize: const Size(48, 48),
+        side: BorderSide(color: accent.withValues(alpha: .5), width: 2),
+        backgroundColor: accent.withValues(alpha: .07),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      ).copyWith(foregroundBuilder: adventureButtonMotion),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(
+        foregroundColor: MenuPalette.ink,
+        minimumSize: const Size(48, 48),
+      ).copyWith(foregroundBuilder: adventureButtonMotion),
+    ),
+    iconButtonTheme: IconButtonThemeData(
+      style: IconButton.styleFrom(
+        foregroundColor: MenuPalette.ink,
+        minimumSize: const Size(48, 48),
+      ).copyWith(foregroundBuilder: adventureButtonMotion),
+    ),
+    sliderTheme: SliderThemeData(
+      activeTrackColor: accent,
+      thumbColor: accent,
+      inactiveTrackColor: const Color(0xFFDEC9A3),
+      overlayColor: accent.withValues(alpha: .16),
+      trackHeight: 5,
+    ),
+    switchTheme: SwitchThemeData(
+      thumbColor: WidgetStateProperty.resolveWith((states) =>
+          states.contains(WidgetState.selected)
+              ? const Color(0xFFFFFDF6)
+              : const Color(0xFF5D4C36)),
+      trackColor: WidgetStateProperty.resolveWith((states) =>
+          states.contains(WidgetState.selected)
+              ? accent
+              : const Color(0xFFE3D5BA)),
+      trackOutlineColor: WidgetStateProperty.resolveWith((states) =>
+          states.contains(WidgetState.selected)
+              ? Color.lerp(accent, const Color(0xFF1E140B), .45)!
+              : const Color(0xFF9F8C6F)),
+      trackOutlineWidth: const WidgetStatePropertyAll(1.6),
+    ),
+    dialogTheme: const DialogThemeData(backgroundColor: MenuPalette.paper),
+    snackBarTheme: const SnackBarThemeData(
+      backgroundColor: MenuPalette.forest,
+      contentTextStyle: TextStyle(color: MenuPalette.paper),
+      behavior: SnackBarBehavior.floating,
+    ),
   );
 }

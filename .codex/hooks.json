@@ -1,0 +1,34 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "C:/Users/gurpr/AppData/Local/Programs/Python/Python311/python.exe -I -S \"C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/tools/agent-kit/quality_hooks.py\"",
+            "commandWindows": "C:/Users/gurpr/AppData/Local/Programs/Python/Python311/python.exe -I -S \"C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/tools/agent-kit/quality_hooks.py\"",
+            "timeout": 5,
+            "additionalContextLimit": 2500,
+            "statusMessage": "Loading Games quality workflow"
+          }
+        ],
+        "matcher": "^(startup|resume|clear|compact)$"
+      }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "C:/Users/gurpr/AppData/Local/Programs/Python/Python311/python.exe -I -S \"C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/tools/agent-kit/quality_hooks.py\"",
+            "commandWindows": "C:/Users/gurpr/AppData/Local/Programs/Python/Python311/python.exe -I -S \"C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/tools/agent-kit/quality_hooks.py\"",
+            "timeout": 5,
+            "additionalContextLimit": 2500,
+            "statusMessage": "Loading Games quality workflow"
+          }
+        ]
+      }
+    ]
+  },
+  "description": "Games quality reminders; advisory, bounded, local-only. Review through /hooks before use."
+}

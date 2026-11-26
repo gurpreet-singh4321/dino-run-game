@@ -34,7 +34,7 @@ class Meteor extends PositionComponent with CollisionCallbacks, HasGameReference
 
   @override
   void update(double dt) {
-    dt *= game.globalTimeScale;
+    // dt comes from the authoritative simulation clock.
     super.update(dt);
     position += velocity * dt;
     _angle += rotationSpeed * dt;

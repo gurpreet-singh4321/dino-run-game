@@ -6,6 +6,13 @@ import '../../utils/colors.dart';
 
 /// Progress bar showing remaining space mode coin-rain time.
 class SpaceTimerBar extends PositionComponent with HasGameReference<DinoGame> {
+  final _label = TextPaint(
+    style: const TextStyle(
+      color: Colors.white,
+      fontSize: 11,
+      fontWeight: FontWeight.bold,
+    ),
+  );
   @override
   Future<void> onLoad() async {
     priority = 55;
@@ -14,7 +21,8 @@ class SpaceTimerBar extends PositionComponent with HasGameReference<DinoGame> {
   @override
   void render(Canvas canvas) {
     // Only visible during coin rain phase
-    if (game.state != GameState.spaceMode || game.spacePhase != SpacePhase.coinRain) {
+    if (game.state != GameState.spaceMode ||
+        game.spacePhase != SpacePhase.coinRain) {
       return;
     }
 
@@ -23,7 +31,10 @@ class SpaceTimerBar extends PositionComponent with HasGameReference<DinoGame> {
     final x = (game.size.x - barWidth) / 2;
     final y = 60.0;
 
-    final progress = (game.spaceTimer / DinoGame.spaceCoinDuration).clamp(0.0, 1.0);
+    final progress = (game.spaceTimer / DinoGame.spaceCoinDuration).clamp(
+      0.0,
+      1.0,
+    );
 
     // Background
     canvas.drawRRect(
@@ -43,26 +54,21 @@ class SpaceTimerBar extends PositionComponent with HasGameReference<DinoGame> {
       Paint()..color = GameColors.gravityAura,
     );
 
-    // Glow
+    // Soft edge without a per-frame blur pass.
     canvas.drawRRect(
       RRect.fromRectAndRadius(
         Rect.fromLTWH(x, y, barWidth * progress, barHeight),
         const Radius.circular(4),
       ),
-      Paint()
-        ..color = GameColors.gravityAura.withValues(alpha: 0.3)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
+      Paint()..color = GameColors.gravityAura.withValues(alpha: 0.12),
     );
 
     // Label
-    final labelPaint = TextPaint(
-      style: const TextStyle(
-        color: Colors.white,
-        fontSize: 11,
-        fontWeight: FontWeight.bold,
-      ),
+    _label.render(
+      canvas,
+      'SPACE MODE',
+      Vector2(game.size.x / 2, y - 14),
+      anchor: Anchor.center,
     );
-    labelPaint.render(canvas, 'SPACE MODE',
-        Vector2(game.size.x / 2, y - 14), anchor: Anchor.center);
   }
 }

@@ -1,25 +1,44 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flame/components.dart';
 import 'package:flame/collisions.dart';
 import '../game/dino_game.dart';
 import '../game/game_state.dart';
+import '../game/hazard_contact.dart';
 
-enum ObstacleType { cactusSmall, cactusTall, rock, bird, bush, pillar, ceilingPipe, pipePair, lavaPit }
+enum ObstacleType {
+  cactusSmall,
+  cactusTall,
+  rock,
+  bird,
+  bush,
+  pillar,
+  ceilingPipe,
+  pipePair,
+  lavaPit,
+}
 
-class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReference<DinoGame> {
+class Obstacle extends PositionComponent
+    with CollisionCallbacks, HasGameReference<DinoGame>, HazardContact {
+  @override
+  HazardMaterial impactMaterial = HazardMaterial.stone;
+  @override
+  bool get impactReady => isEntranceComplete;
+  ui.Picture? _themedArt;
+  String _epoch = 'DESERT';
   final ObstacleType type;
   final double speed; // kept for reference but we use live speed
   bool passed = false;
   bool nearMissTriggered = false;
-  
+
   double age = 0;
-  
+
   // Per-instance randomization seed
   late final int _seed;
   late final double _wobblePhase;
   late final double _wobbleSpeed;
-  
+
   // Bird specifics
   int _birdFrame = 0;
   double _birdTimer = 0;
@@ -57,7 +76,7 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
     _seed = rng.nextInt(99999);
     _wobblePhase = rng.nextDouble() * math.pi * 2;
     _wobbleSpeed = 1.5 + rng.nextDouble() * 2.0;
-    
+
     switch (type) {
       case ObstacleType.cactusSmall:
         // Variable short cactus (48 - 85px high)
@@ -71,9 +90,15 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
         // Variable rocks (45 - 125px high)
         final isBigRock = rng.nextBool();
         if (isBigRock) {
-          size = Vector2(95 + rng.nextDouble() * 35, 80 + rng.nextDouble() * 45);
+          size = Vector2(
+            95 + rng.nextDouble() * 35,
+            80 + rng.nextDouble() * 45,
+          );
         } else {
-          size = Vector2(65 + rng.nextDouble() * 25, 45 + rng.nextDouble() * 20);
+          size = Vector2(
+            65 + rng.nextDouble() * 25,
+            45 + rng.nextDouble() * 20,
+          );
         }
         break;
       case ObstacleType.bush:
@@ -96,7 +121,9 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
       case ObstacleType.lavaPit:
         // 1 or 2 vents clustered (matching reference image)
         final isDoubleVent = rng.nextDouble() < 0.45;
-        final w = isDoubleVent ? (88.0 + rng.nextDouble() * 16.0) : (52.0 + rng.nextDouble() * 10.0);
+        final w = isDoubleVent
+            ? (88.0 + rng.nextDouble() * 16.0)
+            : (52.0 + rng.nextDouble() * 10.0);
         final h = 65.0 + rng.nextDouble() * 35.0; // 65-100px eruption height
         size = Vector2(w, h);
         break;
@@ -112,20 +139,28 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
       // Forgiving inset padding on pipe hitboxes for fair, smooth jump clearance!
       _topPipeHitbox = RectangleHitbox(
         position: Vector2(8, 0),
-        size: Vector2(math.max(10.0, size.x - 16), math.max(10.0, liveGapTopY - 10)),
+        size: Vector2(
+          math.max(10.0, size.x - 16),
+          math.max(10.0, liveGapTopY - 10),
+        ),
       );
       _bottomPipeHitbox = RectangleHitbox(
         position: Vector2(8, liveGapBottomY + 10),
-        size: Vector2(math.max(10.0, size.x - 16), math.max(10.0, size.y - liveGapBottomY - 10)),
+        size: Vector2(
+          math.max(10.0, size.x - 16),
+          math.max(10.0, size.y - liveGapBottomY - 10),
+        ),
       );
       add(_topPipeHitbox!);
       add(_bottomPipeHitbox!);
     } else if (type == ObstacleType.lavaPit) {
       // Inset hitbox for fair and clean jump clearance over volcanic eruption
-      add(RectangleHitbox(
-        position: Vector2(size.x * 0.12, size.y * 0.15),
-        size: Vector2(size.x * 0.76, size.y * 0.85),
-      ));
+      add(
+        RectangleHitbox(
+          position: Vector2(size.x * 0.12, size.y * 0.15),
+          size: Vector2(size.x * 0.76, size.y * 0.85),
+        ),
+      );
     } else {
       add(RectangleHitbox(size: size * 0.85, position: size * 0.075));
     }
@@ -135,12 +170,51 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
       child.collisionType = CollisionType.inactive;
     }
 
+    final biome = game.biomeManager.effectiveBiome.name;
+    _epoch = biome;
+    impactMaterial = switch (type) {
+      ObstacleType.cactusSmall ||
+      ObstacleType.cactusTall => HazardMaterial.plant,
+      ObstacleType.bush => switch (biome) {
+        'FOREST' || 'RAIN' => HazardMaterial.wood,
+        'ICE' => HazardMaterial.ice,
+        'COSMOS' => HazardMaterial.crystal,
+        'VOLCANO' => HazardMaterial.stone,
+        _ => HazardMaterial.plant,
+      },
+      ObstacleType.bird => HazardMaterial.feathers,
+      ObstacleType.ceilingPipe || ObstacleType.pipePair => switch (biome) {
+        'FOREST' || 'RAIN' => HazardMaterial.wood,
+        'ICE' => HazardMaterial.ice,
+        'COSMOS' => HazardMaterial.crystal,
+        _ => HazardMaterial.stone,
+      },
+      ObstacleType.lavaPit => HazardMaterial.fire,
+      _ => switch (biome) {
+        'ICE' => HazardMaterial.ice,
+        'COSMOS' => HazardMaterial.crystal,
+        'FOREST' || 'RAIN' =>
+          type == ObstacleType.pillar
+              ? HazardMaterial.wood
+              : HazardMaterial.stone,
+        _ => HazardMaterial.stone,
+      },
+    };
+    if ([
+      ObstacleType.rock,
+      ObstacleType.bush,
+      ObstacleType.pillar,
+    ].contains(type)) {
+      final recorder = ui.PictureRecorder();
+      _paintEpochObstacle(Canvas(recorder), biome);
+      _themedArt = recorder.endRecording();
+    }
     priority = 5;
   }
 
   @override
   void update(double dt) {
-    dt *= game.globalTimeScale;
+    // dt comes from the authoritative simulation clock.
     super.update(dt);
 
     entranceTimer += dt;
@@ -154,7 +228,9 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
     if (game.state == GameState.playing || game.state == GameState.spaceMode) {
       // Use LIVE speed from speedManager so obstacles match the ground
       final liveSpeed = game.speedManager.currentSpeed;
-      final moveSpeed = type == ObstacleType.bird ? liveSpeed * 1.15 : liveSpeed;
+      final moveSpeed = type == ObstacleType.bird
+          ? liveSpeed * 1.15
+          : liveSpeed;
       position.x -= moveSpeed * dt;
       age += dt;
 
@@ -167,7 +243,9 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
           position.y = targetGroundY;
           hasLanded = true;
           fallVelocityY = 0;
-          game.particlePool.emitJumpDust(position + Vector2(size.x / 2, size.y));
+          game.particlePool.emitJumpDust(
+            position + Vector2(size.x / 2, size.y),
+          );
         }
       }
 
@@ -175,17 +253,25 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
       if (type == ObstacleType.pipePair && gapBottomY > gapTopY) {
         _pipeOscillationPhase += dt * 2.2;
         final gapHeight = gapBottomY - gapTopY;
-        final offset = math.sin(_pipeOscillationPhase + _wobblePhase) * 20.0; // Gentle 20px wave
-        
+        final offset =
+            math.sin(_pipeOscillationPhase + _wobblePhase) *
+            20.0; // Gentle 20px wave
+
         liveGapTopY = (gapTopY + offset).clamp(20.0, size.y - gapHeight - 20.0);
         liveGapBottomY = liveGapTopY + gapHeight;
 
         // Update child hitboxes live with forgiving inset padding
         if (_topPipeHitbox != null && _bottomPipeHitbox != null) {
           _topPipeHitbox!.position = Vector2(8, 0);
-          _topPipeHitbox!.size = Vector2(math.max(10.0, size.x - 16), math.max(10.0, liveGapTopY - 10));
+          _topPipeHitbox!.size = Vector2(
+            math.max(10.0, size.x - 16),
+            math.max(10.0, liveGapTopY - 10),
+          );
           _bottomPipeHitbox!.position = Vector2(8, liveGapBottomY + 10);
-          _bottomPipeHitbox!.size = Vector2(math.max(10.0, size.x - 16), math.max(10.0, size.y - liveGapBottomY - 10));
+          _bottomPipeHitbox!.size = Vector2(
+            math.max(10.0, size.x - 16),
+            math.max(10.0, size.y - liveGapBottomY - 10),
+          );
         }
       }
     }
@@ -196,18 +282,18 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
         _birdTimer -= 0.15;
         _birdFrame = (_birdFrame + 1) % 2;
       }
-      
+
       final playerX = game.player.position.x;
       final distToPlayer = position.x - playerX;
-      
+
       if (distToPlayer > 400) {
         position.y += math.sin(position.x * 0.05) * 0.5;
       } else if (distToPlayer > 150 && !_lockedHeight) {
         final playerY = game.player.position.y;
         final diff = playerY - position.y;
-        position.y += diff * 2.5 * dt; 
+        position.y += diff * 2.5 * dt;
       } else if (distToPlayer <= 150 && !_lockedHeight) {
-        _lockedHeight = true; 
+        _lockedHeight = true;
       }
     }
 
@@ -221,8 +307,10 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
   void _checkNearMiss() {
     if (passed || nearMissTriggered) return;
     final player = game.player;
-    final dx = (position.x + size.x / 2 - player.position.x - player.size.x / 2).abs();
-    final dy = (position.y + size.y / 2 - player.position.y - player.size.y / 2).abs();
+    final dx = (position.x + size.x / 2 - player.position.x - player.size.x / 2)
+        .abs();
+    final dy = (position.y + size.y / 2 - player.position.y - player.size.y / 2)
+        .abs();
 
     // Adjusted near miss distance for bigger dino (80x96)
     if (dx < 60 && dy < 70) {
@@ -234,7 +322,7 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
         game.comboTimer = 1.6;
         game.score += game.combo * 12;
         game.comboDisplay.show(game.combo);
-        
+
         game.triggerNearMissSlowMo();
         game.particlePool.emitSpeedLines();
 
@@ -249,6 +337,30 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
 
   @override
   void render(Canvas canvas) {
+    if (type == ObstacleType.ceilingPipe || type == ObstacleType.pipePair) {
+      _renderEpochPassage(canvas);
+      return;
+    }
+    if (_themedArt != null) {
+      if (isFallingFromSky && !hasLanded) {
+        final landing = targetGroundY - position.y + size.y;
+        canvas.drawOval(
+          Rect.fromLTWH(-4, landing - 4, size.x + 8, 8),
+          Paint()..color = const Color(0x664D342D),
+        );
+        canvas.drawLine(
+          Offset(size.x / 2, size.y),
+          Offset(size.x / 2, landing - 8),
+          Paint()
+            ..color = const Color(0x88FFD367)
+            ..strokeWidth = 2,
+        );
+        canvas.drawPicture(_themedArt!);
+      } else {
+        _renderGroundObstacle(canvas, (_) => canvas.drawPicture(_themedArt!));
+      }
+      return;
+    }
     switch (type) {
       case ObstacleType.cactusSmall:
         _renderCactus(canvas, size.x.toDouble(), size.y.toDouble(), false);
@@ -280,7 +392,306 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
     }
   }
 
-  void _renderGroundShadow(Canvas canvas, double w, double h, [double shadowAlphaMultiplier = 1.0]) {
+  @override
+  void onRemove() {
+    _themedArt?.dispose();
+    _themedArt = null;
+    super.onRemove();
+  }
+
+  void _paintEpochObstacle(Canvas canvas, String biome) {
+    final w = size.x, h = size.y;
+    final forest = biome == 'FOREST' || biome == 'RAIN';
+    final ice = biome == 'ICE';
+    final lava = biome == 'VOLCANO';
+    final desert = biome == 'DESERT';
+    final base = desert
+        ? const Color(0xFFBB7948)
+        : forest
+        ? const Color(0xFF77503B)
+        : ice
+        ? const Color(0xFF64BBD6)
+        : lava
+        ? const Color(0xFF41394A)
+        : const Color(0xFF6757A4);
+    final light = desert
+        ? const Color(0xFFFFD38E)
+        : forest
+        ? const Color(0xFFAD8056)
+        : ice
+        ? const Color(0xFFDEF9FF)
+        : lava
+        ? const Color(0xFF8E6975)
+        : const Color(0xFFBC9EEB);
+    final outline = desert
+        ? const Color(0xFF70482F)
+        : forest
+        ? const Color(0xFF45372F)
+        : ice
+        ? const Color(0xFF397DAB)
+        : const Color(0xFF332B50);
+    canvas.drawOval(
+      Rect.fromLTWH(w * .06, h - 6, w * .9, 8),
+      Paint()..color = Colors.black26,
+    );
+    if (forest && type == ObstacleType.bush) {
+      final rect = Rect.fromLTRB(w * .02, h * .07, w * .98, h - 2);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(rect, Radius.circular(h * .3)),
+        Paint()
+          ..shader = LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [light, base, outline],
+          ).createShader(rect),
+      );
+      final end = Rect.fromLTWH(w * .69, h * .1, w * .27, h * .84);
+      canvas.drawOval(end, Paint()..color = const Color(0xFFE5BB7B));
+      for (var i = 0; i < 3; i++) {
+        canvas.drawOval(
+          end.deflate(3 + i * 3),
+          Paint()
+            ..color = base
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1.5,
+        );
+      }
+      for (var i = 0; i < 4; i++) {
+        canvas.drawPath(
+          Path()
+            ..moveTo(w * .08, h * (.22 + i * .18))
+            ..quadraticBezierTo(
+              w * .4,
+              h * (.14 + i * .18),
+              w * .68,
+              h * (.24 + i * .18),
+            ),
+          Paint()
+            ..color = outline
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 2,
+        );
+      }
+    } else if (forest && type != ObstacleType.rock) {
+      final rect = Rect.fromLTRB(w * .09, h * .08, w * .92, h - 2);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(rect, Radius.circular(w * .18)),
+        Paint()
+          ..shader = LinearGradient(
+            colors: [light, base, outline],
+          ).createShader(rect),
+      );
+      for (var i = 0; i < 5; i++) {
+        final x = w * (.2 + i * .14);
+        canvas.drawLine(
+          Offset(x, h * .22),
+          Offset(x + w * .03, h * .89),
+          Paint()
+            ..color = outline.withValues(alpha: .6)
+            ..strokeWidth = 2,
+        );
+      }
+      canvas.drawOval(
+        Rect.fromLTWH(w * .09, h * .02, w * .83, h * .18),
+        Paint()..color = light,
+      );
+      canvas.drawOval(
+        Rect.fromLTWH(w * .26, h * .065, w * .48, h * .08),
+        Paint()
+          ..color = base
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2,
+      );
+    } else {
+      final path = Path()
+        ..moveTo(w * .06, h)
+        ..lineTo(w * .02, h * .57)
+        ..lineTo(w * .23, h * .16)
+        ..lineTo(w * .48, 0)
+        ..lineTo(w * .76, h * .12)
+        ..lineTo(w * .98, h * .55)
+        ..lineTo(w * .94, h)
+        ..close();
+      if (desert || (ice && type == ObstacleType.rock)) {
+        path.reset();
+        path.moveTo(w * .05, h);
+        path.quadraticBezierTo(-w * .05, h * .3, w * .3, h * .08);
+        path.quadraticBezierTo(w * .6, -h * .1, w * .85, h * .19);
+        path.quadraticBezierTo(w * 1.02, h * .42, w * .96, h);
+        path.close();
+      } else if (biome == 'RAIN' && type == ObstacleType.rock) {
+        path.reset();
+        path.moveTo(w * .03, h);
+        path.lineTo(w * .06, h * .17);
+        path.lineTo(w * .27, h * .06);
+        path.lineTo(w * .91, h * .12);
+        path.lineTo(w * .97, h);
+        path.close();
+      } else if (biome == 'COSMOS' && type == ObstacleType.pillar) {
+        path.reset();
+        path.moveTo(w * .06, h);
+        path.lineTo(w * .12, h * .1);
+        path.lineTo(w * .31, h * .03);
+        path.lineTo(w * .84, h * .03);
+        path.lineTo(w * .94, h);
+        path.close();
+      }
+      canvas.drawPath(
+        path,
+        Paint()
+          ..shader = LinearGradient(
+            colors: [light, base, outline],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ).createShader(Rect.fromLTWH(0, 0, w, h)),
+      );
+      canvas.drawPath(
+        path,
+        Paint()
+          ..color = outline
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2,
+      );
+      canvas.drawPath(
+        Path()
+          ..moveTo(w * .48, 3)
+          ..lineTo(w * .39, h * .54)
+          ..lineTo(w * .08, h * .9)
+          ..moveTo(w * .39, h * .54)
+          ..lineTo(w * .92, h * .68),
+        Paint()
+          ..color = light.withValues(alpha: .7)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = ice ? 3 : 2,
+      );
+      if (lava) {
+        canvas.drawPath(
+          Path()
+            ..moveTo(w * .63, h * .15)
+            ..lineTo(w * .52, h * .39)
+            ..lineTo(w * .64, h * .53)
+            ..lineTo(w * .47, h * .86),
+          Paint()
+            ..color = const Color(0xFFFFA04B)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 3,
+        );
+      }
+      if (!forest && !ice && !lava && !desert) {
+        for (var i = 0; i < 3; i++) {
+          final x = w * (.25 + i * .25), y = h * (.34 + i * .12);
+          canvas.drawPath(
+            Path()
+              ..moveTo(x, y - 6)
+              ..lineTo(x + 4, y)
+              ..lineTo(x, y + 6)
+              ..lineTo(x - 4, y)
+              ..close(),
+            Paint()..color = const Color(0xFF82F2E5),
+          );
+        }
+      }
+    }
+    // Texture is recorded once, rather than regenerated during each frame.
+    final grain = math.Random(_seed);
+    for (var i = 0; i < 20; i++) {
+      canvas.drawOval(
+        Rect.fromLTWH(
+          w * (.2 + grain.nextDouble() * .6),
+          h * (.3 + grain.nextDouble() * .6),
+          1 + grain.nextDouble() * 3,
+          1,
+        ),
+        Paint()..color = light.withValues(alpha: .35),
+      );
+    }
+    if (desert) {
+      final fossil = Path();
+      for (var i = 0; i < 32; i++) {
+        final t = i / 31 * math.pi * 3.5;
+        final r = w * .025 + i / 31 * w * .17;
+        final point = Offset(
+          w * .5 + math.cos(t) * r,
+          h * .56 + math.sin(t) * r,
+        );
+        if (i == 0) {
+          fossil.moveTo(point.dx, point.dy);
+        } else {
+          fossil.lineTo(point.dx, point.dy);
+        }
+      }
+      canvas.drawPath(
+        fossil,
+        Paint()
+          ..color = const Color(0xFFF4D5A0)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3
+          ..strokeCap = StrokeCap.round,
+      );
+    }
+    if (biome == 'COSMOS' && type != ObstacleType.pillar) {
+      for (var i = 0; i < 3; i++) {
+        final x = w * (.08 + i * .29), top = h * (.12 + (i % 2) * .16);
+        final shard = Path()
+          ..moveTo(x, h * .96)
+          ..lineTo(x, top + h * .16)
+          ..lineTo(x + w * .12, top)
+          ..lineTo(x + w * .24, top + h * .14)
+          ..lineTo(x + w * .24, h * .96)
+          ..close();
+        canvas.drawPath(
+          shard,
+          Paint()
+            ..shader = LinearGradient(
+              colors: [const Color(0xFFACF9EF), light, base],
+            ).createShader(Rect.fromLTWH(x, top, w * .24, h)),
+        );
+        canvas.drawLine(
+          Offset(x + w * .12, top),
+          Offset(x + w * .12, h * .9),
+          Paint()
+            ..color = outline
+            ..strokeWidth = 1.5,
+        );
+      }
+    }
+    if (forest) {
+      for (var i = 0; i < 5; i++) {
+        canvas.drawOval(
+          Rect.fromLTWH(
+            w * (.08 + i * .16),
+            h * (.08 + (i % 2) * .06),
+            w * .25,
+            h * .13,
+          ),
+          Paint()
+            ..color = biome == 'RAIN'
+                ? const Color(0xFF359C8C)
+                : const Color(0xFF59993E),
+        );
+      }
+    }
+    if (ice) {
+      canvas.drawPath(
+        Path()
+          ..moveTo(w * .23, h * .16)
+          ..lineTo(w * .48, 0)
+          ..lineTo(w * .76, h * .12)
+          ..lineTo(w * .68, h * .21)
+          ..lineTo(w * .46, h * .13)
+          ..lineTo(w * .34, h * .23)
+          ..close(),
+        Paint()..color = const Color(0xFFF0FEFF),
+      );
+    }
+  }
+
+  void _renderGroundShadow(
+    Canvas canvas,
+    double w,
+    double h, [
+    double shadowAlphaMultiplier = 1.0,
+  ]) {
     final alpha = (0.25 * shadowAlphaMultiplier).clamp(0.0, 0.35);
     if (alpha <= 0.01) return;
     // +4px horizontal offset to match top-left rim lighting casting shadow to bottom-right
@@ -300,7 +711,10 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
     canvas.drawOval(shadowRect, Paint()..shader = shadowShader);
   }
 
-  void _renderGroundObstacle(Canvas canvas, void Function(double shadowMult) renderBody) {
+  void _renderGroundObstacle(
+    Canvas canvas,
+    void Function(double shadowMult) renderBody,
+  ) {
     final easeProgress = (entranceTimer / entranceDuration).clamp(0.0, 1.0);
     final isEntrance = entranceTimer < entranceDuration;
 
@@ -320,13 +734,19 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
     }
   }
 
-  void _renderBirdGroundShadow(Canvas canvas, double w, double h, double easeProgress) {
+  void _renderBirdGroundShadow(
+    Canvas canvas,
+    double w,
+    double h,
+    double easeProgress,
+  ) {
     try {
       final groundYLocal = game.ground.groundY - position.y;
       if (groundYLocal > h) {
         final altitude = (groundYLocal - h).clamp(20.0, 300.0);
         final shadowScale = (1.0 + altitude * 0.002).clamp(1.0, 1.6);
-        final shadowAlpha = (0.22 * (1.0 - (altitude / 450.0)) * easeProgress).clamp(0.05, 0.22);
+        final shadowAlpha = (0.22 * (1.0 - (altitude / 450.0)) * easeProgress)
+            .clamp(0.05, 0.22);
         final shadowRect = Rect.fromCenter(
           center: Offset(w * 0.5 + 4.0, groundYLocal - 2.0),
           width: w * 0.85 * shadowScale,
@@ -364,10 +784,7 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
 
       // Main central trunk
       canvas.drawRRect(
-        RRect.fromRectAndRadius(
-          trunkRect,
-          Radius.circular(trunkWidth * 0.45),
-        ),
+        RRect.fromRectAndRadius(trunkRect, Radius.circular(trunkWidth * 0.45)),
         paint,
       );
 
@@ -375,37 +792,53 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
       final ribPaint = Paint()
         ..color = const Color(0xFF81C784).withValues(alpha: 0.7)
         ..strokeWidth = 2.0;
-      canvas.drawLine(Offset(w * 0.42, h * 0.05), Offset(w * 0.42, h * 0.95), ribPaint);
-      canvas.drawLine(Offset(w * 0.58, h * 0.05), Offset(w * 0.58, h * 0.95), ribPaint);
+      canvas.drawLine(
+        Offset(w * 0.42, h * 0.05),
+        Offset(w * 0.42, h * 0.95),
+        ribPaint,
+      );
+      canvas.drawLine(
+        Offset(w * 0.58, h * 0.05),
+        Offset(w * 0.58, h * 0.95),
+        ribPaint,
+      );
 
       // Spine needle dot clusters
       final spinePaint = Paint()..color = const Color(0xFFDCEDC8);
       for (double sy = h * 0.15; sy < h * 0.85; sy += 16) {
-        canvas.drawCircle(Offset((w - trunkWidth) / 2 - 1, sy), 1.5, spinePaint);
-        canvas.drawCircle(Offset((w + trunkWidth) / 2 + 1, sy), 1.5, spinePaint);
+        canvas.drawCircle(
+          Offset((w - trunkWidth) / 2 - 1, sy),
+          1.5,
+          spinePaint,
+        );
+        canvas.drawCircle(
+          Offset((w + trunkWidth) / 2 + 1, sy),
+          1.5,
+          spinePaint,
+        );
       }
 
       // Branch growth: starts at 0.05 scale, grows to 1.0 over 2.5 seconds
       final double branchScale = (age / 2.0).clamp(0.05, 1.0);
       final branchCount = tall ? (2 + rng.nextInt(2)) : (1 + rng.nextInt(2));
-      
+
       for (int i = 0; i < branchCount; i++) {
         final isRight = (i % 2 == 0);
         final yPos = h * (0.2 + i * 0.28);
         final branchLen = w * (0.32 + rng.nextDouble() * 0.3) * branchScale;
         final branchThickness = 11.0;
         final upLen = h * (0.18 + rng.nextDouble() * 0.15) * branchScale;
-        
+
         canvas.save();
         canvas.translate(isRight ? w * 0.65 : w * 0.35, yPos);
-        
+
         // Horizontal arm
         canvas.drawRRect(
           RRect.fromRectAndRadius(
             Rect.fromLTWH(
-              isRight ? 0 : -branchLen, 
-              -branchThickness / 2, 
-              branchLen, 
+              isRight ? 0 : -branchLen,
+              -branchThickness / 2,
+              branchLen,
               branchThickness,
             ),
             Radius.circular(branchThickness / 2),
@@ -414,13 +847,15 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
         );
 
         // Vertical arm tip going up
-        final tipX = (isRight ? branchLen : -branchLen) + (isRight ? -branchThickness / 2 : -branchThickness / 2);
+        final tipX =
+            (isRight ? branchLen : -branchLen) +
+            (isRight ? -branchThickness / 2 : -branchThickness / 2);
         canvas.drawRRect(
           RRect.fromRectAndRadius(
             Rect.fromLTWH(
-              tipX, 
-              -upLen - branchThickness / 2, 
-              branchThickness, 
+              tipX,
+              -upLen - branchThickness / 2,
+              branchThickness,
               upLen + branchThickness,
             ),
             Radius.circular(branchThickness / 2),
@@ -429,15 +864,31 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
         );
 
         // Arm flower blossom
-        canvas.drawCircle(Offset(tipX + branchThickness / 2, -upLen - branchThickness / 2), 4.0, Paint()..color = const Color(0xFFFF4081));
-        canvas.drawCircle(Offset(tipX + branchThickness / 2, -upLen - branchThickness / 2), 1.8, Paint()..color = const Color(0xFFFFEB3B));
+        canvas.drawCircle(
+          Offset(tipX + branchThickness / 2, -upLen - branchThickness / 2),
+          4.0,
+          Paint()..color = const Color(0xFFFF4081),
+        );
+        canvas.drawCircle(
+          Offset(tipX + branchThickness / 2, -upLen - branchThickness / 2),
+          1.8,
+          Paint()..color = const Color(0xFFFFEB3B),
+        );
 
         canvas.restore();
       }
 
       // Top main flower blossom
-      canvas.drawCircle(Offset(w / 2, 0), 5.5, Paint()..color = const Color(0xFFFF4081));
-      canvas.drawCircle(Offset(w / 2, 0), 2.2, Paint()..color = const Color(0xFFFFEB3B));
+      canvas.drawCircle(
+        Offset(w / 2, 0),
+        5.5,
+        Paint()..color = const Color(0xFFFF4081),
+      );
+      canvas.drawCircle(
+        Offset(w / 2, 0),
+        2.2,
+        Paint()..color = const Color(0xFFFFEB3B),
+      );
     });
   }
 
@@ -447,10 +898,10 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
 
       // 1. Soft Ground Contact AO Shadow (+4px offset, radial gradient, Condition 3)
       _renderGroundShadow(canvas, size.x, size.y, shadowMult);
-      
+
       // Dynamic wobble
       final wobble = math.sin(age * _wobbleSpeed + _wobblePhase) * 1.5;
-      
+
       canvas.save();
       canvas.translate(size.x / 2, size.y);
       canvas.rotate(wobble * math.pi / 180);
@@ -463,10 +914,12 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
         final angle = (i / vertexCount) * math.pi * 2 - math.pi / 2;
         final radiusX = size.x * 0.45 * (0.75 + rng.nextDouble() * 0.25);
         final radiusY = size.y * 0.45 * (0.75 + rng.nextDouble() * 0.25);
-        pts.add(Offset(
-          size.x / 2 + math.cos(angle) * radiusX,
-          size.y / 2 + math.sin(angle) * radiusY,
-        ));
+        pts.add(
+          Offset(
+            size.x / 2 + math.cos(angle) * radiusX,
+            size.y / 2 + math.sin(angle) * radiusY,
+          ),
+        );
       }
 
       // Normalize vertices so rock sits flush on ground [0, size.x] & [0, size.y]
@@ -502,7 +955,13 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
         ],
         stops: const [0.0, 0.5, 1.0],
       );
-      canvas.drawPath(path, Paint()..shader = rockGradient.createShader(Rect.fromLTWH(0, 0, size.x, size.y)));
+      canvas.drawPath(
+        path,
+        Paint()
+          ..shader = rockGradient.createShader(
+            Rect.fromLTWH(0, 0, size.x, size.y),
+          ),
+      );
 
       // 3. 3D Facet Shading Lines (Chiseled Rock Planes)
       final centerPt = Offset(size.x * 0.45, size.y * 0.45);
@@ -540,7 +999,11 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
         final cx2 = cx + (rng.nextDouble() - 0.5) * size.x * 0.35;
         final cy2 = cy + rng.nextDouble() * size.y * 0.35;
 
-        canvas.drawLine(Offset(cx + 1, cy + 1), Offset(cx2 + 1, cy2 + 1), crackLitPaint);
+        canvas.drawLine(
+          Offset(cx + 1, cy + 1),
+          Offset(cx2 + 1, cy2 + 1),
+          crackLitPaint,
+        );
         canvas.drawLine(Offset(cx, cy), Offset(cx2, cy2), crackDarkPaint);
       }
 
@@ -549,7 +1012,11 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
       for (int k = 0; k < 4; k++) {
         final ox = size.x * (0.2 + rng.nextDouble() * 0.6);
         final oy = size.y * (0.2 + rng.nextDouble() * 0.6);
-        canvas.drawCircle(Offset(ox, oy), 1.2 + rng.nextDouble() * 1.0, orePaint);
+        canvas.drawCircle(
+          Offset(ox, oy),
+          1.2 + rng.nextDouble() * 1.0,
+          orePaint,
+        );
       }
 
       // 6. Sunlight Specular Edge Outline (Top-Left Edge Highlight)
@@ -577,7 +1044,7 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
       _renderGroundShadow(canvas, size.x, size.y, shadowMult);
 
       final sway = math.sin(age * 2.5 + _wobblePhase) * 2.0;
-      
+
       canvas.save();
       canvas.translate(size.x / 2, size.y);
       canvas.rotate(sway * math.pi / 180);
@@ -585,24 +1052,63 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
 
       // Low-lying dark base shadow foliage
       final basePaint = Paint()..color = const Color(0xFF1B5E20);
-      canvas.drawCircle(Offset(size.x * 0.22, size.y * 0.65), size.x * 0.28, basePaint);
-      canvas.drawCircle(Offset(size.x * 0.78, size.y * 0.65), size.x * 0.28, basePaint);
-      canvas.drawCircle(Offset(size.x * 0.5, size.y * 0.45), size.x * 0.36, basePaint);
+      canvas.drawCircle(
+        Offset(size.x * 0.22, size.y * 0.65),
+        size.x * 0.28,
+        basePaint,
+      );
+      canvas.drawCircle(
+        Offset(size.x * 0.78, size.y * 0.65),
+        size.x * 0.28,
+        basePaint,
+      );
+      canvas.drawCircle(
+        Offset(size.x * 0.5, size.y * 0.45),
+        size.x * 0.36,
+        basePaint,
+      );
 
       // Fluffy round main green bush foliage
       final mainPaint = Paint()..color = const Color(0xFF2E7D32);
-      canvas.drawCircle(Offset(size.x * 0.25, size.y * 0.6), size.x * 0.25, mainPaint);
-      canvas.drawCircle(Offset(size.x * 0.75, size.y * 0.6), size.x * 0.25, mainPaint);
-      canvas.drawCircle(Offset(size.x * 0.5, size.y * 0.4), size.x * 0.33, mainPaint);
+      canvas.drawCircle(
+        Offset(size.x * 0.25, size.y * 0.6),
+        size.x * 0.25,
+        mainPaint,
+      );
+      canvas.drawCircle(
+        Offset(size.x * 0.75, size.y * 0.6),
+        size.x * 0.25,
+        mainPaint,
+      );
+      canvas.drawCircle(
+        Offset(size.x * 0.5, size.y * 0.4),
+        size.x * 0.33,
+        mainPaint,
+      );
 
       // Top bright leaf highlights
       final highlightPaint = Paint()..color = const Color(0xFF66BB6A);
-      canvas.drawCircle(Offset(size.x * 0.35, size.y * 0.38), size.x * 0.18, highlightPaint);
-      canvas.drawCircle(Offset(size.x * 0.65, size.y * 0.38), size.x * 0.18, highlightPaint);
-      canvas.drawCircle(Offset(size.x * 0.5, size.y * 0.28), size.x * 0.2, highlightPaint);
+      canvas.drawCircle(
+        Offset(size.x * 0.35, size.y * 0.38),
+        size.x * 0.18,
+        highlightPaint,
+      );
+      canvas.drawCircle(
+        Offset(size.x * 0.65, size.y * 0.38),
+        size.x * 0.18,
+        highlightPaint,
+      );
+      canvas.drawCircle(
+        Offset(size.x * 0.5, size.y * 0.28),
+        size.x * 0.2,
+        highlightPaint,
+      );
 
       // Little round berries/flowers
-      final flowerPaint = Paint()..color = (rng.nextBool()) ? const Color(0xFFE91E63) : const Color(0xFFFFCA28);
+      final flowerPaint = Paint()
+        ..color = (rng.nextBool())
+            ? const Color(0xFFE91E63)
+            : const Color(0xFFFFCA28);
       for (int i = 0; i < 5; i++) {
         final fx = size.x * (0.2 + (i * 0.15));
         final fy = size.y * (0.35 + (i % 2) * 0.2);
@@ -648,9 +1154,26 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
 
     final backWingPath = Path()
       ..moveTo(w * 0.52, h * 0.45)
-      ..cubicTo(w * 0.60, h * 0.45 - wingFlexY * 0.8, w * 0.76, h * 0.40 - wingTipFlexY * 0.8, w * 0.90, h * 0.35 - wingTipFlexY * 0.8)
-      ..quadraticBezierTo(w * 0.82, h * 0.50 - wingFlexY * 0.4, w * 0.74, h * 0.54)
-      ..quadraticBezierTo(w * 0.66, h * 0.52 - wingFlexY * 0.2, w * 0.58, h * 0.58)
+      ..cubicTo(
+        w * 0.60,
+        h * 0.45 - wingFlexY * 0.8,
+        w * 0.76,
+        h * 0.40 - wingTipFlexY * 0.8,
+        w * 0.90,
+        h * 0.35 - wingTipFlexY * 0.8,
+      )
+      ..quadraticBezierTo(
+        w * 0.82,
+        h * 0.50 - wingFlexY * 0.4,
+        w * 0.74,
+        h * 0.54,
+      )
+      ..quadraticBezierTo(
+        w * 0.66,
+        h * 0.52 - wingFlexY * 0.2,
+        w * 0.58,
+        h * 0.58,
+      )
       ..close();
     canvas.drawPath(backWingPath, backWingPaint);
 
@@ -679,7 +1202,11 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
         colors: [Color(0xFF9575CD), Color(0xFF7E57C2)],
       ).createShader(Rect.fromLTWH(w * 0.35, h * 0.48, w * 0.28, h * 0.28));
     canvas.drawOval(
-      Rect.fromCenter(center: Offset(w * 0.46, h * 0.60), width: w * 0.24, height: h * 0.22),
+      Rect.fromCenter(
+        center: Offset(w * 0.46, h * 0.60),
+        width: w * 0.24,
+        height: h * 0.22,
+      ),
       bellyPaint,
     );
 
@@ -694,7 +1221,8 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
 
     // Left & Right Pointy Bat Ears
     final earPaint = Paint()..color = const Color(0xFF311B92);
-    final earInnerPaint = Paint()..color = const Color(0xFFFF80AB).withValues(alpha: 0.85);
+    final earInnerPaint = Paint()
+      ..color = const Color(0xFFFF80AB).withValues(alpha: 0.85);
 
     // Front ear (facing viewer)
     final ear1 = Path()
@@ -738,8 +1266,22 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
     final eyeGlint = Paint()..color = Colors.white;
 
     // Left eye (closer, bigger)
-    canvas.drawOval(Rect.fromCenter(center: Offset(w * 0.22, h * 0.44), width: 7.0, height: 8.5), eyeOuter);
-    canvas.drawOval(Rect.fromCenter(center: Offset(w * 0.21, h * 0.44), width: 4.5, height: 6.0), eyePupil);
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: Offset(w * 0.22, h * 0.44),
+        width: 7.0,
+        height: 8.5,
+      ),
+      eyeOuter,
+    );
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: Offset(w * 0.21, h * 0.44),
+        width: 4.5,
+        height: 6.0,
+      ),
+      eyePupil,
+    );
     canvas.drawCircle(Offset(w * 0.20, h * 0.42), 1.5, eyeGlint);
     canvas.drawCircle(Offset(w * 0.23, h * 0.46), 0.7, eyeGlint);
 
@@ -755,7 +1297,11 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
       ..shader = LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-        colors: [const Color(0xFFBA68C8), const Color(0xFF7B1FA2), const Color(0xFF4A148C)],
+        colors: [
+          const Color(0xFFBA68C8),
+          const Color(0xFF7B1FA2),
+          const Color(0xFF4A148C),
+        ],
       ).createShader(Rect.fromLTWH(w * 0.35, -h * 0.8, w * 0.65, h * 2.2));
 
     final wingOrigin = Offset(w * 0.44, h * 0.46);
@@ -764,10 +1310,30 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
 
     final foreWingPath = Path()
       ..moveTo(wingOrigin.dx, wingOrigin.dy)
-      ..quadraticBezierTo(wingElbow.dx, wingElbow.dy, wingTip.dx, wingTip.dy) // Top wing bone
-      ..quadraticBezierTo(w * 0.76, h * 0.48 + wingFlexY * 0.6, w * 0.68, h * 0.64 + wingFlexY * 0.4) // Scallop 1
-      ..quadraticBezierTo(w * 0.60, h * 0.56 + wingFlexY * 0.3, w * 0.52, h * 0.66) // Scallop 2
-      ..quadraticBezierTo(w * 0.48, h * 0.58, wingOrigin.dx, wingOrigin.dy) // Scallop 3
+      ..quadraticBezierTo(
+        wingElbow.dx,
+        wingElbow.dy,
+        wingTip.dx,
+        wingTip.dy,
+      ) // Top wing bone
+      ..quadraticBezierTo(
+        w * 0.76,
+        h * 0.48 + wingFlexY * 0.6,
+        w * 0.68,
+        h * 0.64 + wingFlexY * 0.4,
+      ) // Scallop 1
+      ..quadraticBezierTo(
+        w * 0.60,
+        h * 0.56 + wingFlexY * 0.3,
+        w * 0.52,
+        h * 0.66,
+      ) // Scallop 2
+      ..quadraticBezierTo(
+        w * 0.48,
+        h * 0.58,
+        wingOrigin.dx,
+        wingOrigin.dy,
+      ) // Scallop 3
       ..close();
     canvas.drawPath(foreWingPath, foreWingPaint);
 
@@ -783,20 +1349,33 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
     canvas.drawLine(wingElbow, wingTip, wingBonePaint);
 
     // Thumb claw
-    canvas.drawLine(wingElbow, Offset(wingElbow.dx - 2, wingElbow.dy - 3), wingBonePaint);
+    canvas.drawLine(
+      wingElbow,
+      Offset(wingElbow.dx - 2, wingElbow.dy - 3),
+      wingBonePaint,
+    );
 
     // Webbing rib struts
     final ribPaint = Paint()
       ..color = const Color(0xFFCE93D8).withValues(alpha: 0.60)
       ..strokeWidth = 1.2
       ..style = PaintingStyle.stroke;
-    canvas.drawLine(wingElbow, Offset(w * 0.68, h * 0.64 + wingFlexY * 0.4), ribPaint);
+    canvas.drawLine(
+      wingElbow,
+      Offset(w * 0.68, h * 0.64 + wingFlexY * 0.4),
+      ribPaint,
+    );
     canvas.drawLine(wingOrigin, Offset(w * 0.52, h * 0.66), ribPaint);
 
     // Tiny magical night trail sparkles behind bat
-    final trailSparkle = Paint()..color = const Color(0xFFE1BEE7).withValues(alpha: 0.7);
+    final trailSparkle = Paint()
+      ..color = const Color(0xFFE1BEE7).withValues(alpha: 0.7);
     final t1 = (age * 6.0) % 1.0;
-    canvas.drawCircle(Offset(w * 0.88 + t1 * 12.0, h * 0.36 + math.sin(age * 8.0) * 4.0), 1.2 * (1.0 - t1), trailSparkle);
+    canvas.drawCircle(
+      Offset(w * 0.88 + t1 * 12.0, h * 0.36 + math.sin(age * 8.0) * 4.0),
+      1.2 * (1.0 - t1),
+      trailSparkle,
+    );
 
     canvas.restore();
   }
@@ -848,7 +1427,10 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
       ],
       stops: [0.0, 0.45, 1.0],
     );
-    canvas.drawRect(shaftRect, Paint()..shader = shaftGradient.createShader(shaftRect));
+    canvas.drawRect(
+      shaftRect,
+      Paint()..shader = shaftGradient.createShader(shaftRect),
+    );
 
     // 3. Fluted Vertical Grooves / Pipe Lines
     final groovePaint = Paint()
@@ -860,7 +1442,11 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
 
     for (double gx = shaftLeft + 8; gx < shaftLeft + shaftWidth - 6; gx += 12) {
       canvas.drawLine(Offset(gx, 15), Offset(gx, h - 13), groovePaint);
-      canvas.drawLine(Offset(gx + 1.5, 15), Offset(gx + 1.5, h - 13), grooveHlPaint);
+      canvas.drawLine(
+        Offset(gx + 1.5, 15),
+        Offset(gx + 1.5, h - 13),
+        grooveHlPaint,
+      );
     }
 
     // 4. Capital Top Cap & Base Trim (Classic Column / Pipe Lip)
@@ -885,6 +1471,161 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
       ..strokeWidth = 1.8;
     canvas.drawLine(Offset(2, 2), Offset(w - 2, 2), capHlPaint);
     canvas.drawLine(Offset(2, h - 14), Offset(w - 2, h - 14), capHlPaint);
+  }
+
+  void _renderEpochPassage(Canvas canvas) {
+    final colors = switch (_epoch) {
+      'RAIN' => [
+        const Color(0xFF98B99A),
+        const Color(0xFF567465),
+        const Color(0xFF334A43),
+      ],
+      'FOREST' => [
+        const Color(0xFFC99864),
+        const Color(0xFF865739),
+        const Color(0xFF4D362A),
+      ],
+      'ICE' => [
+        const Color(0xFFF1FCFF),
+        const Color(0xFF8DDCEC),
+        const Color(0xFF427EAA),
+      ],
+      'VOLCANO' => [
+        const Color(0xFF8F7586),
+        const Color(0xFF4D4057),
+        const Color(0xFF292637),
+      ],
+      'COSMOS' => [
+        const Color(0xFFDAC2FF),
+        const Color(0xFF9572C4),
+        const Color(0xFF514477),
+      ],
+      _ => [
+        const Color(0xFFFFDE9D),
+        const Color(0xFFCB945D),
+        const Color(0xFF805134),
+      ],
+    };
+    void section(double top, double bottom, bool hanging) {
+      if (bottom - top < 2) return;
+      final w = size.x, h = bottom - top;
+      canvas.save();
+      canvas.translate(0, top);
+      final rect = Rect.fromLTWH(6, 0, w - 12, h);
+      final body = Path()
+        ..moveTo(8, 0)
+        ..lineTo(w - 8, 0)
+        ..lineTo(w - 5, h * .36)
+        ..lineTo(w - 9, h * .68)
+        ..lineTo(w - 5, h)
+        ..lineTo(5, h)
+        ..lineTo(9, h * .64)
+        ..lineTo(5, h * .3)
+        ..close();
+      canvas.drawPath(
+        body,
+        Paint()..shader = LinearGradient(colors: colors).createShader(rect),
+      );
+      canvas.drawPath(
+        body,
+        Paint()
+          ..color = colors.last
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2,
+      );
+      final lipY = hanging ? h - 18 : 0.0;
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(0, lipY, w, 18),
+          const Radius.circular(5),
+        ),
+        Paint()..color = colors[1],
+      );
+      canvas.drawLine(
+        Offset(4, lipY + 3),
+        Offset(w - 4, lipY + 3),
+        Paint()
+          ..color = colors.first
+          ..strokeWidth = 2,
+      );
+      for (var y = 28.0; y < h - 22; y += 34) {
+        if (_epoch == 'FOREST' || _epoch == 'RAIN') {
+          canvas.drawOval(
+            Rect.fromLTWH(w * .3, y, w * .3, 12),
+            Paint()
+              ..color = colors.last
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 2,
+          );
+          canvas.drawLine(
+            Offset(12, y - 18),
+            Offset(15, y + 18),
+            Paint()
+              ..color = colors.last
+              ..strokeWidth = 2,
+          );
+          if (_epoch == 'RAIN') {
+            canvas.drawOval(
+              Rect.fromLTWH(w * .65, y, 12, 8),
+              Paint()..color = const Color(0xFF7AA754),
+            );
+          }
+        } else if (_epoch == 'ICE' || _epoch == 'COSMOS') {
+          final shard = Path()
+            ..moveTo(w * .5, y - 10)
+            ..lineTo(w * .7, y + 1)
+            ..lineTo(w * .5, y + 14)
+            ..lineTo(w * .3, y + 1)
+            ..close();
+          canvas.drawPath(
+            shard,
+            Paint()..color = colors.first.withValues(alpha: .75),
+          );
+        } else {
+          final crack = Path()
+            ..moveTo(10, y)
+            ..lineTo(w * .55, y + 5)
+            ..lineTo(w * .45, y + 16)
+            ..lineTo(w - 10, y + 20);
+          canvas.drawPath(
+            crack,
+            Paint()
+              ..color = _epoch == 'VOLCANO'
+                  ? const Color(0xFFFFA65C)
+                  : colors.last
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 2,
+          );
+          if (_epoch == 'DESERT') {
+            canvas.drawCircle(
+              Offset(w * .5, y + 8),
+              5,
+              Paint()
+                ..color = colors.first
+                ..style = PaintingStyle.stroke
+                ..strokeWidth = 1.5,
+            );
+          }
+        }
+      }
+      if (_epoch == 'ICE') {
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromLTWH(2, lipY, w - 4, 5),
+            const Radius.circular(3),
+          ),
+          Paint()..color = colors.first,
+        );
+      }
+      canvas.restore();
+    }
+
+    if (type == ObstacleType.ceilingPipe) {
+      section(0, size.y, true);
+    } else {
+      section(0, liveGapTopY > 0 ? liveGapTopY : gapTopY, true);
+      section(liveGapBottomY > 0 ? liveGapBottomY : gapBottomY, size.y, false);
+    }
   }
 
   void _renderCeilingPipe(Canvas canvas) {
@@ -915,13 +1656,20 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
       ],
       stops: [0.0, 0.5, 1.0],
     );
-    canvas.drawRect(shaftRect, Paint()..shader = shaftGradient.createShader(shaftRect));
+    canvas.drawRect(
+      shaftRect,
+      Paint()..shader = shaftGradient.createShader(shaftRect),
+    );
 
     // 2. Vertical Pipe Shine Line
     final shinePaint = Paint()
       ..color = Colors.white.withValues(alpha: 0.4)
       ..strokeWidth = 3.0;
-    canvas.drawLine(Offset(shaftLeft + 6, 0), Offset(shaftLeft + 6, h - 18), shinePaint);
+    canvas.drawLine(
+      Offset(shaftLeft + 6, 0),
+      Offset(shaftLeft + 6, h - 18),
+      shinePaint,
+    );
 
     // 3. Hanging Pipe Rim Cap at Bottom Lip
     final capRect = Rect.fromLTWH(0, h - 22, w, 22);
@@ -938,7 +1686,10 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
       ..color = const Color(0xFF0D5314)
       ..strokeWidth = 2.0
       ..style = PaintingStyle.stroke;
-    canvas.drawRRect(RRect.fromRectAndRadius(capRect, const Radius.circular(4)), capBorderPaint);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(capRect, const Radius.circular(4)),
+      capBorderPaint,
+    );
 
     final capHlPaint = Paint()
       ..color = Colors.white.withValues(alpha: 0.6)
@@ -995,9 +1746,21 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
       if (isEntrance) {
         canvas.translate(0, topOffsetY);
       }
-      final topShaftRect = Rect.fromLTWH(shaftLeft, 0, shaftWidth, math.max(0.0, gTop - 18));
-      canvas.drawRect(topShaftRect, Paint()..shader = shaftGradient.createShader(topShaftRect));
-      canvas.drawLine(Offset(shaftLeft + 6, 0), Offset(shaftLeft + 6, math.max(0.0, gTop - 18)), shinePaint);
+      final topShaftRect = Rect.fromLTWH(
+        shaftLeft,
+        0,
+        shaftWidth,
+        math.max(0.0, gTop - 18),
+      );
+      canvas.drawRect(
+        topShaftRect,
+        Paint()..shader = shaftGradient.createShader(topShaftRect),
+      );
+      canvas.drawLine(
+        Offset(shaftLeft + 6, 0),
+        Offset(shaftLeft + 6, math.max(0.0, gTop - 18)),
+        shinePaint,
+      );
 
       // Top pipe bottom rim cap
       final topCapRect = Rect.fromLTWH(0, gTop - 22, w, 22);
@@ -1005,8 +1768,15 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
         RRect.fromRectAndRadius(topCapRect, const Radius.circular(4)),
         Paint()..shader = capGradient.createShader(topCapRect),
       );
-      canvas.drawRRect(RRect.fromRectAndRadius(topCapRect, const Radius.circular(4)), capBorderPaint);
-      canvas.drawLine(Offset(4, gTop - 20), Offset(w - 4, gTop - 20), capHlPaint);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(topCapRect, const Radius.circular(4)),
+        capBorderPaint,
+      );
+      canvas.drawLine(
+        Offset(4, gTop - 20),
+        Offset(w - 4, gTop - 20),
+        capHlPaint,
+      );
 
       // Pipe Gap Rim Glow (Item 5: bright edge stroke + subtle glow into safe gap)
       final topGlowRect = Rect.fromLTWH(0, gTop, w, 14);
@@ -1043,12 +1813,31 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
         RRect.fromRectAndRadius(bottomCapRect, const Radius.circular(4)),
         Paint()..shader = capGradient.createShader(bottomCapRect),
       );
-      canvas.drawRRect(RRect.fromRectAndRadius(bottomCapRect, const Radius.circular(4)), capBorderPaint);
-      canvas.drawLine(Offset(4, gBottom + 2), Offset(w - 4, gBottom + 2), capHlPaint);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(bottomCapRect, const Radius.circular(4)),
+        capBorderPaint,
+      );
+      canvas.drawLine(
+        Offset(4, gBottom + 2),
+        Offset(w - 4, gBottom + 2),
+        capHlPaint,
+      );
 
-      final bottomShaftRect = Rect.fromLTWH(shaftLeft, gBottom + 22, shaftWidth, math.max(0.0, h - (gBottom + 22)));
-      canvas.drawRect(bottomShaftRect, Paint()..shader = shaftGradient.createShader(bottomShaftRect));
-      canvas.drawLine(Offset(shaftLeft + 6, gBottom + 22), Offset(shaftLeft + 6, h), shinePaint);
+      final bottomShaftRect = Rect.fromLTWH(
+        shaftLeft,
+        gBottom + 22,
+        shaftWidth,
+        math.max(0.0, h - (gBottom + 22)),
+      );
+      canvas.drawRect(
+        bottomShaftRect,
+        Paint()..shader = shaftGradient.createShader(bottomShaftRect),
+      );
+      canvas.drawLine(
+        Offset(shaftLeft + 6, gBottom + 22),
+        Offset(shaftLeft + 6, h),
+        shinePaint,
+      );
 
       // Pipe Gap Rim Glow (Item 5: bright edge stroke + subtle glow into safe gap)
       final bottomGlowRect = Rect.fromLTWH(0, gBottom - 14, w, 14);
@@ -1065,7 +1854,11 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
       final rimHighlightPaint = Paint()
         ..color = const Color(0xFF80DEEA)
         ..strokeWidth = 2.0;
-      canvas.drawLine(Offset(0, gBottom), Offset(w, gBottom), rimHighlightPaint);
+      canvas.drawLine(
+        Offset(0, gBottom),
+        Offset(w, gBottom),
+        rimHighlightPaint,
+      );
 
       // Soft Ground Shadow with +4px offset and shadowMult (Condition 3)
       _renderGroundShadow(canvas, w, h, isEntrance ? curvedProgress : 1.0);
@@ -1121,8 +1914,16 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
         ..color = const Color(0xFFFF5722).withValues(alpha: 0.80)
         ..strokeWidth = 1.4
         ..style = PaintingStyle.stroke;
-      canvas.drawLine(Offset(w * 0.16, h - 3), Offset(w * 0.28, h - 8), crackPaint);
-      canvas.drawLine(Offset(w * 0.72, h - 4), Offset(w * 0.84, h - 8), crackPaint);
+      canvas.drawLine(
+        Offset(w * 0.16, h - 3),
+        Offset(w * 0.28, h - 8),
+        crackPaint,
+      );
+      canvas.drawLine(
+        Offset(w * 0.72, h - 4),
+        Offset(w * 0.84, h - 8),
+        crackPaint,
+      );
 
       // 3. Fluid Liquid Magma Pool Surface (Viscous undulating molten wave)
       final magmaPoolPath = Path()..moveTo(w * 0.10, h);
@@ -1154,8 +1955,16 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
         final by = h - 6 - (bubbleProgress * 7.0);
         final br = (2.5 + b * 0.8) * math.sin(bubbleProgress * math.pi);
         if (br > 0.5) {
-          canvas.drawCircle(Offset(bx, by), br, Paint()..color = const Color(0xFFFF9100));
-          canvas.drawCircle(Offset(bx, by - br * 0.2), br * 0.55, Paint()..color = const Color(0xFFFFFDE7));
+          canvas.drawCircle(
+            Offset(bx, by),
+            br,
+            Paint()..color = const Color(0xFFFF9100),
+          );
+          canvas.drawCircle(
+            Offset(bx, by - br * 0.2),
+            br * 0.55,
+            Paint()..color = const Color(0xFFFFFDE7),
+          );
         }
       }
 
@@ -1167,54 +1976,75 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
       final fluidSpoutPath = Path()
         ..moveTo(w * 0.30, h - 5)
         ..cubicTo(
-          w * 0.36 + math.sin(age * 7.0) * 3.5, h - splashHeight * 0.45,
-          spoutApexX - 5 + math.cos(age * 8.0) * 2.5, spoutApexY + splashHeight * 0.25,
-          spoutApexX, spoutApexY,
+          w * 0.36 + math.sin(age * 7.0) * 3.5,
+          h - splashHeight * 0.45,
+          spoutApexX - 5 + math.cos(age * 8.0) * 2.5,
+          spoutApexY + splashHeight * 0.25,
+          spoutApexX,
+          spoutApexY,
         )
         ..cubicTo(
-          spoutApexX + 5 - math.cos(age * 8.0) * 2.5, spoutApexY + splashHeight * 0.25,
-          w * 0.64 - math.sin(age * 7.0) * 3.5, h - splashHeight * 0.45,
-          w * 0.70, h - 5,
+          spoutApexX + 5 - math.cos(age * 8.0) * 2.5,
+          spoutApexY + splashHeight * 0.25,
+          w * 0.64 - math.sin(age * 7.0) * 3.5,
+          h - splashHeight * 0.45,
+          w * 0.70,
+          h - 5,
         )
         ..close();
 
-      final fluidSpoutShader = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: const [
-          Color(0xFFFFF9C4), // White-hot liquid tip
-          Color(0xFFFFAB00), // Vibrant amber molten liquid
-          Color(0xFFFF3D00), // Blazing red-orange magma
-          Color(0xFFB71C1C), // Deep crimson base
-        ],
-        stops: const [0.0, 0.35, 0.75, 1.0],
-      ).createShader(Rect.fromLTWH(w * 0.25, spoutApexY, w * 0.5, splashHeight));
+      final fluidSpoutShader =
+          LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: const [
+              Color(0xFFFFF9C4), // White-hot liquid tip
+              Color(0xFFFFAB00), // Vibrant amber molten liquid
+              Color(0xFFFF3D00), // Blazing red-orange magma
+              Color(0xFFB71C1C), // Deep crimson base
+            ],
+            stops: const [0.0, 0.35, 0.75, 1.0],
+          ).createShader(
+            Rect.fromLTWH(w * 0.25, spoutApexY, w * 0.5, splashHeight),
+          );
       canvas.drawPath(fluidSpoutPath, Paint()..shader = fluidSpoutShader);
 
       // Inner bright hot fluid stream
       final innerFluidPath = Path()
         ..moveTo(w * 0.40, h - 5)
         ..quadraticBezierTo(
-          spoutApexX + math.sin(age * 6.0) * 1.5, h - splashHeight * 0.5,
-          spoutApexX, spoutApexY + 3,
+          spoutApexX + math.sin(age * 6.0) * 1.5,
+          h - splashHeight * 0.5,
+          spoutApexX,
+          spoutApexY + 3,
         )
         ..quadraticBezierTo(
-          spoutApexX - math.sin(age * 6.0) * 1.5, h - splashHeight * 0.5,
-          w * 0.60, h - 5,
+          spoutApexX - math.sin(age * 6.0) * 1.5,
+          h - splashHeight * 0.5,
+          w * 0.60,
+          h - 5,
         )
         ..close();
       canvas.drawPath(
         innerFluidPath,
         Paint()
-          ..shader = LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: const [
-              Color(0xFFFFFFFF),
-              Color(0xFFFFF59D),
-              Color(0xFFFF9100),
-            ],
-          ).createShader(Rect.fromLTWH(w * 0.38, spoutApexY + 3, w * 0.24, splashHeight - 3)),
+          ..shader =
+              LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: const [
+                  Color(0xFFFFFFFF),
+                  Color(0xFFFFF59D),
+                  Color(0xFFFF9100),
+                ],
+              ).createShader(
+                Rect.fromLTWH(
+                  w * 0.38,
+                  spoutApexY + 3,
+                  w * 0.24,
+                  splashHeight - 3,
+                ),
+              ),
       );
 
       // 6. Flying Liquid Magma Droplets & Embers (Arching in gravity)
@@ -1226,9 +2056,16 @@ class Obstacle extends PositionComponent with CollisionCallbacks, HasGameReferen
         final pProg = ((age * 2.5 + p * 0.16) % 1.0);
         final side = (p % 2 == 0) ? 1.0 : -1.0;
         final px = spoutApexX + side * (p * 3.5 + 7.0) * pProg;
-        final py = spoutApexY - (16.0 * math.sin(pProg * math.pi)) + (pProg * pProg * 24.0);
+        final py =
+            spoutApexY -
+            (16.0 * math.sin(pProg * math.pi)) +
+            (pProg * pProg * 24.0);
         final pr = (2.2 * (1.0 - pProg)).clamp(0.6, 2.2);
-        final pPaint = (p % 3 == 0) ? sparkYellow : (p % 2 == 0) ? sparkOrange : sparkRed;
+        final pPaint = (p % 3 == 0)
+            ? sparkYellow
+            : (p % 2 == 0)
+            ? sparkOrange
+            : sparkRed;
         canvas.drawCircle(Offset(px, py), pr, pPaint);
       }
 

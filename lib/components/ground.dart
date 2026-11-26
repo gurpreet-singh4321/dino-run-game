@@ -9,17 +9,18 @@ import '../utils/vibration_util.dart';
 class GroundGap {
   double x;
   final double width;
+  final bool erupts;
   bool isRemoved = false;
   bool hasShaken = false;
   double eruptionTimer = 0;
   final List<double> spikeTargetHeights;
 
-  GroundGap(this.x, this.width)
-      : spikeTargetHeights = List.generate(6, (i) {
-          final rng = math.Random(i * 137 + 29);
-          // 6 distinct variable height targets between 110px and 240px!
-          return 110.0 + rng.nextDouble() * 130.0;
-        });
+  GroundGap(this.x, this.width, {this.erupts = true})
+    : spikeTargetHeights = List.generate(6, (i) {
+        final rng = math.Random(i * 137 + 29);
+        // 6 distinct variable height targets between 110px and 240px!
+        return 110.0 + rng.nextDouble() * 130.0;
+      });
 }
 
 /// Scrolling ground strip with biome-colored texture and lava gaps.
@@ -31,7 +32,7 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
   double _scrollOffset = 0;
   final List<GroundGap> _gaps = [];
   double _time = 0;
-  
+
   // Space mode: ground slides down
   double _spaceSlideOffset = 0;
 
@@ -65,10 +66,10 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
 
   @override
   void update(double dt) {
-    dt *= game.globalTimeScale;
+    // dt comes from the authoritative simulation clock.
     super.update(dt);
     _time += dt;
-    
+
     if (game.state == GameState.playing || game.state == GameState.spaceMode) {
       final speed = game.speedManager.currentSpeed;
       _scrollOffset += speed * dt;
@@ -79,12 +80,12 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
 
         // Trigger 1-sec screen vibration & eruption when gap approaches dino
         final distToPlayer = gap.x - game.player.position.x;
-        if (distToPlayer < 400 && !gap.hasShaken) {
+        if (gap.erupts && distToPlayer < 400 && !gap.hasShaken) {
           gap.hasShaken = true;
           game.triggerShake(duration: 1.0, intensity: 6.5);
           GameVibration.heavyImpact();
         }
-        
+
         if (gap.hasShaken) {
           gap.eruptionTimer = (gap.eruptionTimer + dt * 1.8).clamp(0.0, 1.0);
         }
@@ -97,27 +98,34 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
 
       // Rising embers: emit 2 ember particles per second per active gap onscreen
       _emberTimer += dt;
-      if (_emberTimer >= 0.5) {
+      if (_emberTimer >= 0.5 &&
+          game.biomeManager.effectiveBiome.name == 'VOLCANO') {
         _emberTimer = 0.0;
         final groundLine = groundY;
         for (final gap in _gaps) {
           if (gap.x > -gap.width && gap.x < game.size.x) {
-            final emberX = gap.x + gap.width * (0.2 + math.Random().nextDouble() * 0.6);
+            final emberX =
+                gap.x + gap.width * (0.2 + math.Random().nextDouble() * 0.6);
             game.particlePool.emitLavaEmber(Vector2(emberX, groundLine + 14));
           }
         }
       }
     }
-    
+
     // Space mode: ground slides down off screen & rises back on return
     if (game.state == GameState.spaceMode) {
       if (game.spacePhase == SpacePhase.returning) {
-        final returnProgress = (1.0 - (game.spacePhaseTimer / DinoGame.spaceReturnDuration)).clamp(0.0, 1.0);
+        final returnProgress =
+            (1.0 - (game.spacePhaseTimer / DinoGame.spaceReturnDuration)).clamp(
+              0.0,
+              1.0,
+            );
         if (returnProgress >= 0.58) {
           // Path rises smoothly and heroically into place!
           final groundT = ((returnProgress - 0.58) / 0.26).clamp(0.0, 1.0);
           final curvedT = Curves.easeOutBack.transform(groundT);
-          _spaceSlideOffset = (1.0 - curvedT).clamp(0.0, 1.0) * (groundHeight + 200);
+          _spaceSlideOffset =
+              (1.0 - curvedT).clamp(0.0, 1.0) * (groundHeight + 200);
         } else {
           _spaceSlideOffset = groundHeight + 200;
         }
@@ -136,12 +144,17 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
     }
   }
 
-  void addGap(double x, double width) {
-    _gaps.add(GroundGap(x, width));
+  void addGap(double x, double width, {bool erupts = true}) {
+    _gaps.add(GroundGap(x, width, erupts: erupts));
   }
 
   void clearGaps() {
     _gaps.clear();
+  }
+
+  void resetSurface() {
+    _spaceSlideOffset = 0;
+    clearGaps();
   }
 
   bool isOverGap(double playerX, double playerWidth) {
@@ -155,7 +168,12 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
     return false;
   }
 
-  bool hitsLavaSprout(double playerX, double playerY, double playerWidth, double playerHeight) {
+  bool hitsLavaSprout(
+    double playerX,
+    double playerY,
+    double playerWidth,
+    double playerHeight,
+  ) {
     // Inset player hit box (middle 50% width, bottom 75% height) so outer sprite margins don't trigger phantom hits
     final playerRect = Rect.fromLTWH(
       playerX + playerWidth * 0.25,
@@ -164,7 +182,7 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
       playerHeight * 0.75,
     );
     final y = groundY;
-    
+
     for (final gap in _gaps) {
       // Dino MUST be horizontally at or over the lava gap
       if (playerRect.right < gap.x || playerRect.left > gap.x + gap.width) {
@@ -173,9 +191,11 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
 
       if (gap.eruptionTimer > 0.1) {
         final sproutOffsets = [0.08, 0.24, 0.40, 0.56, 0.72, 0.88];
-        final eruptionScale = gap.eruptionTimer < 0.2 
+        final eruptionScale = gap.eruptionTimer < 0.2
             ? (gap.eruptionTimer / 0.2) * 0.70
-            : 0.70 + math.sin((gap.eruptionTimer - 0.2) / 0.8 * math.pi / 2) * 0.30;
+            : 0.70 +
+                  math.sin((gap.eruptionTimer - 0.2) / 0.8 * math.pi / 2) *
+                      0.30;
 
         final eqFrequencies = [8.0, 12.0, 16.0, 14.0, 10.0, 15.0];
         final eqPhases = [0.0, 1.2, 2.5, 0.8, 3.1, 1.9];
@@ -183,9 +203,11 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
         for (int s = 0; s < 6; s++) {
           final cx = gap.x + gap.width * sproutOffsets[s];
           final targetH = gap.spikeTargetHeights[s] * 0.65;
-          final eqBounce = 0.40 + 0.60 * math.sin(_time * eqFrequencies[s] + eqPhases[s]).abs();
+          final eqBounce =
+              0.40 +
+              0.60 * math.sin(_time * eqFrequencies[s] + eqPhases[s]).abs();
           final H = targetH * eruptionScale * eqBounce;
-          
+
           // Only dangerous when erupting noticeably above ground (H > 22)
           if (H < 22) continue;
 
@@ -204,6 +226,7 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
   void render(Canvas canvas) {
     final w = game.size.x;
     final y = groundY;
+    if (y >= game.size.y) return; // Fully below the viewport during orbit.
     final topColor = game.biomeManager.interpolatedGroundTop;
     final bottomColor = game.biomeManager.interpolatedGroundBottom;
     // Condition 2: Ensure ground covers the full bottom region on all screen sizes
@@ -212,27 +235,33 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
     // Draw ground segments (clipping gaps)
     final groundPath = Path();
     double currentX = 0;
-    
-    final sortedGaps = List<GroundGap>.from(_gaps)..sort((a, b) => a.x.compareTo(b.x));
-    
+
+    final sortedGaps = List<GroundGap>.from(_gaps)
+      ..sort((a, b) => a.x.compareTo(b.x));
+
     for (final gap in sortedGaps) {
       if (gap.x > currentX) {
-        groundPath.addRect(Rect.fromLTWH(currentX, y, gap.x - currentX, effectiveGroundHeight));
+        groundPath.addRect(
+          Rect.fromLTWH(currentX, y, gap.x - currentX, effectiveGroundHeight),
+        );
       }
       currentX = math.max(currentX, gap.x + gap.width);
     }
     if (currentX < w) {
-      groundPath.addRect(Rect.fromLTWH(currentX, y, w - currentX, effectiveGroundHeight));
+      groundPath.addRect(
+        Rect.fromLTWH(currentX, y, w - currentX, effectiveGroundHeight),
+      );
     }
 
     canvas.save();
     canvas.clipPath(groundPath);
 
     final currentBiome = game.biomeManager.effectiveBiome.name;
-    final detailAlpha = (game.biomeManager.isTransitioning
-            ? (game.biomeManager.progress - 0.5).abs() * 2.0
-            : 1.0)
-        .clamp(0.0, 1.0);
+    final detailAlpha =
+        (game.biomeManager.isTransitioning
+                ? (game.biomeManager.progress - 0.5).abs() * 2.0
+                : 1.0)
+            .clamp(0.0, 1.0);
 
     // Ground fill gradient
     final rect = Rect.fromLTWH(0, y, w, effectiveGroundHeight);
@@ -282,7 +311,9 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
         end: Alignment.bottomCenter,
         stops: [0.0, 0.12, 0.35, 0.68, 1.0],
         colors: [
-          Color(0xFFFFFFFF), // Pure crystalline diamond ice & fresh powder snow crest
+          Color(
+            0xFFFFFFFF,
+          ), // Pure crystalline diamond ice & fresh powder snow crest
           Color(0xFFB2EBF2), // Translucent sunlit frost
           Color(0xFF4DD0E1), // Vibrant cyan glacial ice layer
           Color(0xFF00838F), // Deep arctic sapphire permafrost
@@ -318,14 +349,14 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
     final topHighlightColor = currentBiome == 'DESERT'
         ? const Color(0xFFFFF1A8)
         : (currentBiome == 'COSMOS'
-            ? const Color(0xFF4DEEEA)
-            : (currentBiome == 'FOREST'
-                ? const Color(0xFFCCFF90)
-                : (currentBiome == 'ICE'
-                    ? const Color(0xFFE0F7FA)
-                    : (currentBiome == 'VOLCANO'
-                        ? const Color(0xFFFF6D00)
-                        : topColor))));
+              ? const Color(0xFF4DEEEA)
+              : (currentBiome == 'FOREST'
+                    ? const Color(0xFFCCFF90)
+                    : (currentBiome == 'ICE'
+                          ? const Color(0xFFE0F7FA)
+                          : (currentBiome == 'VOLCANO'
+                                ? const Color(0xFFFF6D00)
+                                : topColor))));
     canvas.drawLine(
       Offset(0, y),
       Offset(w, y),
@@ -337,7 +368,13 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
     canvas.clipRect(Rect.fromLTWH(0, y, w, effectiveGroundHeight));
 
     // Fallback small pebbles (deterministic scrolling positions)
-    if (currentBiome != 'DESERT' && currentBiome != 'RAIN' && currentBiome != 'STORM' && currentBiome != 'COSMOS' && currentBiome != 'FOREST' && currentBiome != 'ICE' && currentBiome != 'VOLCANO') {
+    if (currentBiome != 'DESERT' &&
+        currentBiome != 'RAIN' &&
+        currentBiome != 'STORM' &&
+        currentBiome != 'COSMOS' &&
+        currentBiome != 'FOREST' &&
+        currentBiome != 'ICE' &&
+        currentBiome != 'VOLCANO') {
       final pebblePaint = Paint()..color = bottomColor.withValues(alpha: 0.3);
       for (int i = 0; i < 12; i++) {
         final seedX = (i * 127.0);
@@ -358,7 +395,13 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
 
   // --- Cached Tile Blitting & Procedural Generation ---
 
-  void _renderGroundTiles(Canvas canvas, double screenWidth, double groundY, double groundHeight, double detailAlpha) {
+  void _renderGroundTiles(
+    Canvas canvas,
+    double screenWidth,
+    double groundY,
+    double groundHeight,
+    double detailAlpha,
+  ) {
     if (detailAlpha < 0.05) return;
     if (_biomeTilePictures.isEmpty && !_tilesInitialized) {
       _initBiomeTiles();
@@ -372,15 +415,43 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
       final progress = game.biomeManager.progress.clamp(0.0, 1.0);
 
       // Render old biome fading out
-      _drawTileStrip(canvas, currBiome, screenWidth, groundY, groundHeight, detailAlpha * (1.0 - progress));
+      _drawTileStrip(
+        canvas,
+        currBiome,
+        screenWidth,
+        groundY,
+        groundHeight,
+        detailAlpha * (1.0 - progress),
+      );
       // Render new biome fading in
-      _drawTileStrip(canvas, nextBiome, screenWidth, groundY, groundHeight, detailAlpha * progress);
+      _drawTileStrip(
+        canvas,
+        nextBiome,
+        screenWidth,
+        groundY,
+        groundHeight,
+        detailAlpha * progress,
+      );
     } else {
-      _drawTileStrip(canvas, currentBiome, screenWidth, groundY, groundHeight, detailAlpha);
+      _drawTileStrip(
+        canvas,
+        currentBiome,
+        screenWidth,
+        groundY,
+        groundHeight,
+        detailAlpha,
+      );
     }
   }
 
-  void _drawTileStrip(Canvas canvas, String biome, double screenWidth, double groundY, double groundHeight, double alpha) {
+  void _drawTileStrip(
+    Canvas canvas,
+    String biome,
+    double screenWidth,
+    double groundY,
+    double groundHeight,
+    double alpha,
+  ) {
     if (alpha <= 0.01) return;
     final img = _biomeTileImages[biome] ?? _biomeTileImages['DESERT'];
     final pic = _biomeTilePictures[biome] ?? _biomeTilePictures['DESERT'];
@@ -416,19 +487,33 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
     if (_tilesInitialized) return;
     _tilesInitialized = true;
 
-    final biomes = ['DESERT', 'RAIN', 'STORM', 'COSMOS', 'FOREST', 'ICE', 'VOLCANO'];
+    final biomes = [
+      'DESERT',
+      'RAIN',
+      'STORM',
+      'COSMOS',
+      'FOREST',
+      'ICE',
+      'VOLCANO',
+    ];
 
     for (final biome in biomes) {
       final recorder = ui.PictureRecorder();
-      final canvas = Canvas(recorder, const Rect.fromLTWH(0, 0, tileWidth, tileHeight));
-      
+      final canvas = Canvas(
+        recorder,
+        const Rect.fromLTWH(0, 0, tileWidth, tileHeight),
+      );
+
       // Draw procedural details onto tile canvas
       _drawBiomeTileContent(canvas, biome, tileWidth, tileHeight);
 
       final picture = recorder.endRecording();
       _biomeTilePictures[biome] = picture;
       try {
-        final img = await picture.toImage(tileWidth.toInt(), tileHeight.toInt());
+        final img = await picture.toImage(
+          tileWidth.toInt(),
+          tileHeight.toInt(),
+        );
         _biomeTileImages[biome] = img;
       } catch (_) {
         // Fallback gracefully in headless testing
@@ -470,8 +555,10 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
         for (int i = 0; i <= 64; i++) {
           final angle = i * math.pi / 16;
           final radius = 0.6 + i * 0.15;
-          final point = Offset(x + math.cos(angle) * radius,
-              37 + math.sin(angle) * radius);
+          final point = Offset(
+            x + math.cos(angle) * radius,
+            37 + math.sin(angle) * radius,
+          );
           if (i == 0) {
             spiral.moveTo(point.dx, point.dy);
           } else {
@@ -519,8 +606,14 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
         r2DarkPath.moveTo(rx + 2, y + 17);
         r2DarkPath.quadraticBezierTo(rx + 26, y + 22, rx + r2W, y + 17);
       }
-      canvas.drawPath(r2DarkPath, sandShadowWavePaint..style = PaintingStyle.stroke);
-      canvas.drawPath(r2LightPath, sandMidWavePaint..style = PaintingStyle.stroke);
+      canvas.drawPath(
+        r2DarkPath,
+        sandShadowWavePaint..style = PaintingStyle.stroke,
+      );
+      canvas.drawPath(
+        r2LightPath,
+        sandMidWavePaint..style = PaintingStyle.stroke,
+      );
 
       const r3W = 80.0;
       final r3Path = Path();
@@ -528,7 +621,10 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
         r3Path.moveTo(rx, y + 32);
         r3Path.cubicTo(rx + 25, y + 36, rx + 55, y + 28, rx + r3W, y + 32);
       }
-      canvas.drawPath(r3Path, sandDeepStrataPaint..style = PaintingStyle.stroke);
+      canvas.drawPath(
+        r3Path,
+        sandDeepStrataPaint..style = PaintingStyle.stroke,
+      );
 
       const r4W = 128.0;
       final r4Path = Path();
@@ -536,12 +632,19 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
         r4Path.moveTo(rx, y + 50);
         r4Path.quadraticBezierTo(rx + 64, y + 56, rx + r4W, y + 50);
       }
-      canvas.drawPath(r4Path, sandDeepStrataPaint..style = PaintingStyle.stroke);
+      canvas.drawPath(
+        r4Path,
+        sandDeepStrataPaint..style = PaintingStyle.stroke,
+      );
 
-      final quartzSparklePaint = Paint()..color = const Color(0xFFFFFDE7).withValues(alpha: 0.90);
-      final goldSandPaint = Paint()..color = const Color(0xFFFFE082).withValues(alpha: 0.75);
-      final amberSandPaint = Paint()..color = const Color(0xFFFFA000).withValues(alpha: 0.60);
-      final darkSandGrainPaint = Paint()..color = const Color(0xFF795548).withValues(alpha: 0.50);
+      final quartzSparklePaint = Paint()
+        ..color = const Color(0xFFFFFDE7).withValues(alpha: 0.90);
+      final goldSandPaint = Paint()
+        ..color = const Color(0xFFFFE082).withValues(alpha: 0.75);
+      final amberSandPaint = Paint()
+        ..color = const Color(0xFFFFA000).withValues(alpha: 0.60);
+      final darkSandGrainPaint = Paint()
+        ..color = const Color(0xFF795548).withValues(alpha: 0.50);
 
       for (int i = 0; i < 32; i++) {
         final gx = (i * 17.3) % w;
@@ -550,22 +653,39 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
         final paint = (i % 4 == 0)
             ? quartzSparklePaint
             : (i % 3 == 0)
-                ? goldSandPaint
-                : (i % 2 == 0)
-                    ? amberSandPaint
-                    : darkSandGrainPaint;
+            ? goldSandPaint
+            : (i % 2 == 0)
+            ? amberSandPaint
+            : darkSandGrainPaint;
         canvas.drawCircle(Offset(gx, gy), grainRadius, paint);
       }
 
-      final agateStonePaint = Paint()..color = const Color(0xFFD7CCC8).withValues(alpha: 0.85);
-      final agateHighlightPaint = Paint()..color = Colors.white.withValues(alpha: 0.90);
-      final amberPebblePaint = Paint()..color = const Color(0xFFFFB300).withValues(alpha: 0.75);
+      final agateStonePaint = Paint()
+        ..color = const Color(0xFFD7CCC8).withValues(alpha: 0.85);
+      final agateHighlightPaint = Paint()
+        ..color = Colors.white.withValues(alpha: 0.90);
+      final amberPebblePaint = Paint()
+        ..color = const Color(0xFFFFB300).withValues(alpha: 0.75);
 
       const pebblePeriod = 160.0;
       for (double fx = 0.0; fx < w; fx += pebblePeriod) {
-        canvas.drawOval(Rect.fromCenter(center: Offset(fx + 35, y + 22), width: 7, height: 4.5), agateStonePaint);
+        canvas.drawOval(
+          Rect.fromCenter(
+            center: Offset(fx + 35, y + 22),
+            width: 7,
+            height: 4.5,
+          ),
+          agateStonePaint,
+        );
         canvas.drawCircle(Offset(fx + 33.5, y + 21), 1.0, agateHighlightPaint);
-        canvas.drawOval(Rect.fromCenter(center: Offset(fx + 120, y + 32), width: 5.5, height: 3.5), amberPebblePaint);
+        canvas.drawOval(
+          Rect.fromCenter(
+            center: Offset(fx + 120, y + 32),
+            width: 5.5,
+            height: 3.5,
+          ),
+          amberPebblePaint,
+        );
         canvas.drawCircle(Offset(fx + 119, y + 31), 0.8, agateHighlightPaint);
       }
     } else if (biome == 'RAIN' || biome == 'STORM') {
@@ -580,8 +700,16 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
 
       const blockWidth = 64.0;
       for (double bx = 0.0; bx < w; bx += blockWidth) {
-        canvas.drawLine(Offset(bx, y), Offset(bx, y + groundHeight), stoneBorderPaint);
-        canvas.drawLine(Offset(bx + 2, y + 1.5), Offset(bx + blockWidth - 2, y + 1.5), stoneLitPaint);
+        canvas.drawLine(
+          Offset(bx, y),
+          Offset(bx, y + groundHeight),
+          stoneBorderPaint,
+        );
+        canvas.drawLine(
+          Offset(bx + 2, y + 1.5),
+          Offset(bx + blockWidth - 2, y + 1.5),
+          stoneLitPaint,
+        );
         canvas.drawCircle(Offset(bx, y + 3), 2.5, mossCrevicePaint);
       }
       canvas.drawLine(Offset(0, y + 22), Offset(w, y + 22), stoneBorderPaint);
@@ -593,11 +721,19 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
       for (double px = 30.0; px < w; px += puddlePeriod) {
         canvas.drawOval(Rect.fromLTWH(px, y - 2, 48, 6), puddlePaint);
         canvas.drawOval(
-          Rect.fromCenter(center: Offset(px + 24, y + 1), width: 24.0, height: 4.0),
-          Paint()..color = Colors.white.withValues(alpha: 0.35)..style = PaintingStyle.stroke..strokeWidth = 1.2,
+          Rect.fromCenter(
+            center: Offset(px + 24, y + 1),
+            width: 24.0,
+            height: 4.0,
+          ),
+          Paint()
+            ..color = Colors.white.withValues(alpha: 0.35)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1.2,
         );
       }
-      final wetSparklePaint = Paint()..color = const Color(0xFFE0F7FA).withValues(alpha: 0.85);
+      final wetSparklePaint = Paint()
+        ..color = const Color(0xFFE0F7FA).withValues(alpha: 0.85);
       for (int i = 0; i < 24; i++) {
         final gx = (i * 21.3) % w;
         final gy = y + 4.0 + ((i * 11.7) % (groundHeight - 12.0));
@@ -645,10 +781,14 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
       }
       canvas.drawPath(bPath, deepObsidianPaint..style = PaintingStyle.stroke);
 
-      final cosmosWhite = Paint()..color = const Color(0xFFFFFFFF).withValues(alpha: 0.90);
-      final cosmosCyan = Paint()..color = const Color(0xFF80DEEA).withValues(alpha: 0.85);
-      final cosmosMagenta = Paint()..color = const Color(0xFFFF80AB).withValues(alpha: 0.75);
-      final cosmosPurple = Paint()..color = const Color(0xFFCE93D8).withValues(alpha: 0.60);
+      final cosmosWhite = Paint()
+        ..color = const Color(0xFFFFFFFF).withValues(alpha: 0.90);
+      final cosmosCyan = Paint()
+        ..color = const Color(0xFF80DEEA).withValues(alpha: 0.85);
+      final cosmosMagenta = Paint()
+        ..color = const Color(0xFFFF80AB).withValues(alpha: 0.75);
+      final cosmosPurple = Paint()
+        ..color = const Color(0xFFCE93D8).withValues(alpha: 0.60);
 
       for (int i = 0; i < 32; i++) {
         final gx = (i * 19.3) % w;
@@ -657,10 +797,10 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
         final paint = (i % 4 == 0)
             ? cosmosWhite
             : (i % 3 == 0)
-                ? cosmosCyan
-                : (i % 2 == 0)
-                    ? cosmosMagenta
-                    : cosmosPurple;
+            ? cosmosCyan
+            : (i % 2 == 0)
+            ? cosmosMagenta
+            : cosmosPurple;
         canvas.drawCircle(Offset(gx, gy), grainRadius, paint);
       }
 
@@ -671,8 +811,15 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
           ..lineTo(cx + 12, y - 9.0)
           ..lineTo(cx + 16, y + 1)
           ..close();
-        canvas.drawPath(cPath, Paint()..color = const Color(0xFF00E5FF).withValues(alpha: 0.85));
-        canvas.drawCircle(Offset(cx + 12, y - 9.0), 1.2, Paint()..color = Colors.white);
+        canvas.drawPath(
+          cPath,
+          Paint()..color = const Color(0xFF00E5FF).withValues(alpha: 0.85),
+        );
+        canvas.drawCircle(
+          Offset(cx + 12, y - 9.0),
+          1.2,
+          Paint()..color = Colors.white,
+        );
       }
     } else if (biome == 'FOREST') {
       final forestHighlightPaint = Paint()
@@ -702,7 +849,10 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
         r1Path.moveTo(rx, y + 5);
         r1Path.quadraticBezierTo(rx + r1W * 0.5, y + 8, rx + r1W, y + 5);
       }
-      canvas.drawPath(r1Path, forestHighlightPaint..style = PaintingStyle.stroke);
+      canvas.drawPath(
+        r1Path,
+        forestHighlightPaint..style = PaintingStyle.stroke,
+      );
 
       const r2W = 64.0;
       final r2LightPath = Path();
@@ -713,8 +863,14 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
         r2DarkPath.moveTo(rx + 2, y + 17);
         r2DarkPath.quadraticBezierTo(rx + 26, y + 22, rx + r2W, y + 17);
       }
-      canvas.drawPath(r2DarkPath, forestShadowWavePaint..style = PaintingStyle.stroke);
-      canvas.drawPath(r2LightPath, forestMidWavePaint..style = PaintingStyle.stroke);
+      canvas.drawPath(
+        r2DarkPath,
+        forestShadowWavePaint..style = PaintingStyle.stroke,
+      );
+      canvas.drawPath(
+        r2LightPath,
+        forestMidWavePaint..style = PaintingStyle.stroke,
+      );
 
       const r3W = 80.0;
       final r3Path = Path();
@@ -722,7 +878,10 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
         r3Path.moveTo(rx, y + 32);
         r3Path.cubicTo(rx + 25, y + 36, rx + 55, y + 28, rx + r3W, y + 32);
       }
-      canvas.drawPath(r3Path, forestDeepStrataPaint..style = PaintingStyle.stroke);
+      canvas.drawPath(
+        r3Path,
+        forestDeepStrataPaint..style = PaintingStyle.stroke,
+      );
 
       const r4W = 128.0;
       final r4Path = Path();
@@ -730,12 +889,19 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
         r4Path.moveTo(rx, y + 50);
         r4Path.quadraticBezierTo(rx + 64, y + 56, rx + r4W, y + 50);
       }
-      canvas.drawPath(r4Path, forestDeepStrataPaint..style = PaintingStyle.stroke);
+      canvas.drawPath(
+        r4Path,
+        forestDeepStrataPaint..style = PaintingStyle.stroke,
+      );
 
-      final dewSparklePaint = Paint()..color = const Color(0xFFFFFFFF).withValues(alpha: 0.95);
-      final emeraldGlitterPaint = Paint()..color = const Color(0xFFB2FF59).withValues(alpha: 0.85);
-      final goldPollenPaint = Paint()..color = const Color(0xFFFFEE58).withValues(alpha: 0.75);
-      final forestPeatFlecks = Paint()..color = const Color(0xFF558B2F).withValues(alpha: 0.55);
+      final dewSparklePaint = Paint()
+        ..color = const Color(0xFFFFFFFF).withValues(alpha: 0.95);
+      final emeraldGlitterPaint = Paint()
+        ..color = const Color(0xFFB2FF59).withValues(alpha: 0.85);
+      final goldPollenPaint = Paint()
+        ..color = const Color(0xFFFFEE58).withValues(alpha: 0.75);
+      final forestPeatFlecks = Paint()
+        ..color = const Color(0xFF558B2F).withValues(alpha: 0.55);
 
       for (int i = 0; i < 32; i++) {
         final gx = (i * 17.3) % w;
@@ -744,30 +910,50 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
         final paint = (i % 4 == 0)
             ? dewSparklePaint
             : (i % 3 == 0)
-                ? emeraldGlitterPaint
-                : (i % 2 == 0)
-                    ? goldPollenPaint
-                    : forestPeatFlecks;
+            ? emeraldGlitterPaint
+            : (i % 2 == 0)
+            ? goldPollenPaint
+            : forestPeatFlecks;
         canvas.drawCircle(Offset(gx, gy), grainRadius, paint);
       }
 
-      final jadePebblePaint = Paint()..color = const Color(0xFF81C784).withValues(alpha: 0.85);
-      final jadeHighlightPaint = Paint()..color = Colors.white.withValues(alpha: 0.90);
-      final forestAmberPaint = Paint()..color = const Color(0xFFFFB300).withValues(alpha: 0.75);
+      final jadePebblePaint = Paint()
+        ..color = const Color(0xFF81C784).withValues(alpha: 0.85);
+      final jadeHighlightPaint = Paint()
+        ..color = Colors.white.withValues(alpha: 0.90);
+      final forestAmberPaint = Paint()
+        ..color = const Color(0xFFFFB300).withValues(alpha: 0.75);
 
       const pebblePeriod = 160.0;
       for (double fx = 0.0; fx < w; fx += pebblePeriod) {
-        canvas.drawOval(Rect.fromCenter(center: Offset(fx + 35, y + 22), width: 7, height: 4.5), jadePebblePaint);
+        canvas.drawOval(
+          Rect.fromCenter(
+            center: Offset(fx + 35, y + 22),
+            width: 7,
+            height: 4.5,
+          ),
+          jadePebblePaint,
+        );
         canvas.drawCircle(Offset(fx + 33.5, y + 21), 1.0, jadeHighlightPaint);
-        canvas.drawOval(Rect.fromCenter(center: Offset(fx + 120, y + 32), width: 5.5, height: 3.5), forestAmberPaint);
+        canvas.drawOval(
+          Rect.fromCenter(
+            center: Offset(fx + 120, y + 32),
+            width: 5.5,
+            height: 3.5,
+          ),
+          forestAmberPaint,
+        );
         canvas.drawCircle(Offset(fx + 119, y + 31), 0.8, jadeHighlightPaint);
       }
 
       const grassSpacing = 32.0;
       int gIdx = 0;
-      final grassLight = Paint()..color = const Color(0xFFAEEA00).withValues(alpha: 0.90);
-      final grassEmerald = Paint()..color = const Color(0xFF64DD17).withValues(alpha: 0.85);
-      final flowerPaint = Paint()..color = const Color(0xFFFFEE58).withValues(alpha: 0.95);
+      final grassLight = Paint()
+        ..color = const Color(0xFFAEEA00).withValues(alpha: 0.90);
+      final grassEmerald = Paint()
+        ..color = const Color(0xFF64DD17).withValues(alpha: 0.85);
+      final flowerPaint = Paint()
+        ..color = const Color(0xFFFFEE58).withValues(alpha: 0.95);
 
       for (double gx = 0.0; gx < w; gx += grassSpacing) {
         gIdx++;
@@ -780,7 +966,11 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
         canvas.drawPath(gPath, (gIdx % 2 == 0) ? grassLight : grassEmerald);
         if (gIdx % 4 == 0) {
           canvas.drawCircle(Offset(gx + 4.0, y - bladeH), 1.6, flowerPaint);
-          canvas.drawCircle(Offset(gx + 4.0, y - bladeH), 0.7, Paint()..color = Colors.white);
+          canvas.drawCircle(
+            Offset(gx + 4.0, y - bladeH),
+            0.7,
+            Paint()..color = Colors.white,
+          );
         }
       }
     } else if (biome == 'ICE') {
@@ -822,8 +1012,14 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
         r2DarkPath.moveTo(rx + 2, y + 17);
         r2DarkPath.quadraticBezierTo(rx + 26, y + 22, rx + r2W, y + 17);
       }
-      canvas.drawPath(r2DarkPath, iceShadowWavePaint..style = PaintingStyle.stroke);
-      canvas.drawPath(r2LightPath, iceMidWavePaint..style = PaintingStyle.stroke);
+      canvas.drawPath(
+        r2DarkPath,
+        iceShadowWavePaint..style = PaintingStyle.stroke,
+      );
+      canvas.drawPath(
+        r2LightPath,
+        iceMidWavePaint..style = PaintingStyle.stroke,
+      );
 
       const r3W = 80.0;
       final r3Path = Path();
@@ -841,10 +1037,14 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
       }
       canvas.drawPath(r4Path, iceDeepStrataPaint..style = PaintingStyle.stroke);
 
-      final diamondSparklePaint = Paint()..color = const Color(0xFFFFFFFF).withValues(alpha: 0.95);
-      final cyanFrostPaint = Paint()..color = const Color(0xFFB2EBF2).withValues(alpha: 0.85);
-      final sapphireGlitterPaint = Paint()..color = const Color(0xFF4DD0E1).withValues(alpha: 0.75);
-      final deepIceFlecks = Paint()..color = const Color(0xFF00ACC1).withValues(alpha: 0.55);
+      final diamondSparklePaint = Paint()
+        ..color = const Color(0xFFFFFFFF).withValues(alpha: 0.95);
+      final cyanFrostPaint = Paint()
+        ..color = const Color(0xFFB2EBF2).withValues(alpha: 0.85);
+      final sapphireGlitterPaint = Paint()
+        ..color = const Color(0xFF4DD0E1).withValues(alpha: 0.75);
+      final deepIceFlecks = Paint()
+        ..color = const Color(0xFF00ACC1).withValues(alpha: 0.55);
 
       for (int i = 0; i < 32; i++) {
         final gx = (i * 17.3) % w;
@@ -853,22 +1053,39 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
         final paint = (i % 4 == 0)
             ? diamondSparklePaint
             : (i % 3 == 0)
-                ? cyanFrostPaint
-                : (i % 2 == 0)
-                    ? sapphireGlitterPaint
-                    : deepIceFlecks;
+            ? cyanFrostPaint
+            : (i % 2 == 0)
+            ? sapphireGlitterPaint
+            : deepIceFlecks;
         canvas.drawCircle(Offset(gx, gy), grainRadius, paint);
       }
 
-      final sapphireGemPaint = Paint()..color = const Color(0xFF80DEEA).withValues(alpha: 0.85);
-      final iceGlintPaint = Paint()..color = Colors.white.withValues(alpha: 0.95);
-      final arcticOpalPaint = Paint()..color = const Color(0xFFB3E5FC).withValues(alpha: 0.75);
+      final sapphireGemPaint = Paint()
+        ..color = const Color(0xFF80DEEA).withValues(alpha: 0.85);
+      final iceGlintPaint = Paint()
+        ..color = Colors.white.withValues(alpha: 0.95);
+      final arcticOpalPaint = Paint()
+        ..color = const Color(0xFFB3E5FC).withValues(alpha: 0.75);
 
       const pebblePeriod = 160.0;
       for (double fx = 0.0; fx < w; fx += pebblePeriod) {
-        canvas.drawOval(Rect.fromCenter(center: Offset(fx + 35, y + 22), width: 7, height: 4.5), sapphireGemPaint);
+        canvas.drawOval(
+          Rect.fromCenter(
+            center: Offset(fx + 35, y + 22),
+            width: 7,
+            height: 4.5,
+          ),
+          sapphireGemPaint,
+        );
         canvas.drawCircle(Offset(fx + 33.5, y + 21), 1.0, iceGlintPaint);
-        canvas.drawOval(Rect.fromCenter(center: Offset(fx + 120, y + 32), width: 5.5, height: 3.5), arcticOpalPaint);
+        canvas.drawOval(
+          Rect.fromCenter(
+            center: Offset(fx + 120, y + 32),
+            width: 5.5,
+            height: 3.5,
+          ),
+          arcticOpalPaint,
+        );
         canvas.drawCircle(Offset(fx + 119, y + 31), 0.8, iceGlintPaint);
       }
 
@@ -882,8 +1099,15 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
           ..lineTo(cx + 8.0, y - spikeH)
           ..lineTo(cx + 12.0, y + 1.0)
           ..close();
-        canvas.drawPath(cPath, Paint()..color = const Color(0xFF80DEEA).withValues(alpha: 0.85));
-        canvas.drawCircle(Offset(cx + 8.0, y - spikeH), 1.2, Paint()..color = Colors.white);
+        canvas.drawPath(
+          cPath,
+          Paint()..color = const Color(0xFF80DEEA).withValues(alpha: 0.85),
+        );
+        canvas.drawCircle(
+          Offset(cx + 8.0, y - spikeH),
+          1.2,
+          Paint()..color = Colors.white,
+        );
       }
     } else if (biome == 'VOLCANO') {
       final volcanoHighlightPaint = Paint()
@@ -913,7 +1137,10 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
         r1Path.moveTo(rx, y + 5);
         r1Path.quadraticBezierTo(rx + r1W * 0.5, y + 8, rx + r1W, y + 5);
       }
-      canvas.drawPath(r1Path, volcanoHighlightPaint..style = PaintingStyle.stroke);
+      canvas.drawPath(
+        r1Path,
+        volcanoHighlightPaint..style = PaintingStyle.stroke,
+      );
 
       const r2W = 64.0;
       final r2LightPath = Path();
@@ -924,8 +1151,14 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
         r2DarkPath.moveTo(rx + 2, y + 17);
         r2DarkPath.quadraticBezierTo(rx + 26, y + 22, rx + r2W, y + 17);
       }
-      canvas.drawPath(r2DarkPath, volcanoShadowWavePaint..style = PaintingStyle.stroke);
-      canvas.drawPath(r2LightPath, volcanoMidWavePaint..style = PaintingStyle.stroke);
+      canvas.drawPath(
+        r2DarkPath,
+        volcanoShadowWavePaint..style = PaintingStyle.stroke,
+      );
+      canvas.drawPath(
+        r2LightPath,
+        volcanoMidWavePaint..style = PaintingStyle.stroke,
+      );
 
       const r3W = 80.0;
       final r3Path = Path();
@@ -933,7 +1166,10 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
         r3Path.moveTo(rx, y + 32);
         r3Path.cubicTo(rx + 25, y + 36, rx + 55, y + 28, rx + r3W, y + 32);
       }
-      canvas.drawPath(r3Path, volcanoDeepStrataPaint..style = PaintingStyle.stroke);
+      canvas.drawPath(
+        r3Path,
+        volcanoDeepStrataPaint..style = PaintingStyle.stroke,
+      );
 
       const r4W = 128.0;
       final r4Path = Path();
@@ -941,12 +1177,19 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
         r4Path.moveTo(rx, y + 50);
         r4Path.quadraticBezierTo(rx + 64, y + 56, rx + r4W, y + 50);
       }
-      canvas.drawPath(r4Path, volcanoDeepStrataPaint..style = PaintingStyle.stroke);
+      canvas.drawPath(
+        r4Path,
+        volcanoDeepStrataPaint..style = PaintingStyle.stroke,
+      );
 
-      final magmaSparklePaint = Paint()..color = const Color(0xFFFFFDE7).withValues(alpha: 0.95);
-      final goldHeatPaint = Paint()..color = const Color(0xFFFFD600).withValues(alpha: 0.85);
-      final orangeEmberPaint = Paint()..color = const Color(0xFFFF9100).withValues(alpha: 0.75);
-      final basaltFlecks = Paint()..color = const Color(0xFFDD2C00).withValues(alpha: 0.55);
+      final magmaSparklePaint = Paint()
+        ..color = const Color(0xFFFFFDE7).withValues(alpha: 0.95);
+      final goldHeatPaint = Paint()
+        ..color = const Color(0xFFFFD600).withValues(alpha: 0.85);
+      final orangeEmberPaint = Paint()
+        ..color = const Color(0xFFFF9100).withValues(alpha: 0.75);
+      final basaltFlecks = Paint()
+        ..color = const Color(0xFFDD2C00).withValues(alpha: 0.55);
 
       for (int i = 0; i < 32; i++) {
         final gx = (i * 17.3) % w;
@@ -955,22 +1198,39 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
         final paint = (i % 4 == 0)
             ? magmaSparklePaint
             : (i % 3 == 0)
-                ? goldHeatPaint
-                : (i % 2 == 0)
-                    ? orangeEmberPaint
-                    : basaltFlecks;
+            ? goldHeatPaint
+            : (i % 2 == 0)
+            ? orangeEmberPaint
+            : basaltFlecks;
         canvas.drawCircle(Offset(gx, gy), grainRadius, paint);
       }
 
-      final fireAgatePaint = Paint()..color = const Color(0xFFFF7043).withValues(alpha: 0.85);
-      final fireGlintPaint = Paint()..color = Colors.white.withValues(alpha: 0.90);
-      final obsidianGemPaint = Paint()..color = const Color(0xFFFFAB00).withValues(alpha: 0.75);
+      final fireAgatePaint = Paint()
+        ..color = const Color(0xFFFF7043).withValues(alpha: 0.85);
+      final fireGlintPaint = Paint()
+        ..color = Colors.white.withValues(alpha: 0.90);
+      final obsidianGemPaint = Paint()
+        ..color = const Color(0xFFFFAB00).withValues(alpha: 0.75);
 
       const pebblePeriod = 160.0;
       for (double fx = 0.0; fx < w; fx += pebblePeriod) {
-        canvas.drawOval(Rect.fromCenter(center: Offset(fx + 35, y + 22), width: 7, height: 4.5), fireAgatePaint);
+        canvas.drawOval(
+          Rect.fromCenter(
+            center: Offset(fx + 35, y + 22),
+            width: 7,
+            height: 4.5,
+          ),
+          fireAgatePaint,
+        );
         canvas.drawCircle(Offset(fx + 33.5, y + 21), 1.0, fireGlintPaint);
-        canvas.drawOval(Rect.fromCenter(center: Offset(fx + 120, y + 32), width: 5.5, height: 3.5), obsidianGemPaint);
+        canvas.drawOval(
+          Rect.fromCenter(
+            center: Offset(fx + 120, y + 32),
+            width: 5.5,
+            height: 3.5,
+          ),
+          obsidianGemPaint,
+        );
         canvas.drawCircle(Offset(fx + 119, y + 31), 0.8, fireGlintPaint);
       }
 
@@ -994,14 +1254,111 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
     }
   }
 
-
   void _renderLavaGeyser(Canvas canvas, GroundGap gap, double y, double w) {
     if (gap.x > w || gap.x + gap.width < -50) return;
 
+    final biome = game.biomeManager.effectiveBiome.name;
+    if (biome != 'VOLCANO') {
+      _renderEpochGap(canvas, gap, y, biome);
+      return;
+    }
     _renderLavaPool(canvas, gap, y);
 
     if (gap.eruptionTimer > 0.05) {
       _renderLavaEruption(canvas, gap, y);
+    }
+  }
+
+  void _renderEpochGap(Canvas canvas, GroundGap gap, double y, String biome) {
+    final color = switch (biome) {
+      'RAIN' => const Color(0xFF42C9CB),
+      'FOREST' => const Color(0xFFAD8353),
+      'ICE' => const Color(0xFFA8EEFF),
+      'COSMOS' => const Color(0xFF8FEBDD),
+      _ => const Color(0xFFE7B978),
+    };
+    canvas.drawRect(
+      Rect.fromLTWH(gap.x, y, gap.width, groundHeight + 35),
+      Paint()..color = const Color(0xFF242A39),
+    );
+    canvas.drawLine(
+      Offset(gap.x, y + 3),
+      Offset(gap.x + gap.width, y + 3),
+      Paint()
+        ..color = color
+        ..strokeWidth = 3,
+    );
+    if (biome == 'RAIN') {
+      canvas.drawRect(
+        Rect.fromLTWH(gap.x, y + 12, gap.width, groundHeight),
+        Paint()..color = const Color(0xFF207C91),
+      );
+    }
+    // Match the six existing collision sprouts exactly: same x, height and clock.
+    const offsets = [.08, .24, .40, .56, .72, .88];
+    const frequencies = [8.0, 12.0, 16.0, 14.0, 10.0, 15.0];
+    const phases = [0.0, 1.2, 2.5, .8, 3.1, 1.9];
+    for (var i = 0; i < 6; i++) {
+      final x = gap.x + gap.width * offsets[i];
+      final scale = gap.eruptionTimer < .2
+          ? gap.eruptionTimer / .2 * .7
+          : .7 + math.sin((gap.eruptionTimer - .2) / .8 * math.pi / 2) * .3;
+      final h = gap.eruptionTimer > .1
+          ? gap.spikeTargetHeights[i] *
+                .65 *
+                scale *
+                (.4 + .6 * math.sin(_time * frequencies[i] + phases[i]).abs())
+          : 0.0;
+      if (h > 0) {
+        final rect = Rect.fromLTWH(x - 9, y + 15 - h, 18, h);
+        if (biome == 'RAIN') {
+          canvas.drawRRect(
+            RRect.fromRectAndRadius(rect, const Radius.circular(6)),
+            Paint()..color = color,
+          );
+        } else {
+          final shape = Path()..moveTo(rect.left, rect.bottom);
+          if (biome == 'FOREST') {
+            shape.quadraticBezierTo(x + 7, rect.top + h * .4, x - 4, rect.top);
+            shape.lineTo(x + 5, rect.top + 3);
+            shape.quadraticBezierTo(
+              x + 13,
+              rect.top + h * .5,
+              rect.right,
+              rect.bottom,
+            );
+          } else {
+            shape.lineTo(rect.left, rect.top + 8);
+            shape.lineTo(x + (biome == 'DESERT' ? 5 : 0), rect.top);
+            shape.lineTo(rect.right, rect.top + (biome == 'DESERT' ? 5 : 8));
+            shape.lineTo(rect.right, rect.bottom);
+          }
+          shape.close();
+          canvas.drawPath(shape, Paint()..color = color);
+          canvas.drawPath(
+            shape,
+            Paint()
+              ..color = color.withValues(alpha: .6)
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 2,
+          );
+          canvas.drawLine(
+            Offset(x, rect.top + 5),
+            Offset(x, rect.bottom),
+            Paint()
+              ..color = Colors.white38
+              ..strokeWidth = 2,
+          );
+        }
+      }
+      // Quiet, recessed material edges keep the jump/landing lane readable.
+      canvas.drawLine(
+        Offset(x - 5, y + 8),
+        Offset(x + 3, y + 22),
+        Paint()
+          ..color = color.withValues(alpha: .55)
+          ..strokeWidth = 2,
+      );
     }
   }
 
@@ -1026,23 +1383,34 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
     final flamePath = Path()
       ..moveTo(baseX - halfW, baseY)
       ..cubicTo(
-        baseX - halfW * 0.8 + curl * 0.35, baseY - height * 0.38,
-        apexX - halfW * 0.35 + curl, apexY + height * 0.28,
-        apexX, apexY,
+        baseX - halfW * 0.8 + curl * 0.35,
+        baseY - height * 0.38,
+        apexX - halfW * 0.35 + curl,
+        apexY + height * 0.28,
+        apexX,
+        apexY,
       )
       ..cubicTo(
-        apexX + halfW * 0.35 - curl * 0.5, apexY + height * 0.28,
-        baseX + halfW * 0.8 - curl * 0.35, baseY - height * 0.38,
-        baseX + halfW, baseY,
+        apexX + halfW * 0.35 - curl * 0.5,
+        apexY + height * 0.28,
+        baseX + halfW * 0.8 - curl * 0.35,
+        baseY - height * 0.38,
+        baseX + halfW,
+        baseY,
       )
       ..close();
 
-    final shader = LinearGradient(
-      begin: Alignment.topCenter,
-      end: Alignment.bottomCenter,
-      colors: colors.map((c) => c.withValues(alpha: c.a * opacity)).toList(),
-      stops: stops,
-    ).createShader(Rect.fromLTWH(baseX - halfW - 12, apexY, baseWidth + 24, height + 12));
+    final shader =
+        LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: colors
+              .map((c) => c.withValues(alpha: c.a * opacity))
+              .toList(),
+          stops: stops,
+        ).createShader(
+          Rect.fromLTWH(baseX - halfW - 12, apexY, baseWidth + 24, height + 12),
+        );
 
     canvas.drawPath(flamePath, Paint()..shader = shader);
   }
@@ -1077,7 +1445,12 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
     // 1b. Lava Emissive Pulse (0.7 Hz, alpha 0.20 - 0.45 inner glow)
     final pulse = 0.5 + 0.5 * math.sin(_time * 0.7 * 2 * math.pi);
     final emissiveAlpha = (0.20 + 0.25 * pulse).clamp(0.20, 0.45);
-    final emissiveRect = Rect.fromLTWH(leftX - 4, y - 2, pitWidth + 8, pitHeight + 4);
+    final emissiveRect = Rect.fromLTWH(
+      leftX - 4,
+      y - 2,
+      pitWidth + 8,
+      pitHeight + 4,
+    );
     final emissiveShader = RadialGradient(
       center: Alignment.topCenter,
       radius: 0.85,
@@ -1172,7 +1545,8 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
       final norm = i / flameCount;
       final bx = leftX + pitWidth * norm;
       final phase = _time * 8.5 + i * 1.7;
-      final fH = 24.0 + math.sin(phase).abs() * 26.0 + math.cos(phase * 0.7) * 8.0;
+      final fH =
+          24.0 + math.sin(phase).abs() * 26.0 + math.cos(phase * 0.7) * 8.0;
       final sway = math.sin(_time * 7.0 + i * 1.9) * 6.0;
       final curl = math.cos(_time * 6.0 + i * 1.5) * 4.0;
       final baseW = 16.0 + (i % 3) * 4.0;
@@ -1201,7 +1575,8 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
       final norm = (i + 0.5) / (flameCount + 1);
       final bx = leftX + pitWidth * norm;
       final phase = _time * 11.0 + i * 2.1;
-      final fH = 18.0 + math.sin(phase).abs() * 28.0 + math.cos(phase * 0.9) * 6.0;
+      final fH =
+          18.0 + math.sin(phase).abs() * 28.0 + math.cos(phase * 0.9) * 6.0;
       final sway = math.sin(_time * 9.5 + i * 2.3) * 5.0;
       final curl = math.cos(_time * 8.0 + i * 1.8) * 3.5;
       final baseW = 12.0 + (i % 2) * 4.0;
@@ -1242,11 +1617,7 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
         height: fH,
         sway: sway,
         curl: curl,
-        colors: const [
-          Color(0xFFFFFFFF),
-          Color(0xFFFFFDE7),
-          Color(0xFFFFD54F),
-        ],
+        colors: const [Color(0xFFFFFFFF), Color(0xFFFFFDE7), Color(0xFFFFD54F)],
         stops: const [0.0, 0.40, 1.0],
         opacity: 0.95,
       );
@@ -1268,7 +1639,11 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
 
       if (progress < 0.85) {
         canvas.drawCircle(Offset(bx, bubbleY), curR, yellowPaint);
-        canvas.drawCircle(Offset(bx - curR * 0.25, bubbleY - curR * 0.25), curR * 0.35, whitePaint);
+        canvas.drawCircle(
+          Offset(bx - curR * 0.25, bubbleY - curR * 0.25),
+          curR * 0.35,
+          whitePaint,
+        );
       } else {
         final popProg = (progress - 0.85) / 0.15;
         for (int p = 0; p < 4; p++) {
@@ -1294,7 +1669,11 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
       final dist = (y + 10.0 - ey).clamp(0.0, 75.0);
       final alpha = (1.0 - dist / 75.0).clamp(0.0, 0.95);
       final radius = 1.2 + (e % 3) * 0.7;
-      final pPaint = (e % 3 == 0) ? sparkYellow : (e % 2 == 0) ? sparkOrange : sparkRed;
+      final pPaint = (e % 3 == 0)
+          ? sparkYellow
+          : (e % 2 == 0)
+          ? sparkOrange
+          : sparkRed;
 
       canvas.drawCircle(
         Offset(ex, ey),
@@ -1320,8 +1699,10 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
     // 1. Towering Roaring Flame Pillars
     for (int s = 0; s < sproutOffsets.length; s++) {
       final cx = pitLeft + pitWidth * sproutOffsets[s];
-      final targetH = gap.spikeTargetHeights[s % gap.spikeTargetHeights.length] * 0.85;
-      final eqBounce = 0.50 + 0.50 * math.sin(_time * eqFrequencies[s] + eqPhases[s]).abs();
+      final targetH =
+          gap.spikeTargetHeights[s % gap.spikeTargetHeights.length] * 0.85;
+      final eqBounce =
+          0.50 + 0.50 * math.sin(_time * eqFrequencies[s] + eqPhases[s]).abs();
       final H = (targetH * eruptionScale * eqBounce).clamp(12.0, 145.0);
       final pillarBaseY = y + 18.0;
       final pillarW = 16.0 + (H / 145.0) * 12.0;
@@ -1376,11 +1757,7 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
         height: H * 0.72,
         sway: sway * 0.6,
         curl: curl * 0.6,
-        colors: const [
-          Color(0xFFFFFFFF),
-          Color(0xFFFFFDE7),
-          Color(0xFFFFD54F),
-        ],
+        colors: const [Color(0xFFFFFFFF), Color(0xFFFFFDE7), Color(0xFFFFD54F)],
         stops: const [0.0, 0.40, 1.0],
         opacity: 0.95,
       );
@@ -1393,8 +1770,10 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
 
     for (int s = 0; s < sproutOffsets.length; s++) {
       final cx = pitLeft + pitWidth * sproutOffsets[s];
-      final targetH = gap.spikeTargetHeights[s % gap.spikeTargetHeights.length] * 0.85;
-      final eqBounce = 0.50 + 0.50 * math.sin(_time * eqFrequencies[s] + eqPhases[s]).abs();
+      final targetH =
+          gap.spikeTargetHeights[s % gap.spikeTargetHeights.length] * 0.85;
+      final eqBounce =
+          0.50 + 0.50 * math.sin(_time * eqFrequencies[s] + eqPhases[s]).abs();
       final H = targetH * eruptionScale * eqBounce;
       final topY = y + 18.0 - H;
 
@@ -1403,22 +1782,32 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
         final phase = (_time * 4.0 + p * 0.35 + s) % 1.5;
         final progress = phase / 1.5;
         final spreadX = (rng.nextDouble() - 0.5) * 40.0 * progress;
-        final sparkY = topY - (24.0 * math.sin(progress * math.pi)) + progress * progress * 22.0;
+        final sparkY =
+            topY -
+            (24.0 * math.sin(progress * math.pi)) +
+            progress * progress * 22.0;
         final sparkX = cx + spreadX;
         final r = (2.6 * (1.0 - progress)).clamp(0.6, 2.6);
-        final pPaint = (p % 3 == 0) ? sparkYellow : (p % 2 == 0) ? sparkOrange : sparkRed;
+        final pPaint = (p % 3 == 0)
+            ? sparkYellow
+            : (p % 2 == 0)
+            ? sparkOrange
+            : sparkRed;
 
         canvas.drawCircle(Offset(sparkX, sparkY), r, pPaint);
       }
     }
 
     // 3. Billowing Rising Smoke Plumes from Spouts
-    final smokePaint = Paint()..color = const Color(0xFF37474F).withValues(alpha: 0.28);
+    final smokePaint = Paint()
+      ..color = const Color(0xFF37474F).withValues(alpha: 0.28);
 
     for (int s = 0; s < sproutOffsets.length; s += 2) {
       final cx = pitLeft + pitWidth * sproutOffsets[s];
-      final targetH = gap.spikeTargetHeights[s % gap.spikeTargetHeights.length] * 0.85;
-      final eqBounce = 0.50 + 0.50 * math.sin(_time * eqFrequencies[s] + eqPhases[s]).abs();
+      final targetH =
+          gap.spikeTargetHeights[s % gap.spikeTargetHeights.length] * 0.85;
+      final eqBounce =
+          0.50 + 0.50 * math.sin(_time * eqFrequencies[s] + eqPhases[s]).abs();
       final H = targetH * eruptionScale * eqBounce;
       final topY = y + 18.0 - H;
 

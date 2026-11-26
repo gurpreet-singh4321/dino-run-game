@@ -3,10 +3,15 @@ import 'package:flame/components.dart';
 import 'package:flame/collisions.dart';
 import '../game/dino_game.dart';
 import '../game/game_state.dart';
+import '../game/hazard_contact.dart';
 import '../utils/colors.dart';
 
 /// Rolling Stone Ball (Desert) & Rolling Ice Ball (Ice Land) obstacle
-class RollingBall extends PositionComponent with CollisionCallbacks, HasGameReference<DinoGame> {
+class RollingBall extends PositionComponent
+    with CollisionCallbacks, HasGameReference<DinoGame>, HazardContact {
+  @override
+  HazardMaterial get impactMaterial =>
+      isIce ? HazardMaterial.ice : HazardMaterial.stone;
   final bool isIce;
   final double rollSpeed;
   double _rotationAngle = 0;
@@ -23,7 +28,7 @@ class RollingBall extends PositionComponent with CollisionCallbacks, HasGameRefe
   Future<void> onLoad() async {
     final groundY = game.ground.groundY;
     position = Vector2(game.size.x + 40, groundY - size.y);
-    
+
     // Circular hitbox
     add(CircleHitbox(radius: size.x / 2 * 0.88, position: size * 0.06));
     priority = 5;
@@ -31,7 +36,7 @@ class RollingBall extends PositionComponent with CollisionCallbacks, HasGameRefe
 
   @override
   void update(double dt) {
-    dt *= game.globalTimeScale;
+    // dt comes from the authoritative simulation clock.
     super.update(dt);
 
     if (game.state == GameState.playing) {
@@ -47,9 +52,13 @@ class RollingBall extends PositionComponent with CollisionCallbacks, HasGameRefe
       if (_dustTimer > 0.08) {
         _dustTimer = 0;
         if (isIce) {
-          game.particlePool.emitJumpDust(position + Vector2(size.x / 2, size.y));
+          game.particlePool.emitJumpDust(
+            position + Vector2(size.x / 2, size.y),
+          );
         } else {
-          game.particlePool.emitJumpDust(position + Vector2(size.x / 2, size.y));
+          game.particlePool.emitJumpDust(
+            position + Vector2(size.x / 2, size.y),
+          );
         }
       }
     }
@@ -94,7 +103,11 @@ class RollingBall extends PositionComponent with CollisionCallbacks, HasGameRefe
       colors: [Color(0xFF8D6E63), Color(0xFF5D4037), Color(0xFF3E2723)],
     );
     final rect = Rect.fromCircle(center: Offset.zero, radius: r);
-    canvas.drawCircle(Offset.zero, r - 2, Paint()..shader = gradient.createShader(rect));
+    canvas.drawCircle(
+      Offset.zero,
+      r - 2,
+      Paint()..shader = gradient.createShader(rect),
+    );
 
     // Rock fissure lines
     final crackPaint = Paint()
@@ -118,16 +131,26 @@ class RollingBall extends PositionComponent with CollisionCallbacks, HasGameRefe
   /// Render rolling ice ball with frozen ice cracks & glistening frost
   void _renderIceBall(Canvas canvas, double r) {
     // Outer ice glow
-    final glowPaint = Paint()..color = const Color(0xFF4DEEEA).withValues(alpha: 0.3);
+    final glowPaint = Paint()
+      ..color = const Color(0xFF4DEEEA).withValues(alpha: 0.3);
     canvas.drawCircle(Offset.zero, r + 2, glowPaint);
 
     // Ice body gradient
     final gradient = const RadialGradient(
       center: Alignment(-0.3, -0.3),
-      colors: [Color(0xFFE0F7FA), Color(0xFF80DEEA), Color(0xFF00ACC1), Color(0xFF006064)],
+      colors: [
+        Color(0xFFE0F7FA),
+        Color(0xFF80DEEA),
+        Color(0xFF00ACC1),
+        Color(0xFF006064),
+      ],
     );
     final rect = Rect.fromCircle(center: Offset.zero, radius: r);
-    canvas.drawCircle(Offset.zero, r, Paint()..shader = gradient.createShader(rect));
+    canvas.drawCircle(
+      Offset.zero,
+      r,
+      Paint()..shader = gradient.createShader(rect),
+    );
 
     // Frozen ice cracks
     final crackPaint = Paint()

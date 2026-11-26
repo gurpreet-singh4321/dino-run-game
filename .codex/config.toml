@@ -1,0 +1,47 @@
+# Games defaults. Host policy and explicit session selections win.
+model = "gpt-6.1-sol"
+
+[agents]
+max_concurrent_threads_per_session = 3
+
+[skills]
+max_context_tokens = 6000
+
+# Direct SDK bypasses Flutter bootstrap. Enable only after health check.
+[mcp_servers.dart]
+command = 'C:\src\flutter\bin\cache\dart-sdk\bin\dart.exe'
+args = ["mcp-server"]
+enabled = true
+startup_timeout_sec = 30
+
+[[skills.config]]
+path = "C:/Users/gurpr/.agents/skills/gpt-taste"
+enabled = false
+
+[[skills.config]]
+path = "C:/Users/gurpr/.agents/skills/high-end-visual-design"
+enabled = false
+
+[[skills.config]]
+path = "C:/Users/gurpr/.agents/skills/minimalist-ui"
+enabled = false
+
+[[skills.config]]
+path = "C:/Users/gurpr/.agents/skills/industrial-brutalist-ui"
+enabled = false
+
+[[skills.config]]
+path = "C:/Users/gurpr/.agents/skills/stitch-design-taste"
+enabled = false
+
+[[skills.config]]
+path = "C:/Users/gurpr/.agents/skills/design-taste-frontend"
+enabled = false
+
+[[skills.config]]
+path = "C:/Users/gurpr/.agents/skills/design-taste-frontend-v1"
+enabled = false
+
+[[skills.config]]
+path = "C:/Users/gurpr/.agents/skills/redesign-existing-projects"
+enabled = false

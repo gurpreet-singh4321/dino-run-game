@@ -1,0 +1,3 @@
+00:00 +0: loading C:/Users/gurpr/OneDrive/Desktop/Projects/Flutter/Work - Freelance/Games/dino_run_epochs/tool/space_performance_test.dart
+00:00 +0: Render epoch obstacles, ahead impacts and shared scenery cache
+00:01 +1: All tests passed!

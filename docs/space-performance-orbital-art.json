@@ -1,0 +1,19 @@
+{
+  "environment": "Flutter debug test runner, 640x360, 60 updates/s; not phone FPS",
+  "runs": [
+    {
+      "speed": 200.0,
+      "peakPickups": 25,
+      "meanUpdateUs": 164.864406779661,
+      "medianRasterAndReadbackUs": 8254,
+      "p95RasterAndReadbackUs": 16535
+    },
+    {
+      "speed": 450.0,
+      "peakPickups": 26,
+      "meanUpdateUs": 74.30960451977401,
+      "medianRasterAndReadbackUs": 8420,
+      "p95RasterAndReadbackUs": 14344
+    }
+  ]
+}

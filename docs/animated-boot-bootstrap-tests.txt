@@ -1,0 +1,12 @@
+✔ Fallback launches once and guards a late normal debug launch (1.7847ms)
+✔ Normal startup stops fallback without invoking the entrypoint (0.824ms)
+✔ Release pages without a debug entrypoint stop polling (0.6965ms)
+✔ Boot handoff waits for the loaded Dino and removes the overlay once (0.7212ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 10.7061
