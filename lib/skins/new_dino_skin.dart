@@ -94,7 +94,7 @@ class NewDinoSkin extends CharacterSkin {
 
   void _part(Canvas canvas, int part, Rect destination, {bool far = false}) {
     _paint.colorFilter = far
-        ? const ColorFilter.mode(Color(0xFFDFB24F), BlendMode.modulate)
+        ? const ColorFilter.mode(Color(0xFFCC9838), BlendMode.modulate)
         : null;
     canvas.drawImageRect(
       Flame.images.fromCache('new_dino_rig.png'),
@@ -224,9 +224,12 @@ class NewDinoSkin extends CharacterSkin {
           motion.damage * (far ? .25 : .7) -
           motion.drivingMix * (far ? .3 : 1.3) -
           motion.yawn * (far ? .3 : 1.8) -
+          motion.stretch * (far ? .65 : 1.15) -
+          motion.bounce * (far ? .35 : .55) -
           (far
               ? 0
-              : motion.wave * (2.45 + .2 * math.sin(motion.idleTime * 13))),
+              : motion.wave * (2.45 + .2 * math.sin(motion.idleTime * 13)) +
+                    motion.wag * math.sin(motion.idleTime * 12) * .25),
     );
     _part(c, 3, Rect.fromLTWH(-7, -3, far ? 14 : 18, 28), far: far);
     c.restore();
@@ -268,16 +271,18 @@ class NewDinoSkin extends CharacterSkin {
     }
     canvas.restore();
     _leg(canvas, false);
-    _part(
-      canvas,
-      1,
-      Rect.fromLTWH(
-        35,
-        53 + motion.bodyY,
-        45,
-        44 - motion.landing + motion.launch,
-      ),
+    final torsoRect = Rect.fromLTWH(
+      35,
+      53 + motion.bodyY,
+      45,
+      44 - motion.landing + motion.launch + motion.stretch * 1.4,
     );
+    canvas.saveLayer(torsoRect.inflate(2), Paint());
+    _part(canvas, 1, torsoRect);
+    _drawDefaultCostume(canvas, torsoRect);
+    canvas.restore();
+    _drawStarterBandana(canvas);
+    _drawHeadCastShadow(canvas);
     canvas.save();
     canvas.translate(58, 54 + motion.headY);
     canvas.rotate(motion.headAngle);
@@ -320,9 +325,296 @@ class NewDinoSkin extends CharacterSkin {
       canvas.restore();
     }
     canvas.restore();
+    _drawArmCastShadow(canvas);
     // The front arm and hand always sit above neckwear, including when raised
     // across the scarf during a yawn or greeting.
     _arm(canvas, false);
+    canvas.restore();
+  }
+
+  /// Renders Dino's built-in 3D explorer vest, stitched utility belt, and
+  /// gold compass buckle masked via `srcATop` onto the torso silhouette so
+  /// the costume wraps 100% flush around every curve with zero edge gap.
+  void _drawDefaultCostume(Canvas canvas, Rect torsoRect) {
+    final dy = motion.bodyY;
+    final squash = -motion.landing + motion.launch + motion.stretch * 1.4;
+    final p = Paint()..blendMode = BlendMode.srcATop;
+
+    // Subtle tail-junction ambient occlusion on the lower left hip.
+    canvas.drawOval(
+      Rect.fromLTWH(31, 70 + dy, 16, 22),
+      p
+        ..shader = Gradient.radial(
+          Offset(36, 81 + dy),
+          12,
+          [const Color(0x445E2B04), const Color(0x005E2B04)],
+        ),
+    );
+    p.shader = null;
+
+    // 3D open-front forest-teal Explorer Vest hugging both shoulders and flanks
+    // all the way past the outer contour (`32..83`), clipped cleanly by srcATop.
+    final leftPanel = Path()
+      ..moveTo(32, 52 + dy)
+      ..lineTo(57.2, 52 + dy)
+      ..quadraticBezierTo(51.5, 68 + dy, 51, 86 + dy + squash * .6)
+      ..lineTo(32, 86 + dy + squash * .6)
+      ..close();
+    final rightPanel = Path()
+      ..moveTo(67.2, 52 + dy)
+      ..lineTo(83, 52 + dy)
+      ..lineTo(83, 86 + dy + squash * .6)
+      ..lineTo(72, 86 + dy + squash * .6)
+      ..quadraticBezierTo(72.5, 68 + dy, 67.2, 52 + dy)
+      ..close();
+
+    // Soft cast shadow from vest lapels onto Dino's cream belly.
+    canvas.save();
+    canvas.translate(1.2, 1.4);
+    final lapelShadow = Paint()
+      ..blendMode = BlendMode.srcATop
+      ..color = const Color(0x385A2B08)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.4);
+    canvas.drawPath(leftPanel, lapelShadow);
+    canvas.drawPath(rightPanel, lapelShadow);
+    canvas.restore();
+
+    // Horizontal cylindrical 3D wrap shading darkens the far outer flanks so
+    // the vest visibly curves around Dino's body.
+    canvas.drawPath(
+      leftPanel,
+      p
+        ..color = const Color(0xFFFFFFFF)
+        ..shader = Gradient.linear(
+          Offset(35, 68 + dy),
+          Offset(56, 68 + dy),
+          const [Color(0xFF07312E), Color(0xFF157F74), Color(0xFF2FA897)],
+          const [0, .45, 1],
+        ),
+    );
+    canvas.drawPath(
+      rightPanel,
+      p
+        ..color = const Color(0xFFFFFFFF)
+        ..shader = Gradient.linear(
+          Offset(68, 68 + dy),
+          Offset(80, 68 + dy),
+          const [Color(0xFF289F8F), Color(0xFF13796E), Color(0xFF07312E)],
+          const [0, .55, 1],
+        ),
+    );
+    p.shader = null;
+
+    // Gold braided trim & 3D brass lapel buttons.
+    final trim = Paint()
+      ..blendMode = BlendMode.srcATop
+      ..color = const Color(0xFFF6CB65)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.4
+      ..strokeCap = StrokeCap.round;
+    canvas.drawPath(
+      Path()
+        ..moveTo(57, 54.5 + dy)
+        ..quadraticBezierTo(51.5, 68.5 + dy, 51, 84.5 + dy + squash * .6),
+      trim,
+    );
+    canvas.drawPath(
+      Path()
+        ..moveTo(67.6, 54.5 + dy)
+        ..quadraticBezierTo(72.5, 68 + dy, 72.2, 84.5 + dy + squash * .6),
+      trim,
+    );
+    for (final pos in [Offset(46.5, 69 + dy), Offset(46.5, 77 + dy)]) {
+      canvas.drawCircle(
+        pos + const Offset(.4, .7),
+        1.7,
+        Paint()
+          ..blendMode = BlendMode.srcATop
+          ..color = const Color(0x55082622),
+      );
+      canvas.drawCircle(
+        pos,
+        1.6,
+        Paint()
+          ..blendMode = BlendMode.srcATop
+          ..shader = Gradient.radial(
+            pos - const Offset(.5, .5),
+            2.1,
+            const [Color(0xFFFFF3BA), Color(0xFFF2B642), Color(0xFF8C5A14)],
+            const [0, .55, 1],
+          ),
+      );
+    }
+
+    // 3D curved leather utility belt wrapping completely around both flanks.
+    final beltY = 82.0 + dy + squash * .72;
+    final beltPath = Path()
+      ..moveTo(32, beltY - 1.2)
+      ..quadraticBezierTo(59, beltY + 4.8, 83, beltY - 1.5)
+      ..lineTo(83, beltY + 5.6)
+      ..quadraticBezierTo(59, beltY + 11.4, 32, beltY + 5.8)
+      ..close();
+    canvas.drawPath(
+      beltPath.shift(const Offset(0, 1.5)),
+      Paint()
+        ..blendMode = BlendMode.srcATop
+        ..color = const Color(0x3D471F04)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.2),
+    );
+    canvas.drawPath(
+      beltPath,
+      Paint()
+        ..blendMode = BlendMode.srcATop
+        ..shader = Gradient.linear(
+          Offset(35, beltY + 4),
+          Offset(80, beltY + 4),
+          const [
+            Color(0xFF3E1D0A),
+            Color(0xFF8E562C),
+            Color(0xFFA86A3A),
+            Color(0xFF724120),
+            Color(0xFF3A1A08),
+          ],
+          const [0, .25, .55, .8, 1],
+        ),
+    );
+    canvas.drawPath(
+      Path()
+        ..moveTo(32, beltY)
+        ..quadraticBezierTo(59, beltY + 5.8, 83, beltY - .3),
+      Paint()
+        ..blendMode = BlendMode.srcATop
+        ..color = const Color(0x66FFCE8A)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = .9,
+    );
+
+    // 3D beveled Gold Compass/Paw belt buckle at front-center.
+    final bx = 61.5, by = beltY + 5.2;
+    final buckle = RRect.fromRectAndRadius(
+      Rect.fromCenter(center: Offset(bx, by), width: 10.5, height: 8.4),
+      const Radius.circular(2.6),
+    );
+    canvas.drawRRect(
+      buckle.shift(const Offset(.5, 1.1)),
+      Paint()
+        ..blendMode = BlendMode.srcATop
+        ..color = const Color(0x552B1304)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 0.8),
+    );
+    canvas.drawRRect(
+      buckle,
+      Paint()
+        ..blendMode = BlendMode.srcATop
+        ..shader = Gradient.linear(
+          Offset(bx - 5, by - 4),
+          Offset(bx + 5, by + 4),
+          const [Color(0xFFFFF2AD), Color(0xFFF5BC45), Color(0xFF965E15)],
+          const [0, .5, 1],
+        ),
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(center: Offset(bx, by), width: 5.5, height: 4.0),
+        const Radius.circular(1.3),
+      ),
+      Paint()
+        ..blendMode = BlendMode.srcATop
+        ..color = const Color(0xFF157A70),
+    );
+  }
+
+  /// Starter Crimson Trail Bandana at the collar unless a Neck cosmetic overrides it.
+  void _drawStarterBandana(Canvas canvas) {
+    final hasNeckCosmetic = cosmetics.any((c) => c.slot == CosmeticSlot.neck);
+    if (hasNeckCosmetic) return;
+    final dy = motion.bodyY;
+    final ny = 58.0 + dy;
+    final tail = Path()
+      ..moveTo(46, ny + 1)
+      ..lineTo(31, ny - 3.5)
+      ..lineTo(35.5, ny + 2.2)
+      ..lineTo(31.5, ny + 6.5)
+      ..lineTo(48, ny + 5.5)
+      ..close();
+    canvas.drawPath(
+      tail,
+      Paint()
+        ..shader = Gradient.linear(
+          Offset(31, ny - 3),
+          Offset(48, ny + 6),
+          const [Color(0xFFEC594A), Color(0xFFAE2A2D)],
+        ),
+    );
+    final collar = Path()
+      ..moveTo(46, ny - .5)
+      ..quadraticBezierTo(60, ny + 4.8, 72.5, ny - .5)
+      ..quadraticBezierTo(73.5, ny + 4.8, 62, ny + 7.6)
+      ..quadraticBezierTo(47.5, ny + 6.2, 45.5, ny + 3.2)
+      ..close();
+    canvas.drawPath(
+      collar.shift(const Offset(0, 1.4)),
+      Paint()
+        ..color = const Color(0x3D451208)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.0),
+    );
+    canvas.drawPath(
+      collar,
+      Paint()
+        ..shader = Gradient.linear(
+          Offset(46, ny),
+          Offset(72, ny + 7),
+          const [Color(0xFFFF725E), Color(0xFFDD3F34), Color(0xFF9F2323)],
+          const [0, .55, 1],
+        ),
+    );
+    final bib = Path()
+      ..moveTo(56, ny + 4.6)
+      ..lineTo(68.2, ny + 4.2)
+      ..lineTo(62.8, ny + 14.0)
+      ..close();
+    canvas.drawPath(
+      bib,
+      Paint()
+        ..shader = Gradient.linear(
+          Offset(56, ny + 4),
+          Offset(67, ny + 14),
+          const [Color(0xFFF35B4C), Color(0xFFB32C2C)],
+        ),
+    );
+  }
+
+  /// Dynamic 3D ambient shadow cast by the head onto Dino's chest and collar.
+  void _drawHeadCastShadow(Canvas canvas) {
+    final cy = 62.5 + motion.headY * .65 + motion.bodyY * .35;
+    canvas.drawOval(
+      Rect.fromCenter(center: Offset(60, cy), width: 32, height: 11),
+      Paint()
+        ..shader = Gradient.radial(
+          Offset(60, cy - 1),
+          17,
+          const [Color(0x524A1E04), Color(0x224A1E04), Color(0x004A1E04)],
+          const [0, .55, 1],
+        ),
+    );
+  }
+
+  /// Soft 3D cast shadow beneath the near arm onto Dino's torso/vest.
+  void _drawArmCastShadow(Canvas canvas) {
+    if (motion.yawn > .15 || motion.wave > .15) return;
+    final swing = math.sin(motion.phase * math.pi * 2);
+    canvas.save();
+    canvas.translate(50, 74 + motion.bodyY);
+    canvas.rotate(swing * .42 * motion.run);
+    canvas.drawOval(
+      const Rect.fromLTWH(-4, -1, 13, 21),
+      Paint()
+        ..shader = Gradient.radial(
+          const Offset(2.5, 9),
+          11,
+          const [Color(0x38502306), Color(0x00502306)],
+        ),
+    );
     canvas.restore();
   }
 
@@ -399,7 +691,9 @@ class NewDinoSkin extends CharacterSkin {
     final delighted =
         state == DinoAnimationState.doubleJump ||
         state == DinoAnimationState.rocket ||
-        motion.power == DinoPowerState.magnet;
+        motion.power == DinoPowerState.magnet ||
+        motion.wag > .25 ||
+        motion.bounce > .25;
     canvas.drawPath(
       Path()
         ..moveTo(

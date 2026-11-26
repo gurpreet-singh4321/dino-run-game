@@ -34,6 +34,9 @@ class DinoMotion {
   double yawn = 0;
   double look = 0;
   double wave = 0;
+  double wag = 0;
+  double stretch = 0;
+  double bounce = 0;
   double _damageAge = 1;
   bool _doubleJump = false;
   bool _grounded = true;
@@ -80,16 +83,25 @@ class DinoMotion {
       time += step;
       drivingMix = follow(drivingMix, driving ? 1 : 0, 20, step);
       idleTime = idle ? idleTime + step : 0;
-      final beat = idleTime % 18;
+      final beat = idleTime % 26;
       double gesture(double start, double duration) =>
           idle && beat > start && beat < start + duration
           ? math
                 .pow(math.sin(math.pi * (beat - start) / duration), 2)
                 .toDouble()
           : 0;
-      yawn = follow(yawn, gesture(3, 3), 16, step);
+      double doubleBeat(double start, double duration) =>
+          idle && beat > start && beat < start + duration
+          ? math
+                .pow(math.sin(math.pi * 2 * (beat - start) / duration), 2)
+                .toDouble()
+          : 0;
+      yawn = follow(yawn, gesture(3.5, 2.0), 18, step);
       look = follow(look, gesture(8, 3) * math.sin((beat - 8) * 2), 14, step);
       wave = follow(wave, gesture(12, 3), 16, step);
+      wag = follow(wag, gesture(16, 2.2), 16, step);
+      stretch = follow(stretch, gesture(19, 2.8), 14, step);
+      bounce = follow(bounce, doubleBeat(22.5, 2.4), 18, step);
       _landingAge += step;
       _launchAge += step;
       _damageAge += step;
@@ -141,11 +153,14 @@ class DinoMotion {
 
   double get bodyY =>
       math.sin(time * 2.4) * .65 * (1 - run) -
-      yawn * 1.8 +
+      yawn * 1.8 -
+      stretch * 1.6 -
+      bounce * 2.4 +
       (1 + math.cos((phase - .08) * math.pi * 4)) * .7 * run +
       landing * 2.5 +
       damage * 2.4 * (1 - air);
-  double get headY => bodyY + math.sin((phase - .10) * math.pi * 4) * .3 * run;
+  double get headY =>
+      bodyY + math.sin((phase - .10) * math.pi * 4) * .3 * run - stretch * .5;
 
   double footAngle(bool far) {
     final p = (phase + (far ? .5 : 0)) % 1;
@@ -153,7 +168,8 @@ class DinoMotion {
     // The toes follow the returning foot; the sole settles flat at contact.
     final swing = math.sin(math.pi * t);
     return .22 * swing * swing * math.sin(2 * math.pi * t) * run * (1 - air) +
-        air * (1 - fall) * .12;
+        air * (1 - fall) * .12 -
+        bounce * (far ? .08 : .12);
   }
 
   double get headAngle =>
@@ -162,10 +178,15 @@ class DinoMotion {
       fall * air * .06 +
       damage * .22 -
       yawn * .12 +
-      look * .12;
+      look * .12 -
+      stretch * .18 +
+      wag * math.sin(idleTime * 9) * .08 -
+      bounce * .06;
   double get tailAngle =>
       math.sin(phase * math.pi * 2 - .8) * .07 * run +
       math.sin(time * 2) * .04 * (1 - run) +
+      wag * math.sin(idleTime * 16) * .28 +
+      stretch * .14 +
       air * .15 -
       damage * .18;
 
@@ -187,7 +208,10 @@ class DinoMotion {
   }
 
   Offset foot(bool far) {
-    final resting = Offset(far ? 62 : 51, 113);
+    final resting = Offset(
+      far ? 62 : 51,
+      113 - bounce * (far ? 1.8 : 2.6),
+    );
     final running = gaitFoot(phase + (far ? .5 : 0));
     final grounded = Offset.lerp(resting, running, run)!;
     final tucked = Offset(far ? 54 : 60, 106);

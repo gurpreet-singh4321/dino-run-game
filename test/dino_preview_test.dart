@@ -37,6 +37,10 @@ void main() {
       expect(first.motion.wave, greaterThan(.1));
       expect(second.motion.wave, 0);
       expect(gameplay.motion.wave, 0);
+      final beforeBlur = first.motion.time;
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(first.motion.time, greaterThan(beforeBlur));
       first.onJump(doubleJump: true);
       expect(second.motion.launch, 0);
       await tester.pumpWidget(const SizedBox());

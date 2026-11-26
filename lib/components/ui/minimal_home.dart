@@ -100,11 +100,12 @@ class MinimalHome extends StatelessWidget {
               final dino = LayoutBuilder(builder: (context, box) {
                 final height = box.maxHeight.clamp(60.0, portrait ? 310.0 : 340.0);
                 final width = height * .86;
-                final ledgeHeight = (height * .16).clamp(18.0, 50.0);
+                final ledgeHeight = (height * .20).clamp(20.0, 56.0);
+                final padBottom = portrait || short ? 8.0 : 20.0;
                 return Align(
                   alignment: Alignment.bottomCenter,
                   child: Padding(
-                    padding: EdgeInsets.only(bottom: portrait || short ? 2 : 12),
+                    padding: EdgeInsets.only(bottom: padBottom),
                     child: SizedBox(
                       height: height,
                       width: width,
@@ -113,8 +114,8 @@ class MinimalHome extends StatelessWidget {
                         alignment: Alignment.bottomCenter,
                         children: [
                           Positioned(
-                            bottom: -4,
-                            width: width * 1.16,
+                            bottom: -ledgeHeight * .44,
+                            width: width * 1.24,
                             height: ledgeHeight,
                             child: IgnorePointer(
                               child: CustomPaint(painter: _DinoTrailLedgePainter(stage)),
@@ -313,12 +314,27 @@ class _TitleCrestPainter extends CustomPainter {
 class _DinoTrailLedgePainter extends CustomPainter {
   final int stage;
   const _DinoTrailLedgePainter(this.stage);
+
+  static const _palettes = [
+    // 0: Desert sandstone
+    (Color(0xFFB5824E), Color(0xFF6B4727), Color(0xFFFFE5B0), Color(0xFFD6A870)),
+    // 1: Monsoon wet mossy slate & puddle
+    (Color(0xFF426A6C), Color(0xFF21383D), Color(0xFFAEEBFF), Color(0xFF6BA6AE)),
+    // 2: Forest mossy turf & grass
+    (Color(0xFF469553), Color(0xFF255233), Color(0xFFC5F49E), Color(0xFF7FD171)),
+    // 3: Glacial snow & ice slab
+    (Color(0xFFD4F1FF), Color(0xFF619EC4), Color(0xFFFFFFFF), Color(0xFF9CD8F5)),
+    // 4: Volcanic charred basalt & magma glow
+    (Color(0xFF4A3539), Color(0xFF1E1418), Color(0xFFFF8C42), Color(0xFFFF5924)),
+    // 5: Cosmic moon rock & stardust
+    (Color(0xFF5A549E), Color(0xFF252152), Color(0xFFB7C4FF), Color(0xFF8BE8FF)),
+  ];
+
   @override
   void paint(Canvas canvas, Size size) {
-    final tint = MenuPalette.accents[stage % MenuPalette.accents.length];
-    final topColor = Color.lerp(const Color(0xFF9C764D), tint, .20)!;
-    final bodyColor = Color.lerp(const Color(0xFF563E29), tint, .16)!;
-    final deepColor = const Color(0xFF211710);
+    final s = stage % 6;
+    final (topColor, bodyColor, crestColor, detailColor) = _palettes[s];
+    const deepColor = Color(0xFF141820);
     final ground = Rect.fromLTWH(0, size.height * .22, size.width, size.height * .78);
     final p = Paint();
     // Soft ambient shadow dispersing into the painted landscape below.
@@ -326,12 +342,13 @@ class _DinoTrailLedgePainter extends CustomPainter {
       Rect.fromLTWH(size.width * .02, size.height * .46, size.width * .96, size.height * .54),
       p
         ..shader = const RadialGradient(
-          colors: [Color(0x9C0A1019), Color(0x450A1019), Color(0x000A1019)],
+          colors: [Color(0xAD0A1019), Color(0x4A0A1019), Color(0x000A1019)],
           stops: [0, .62, 1],
         ).createShader(ground),
     );
     p.shader = null;
-    // Soft-edged earthen trail shelf rooted into the scene.
+
+    // Ground mound silhouette rooted beneath Dino's soles.
     final path = Path()
       ..moveTo(size.width * .08, size.height * .66)
       ..quadraticBezierTo(size.width * .20, size.height * .26, size.width * .50, size.height * .27)
@@ -345,15 +362,183 @@ class _DinoTrailLedgePainter extends CustomPainter {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            topColor.withValues(alpha: 0.90),
-            bodyColor.withValues(alpha: 0.86),
+            topColor.withValues(alpha: 0.94),
+            bodyColor.withValues(alpha: 0.90),
             deepColor.withValues(alpha: 0.0),
           ],
-          stops: const [0, .54, 1],
+          stops: const [0, .58, 1],
         ).createShader(ground),
     );
     p.shader = null;
-    // Subtle sunlit ridge line along ONLY the top crest (no hard bottom border).
+
+    // Epoch-specific ground surface texture clipped cleanly inside the mound.
+    canvas.save();
+    canvas.clipPath(path);
+    switch (s) {
+      case 0: // Desert: sandstone strata & pebbles
+        canvas.drawOval(
+          Rect.fromCenter(
+            center: Offset(size.width * .42, size.height * .44),
+            width: size.width * .42,
+            height: size.height * .12,
+          ),
+          p..color = detailColor.withValues(alpha: .28),
+        );
+        for (final g in [
+          (0.22, 0.56, 4.2, 2.0),
+          (0.75, 0.53, 4.5, 2.1),
+          (0.35, 0.65, 3.0, 1.5),
+          (0.65, 0.63, 3.2, 1.6),
+        ]) {
+          canvas.drawOval(
+            Rect.fromCenter(
+              center: Offset(size.width * g.$1, size.height * g.$2),
+              width: g.$3 * 2,
+              height: g.$4 * 2,
+            ),
+            p..color = detailColor.withValues(alpha: .58),
+          );
+        }
+      case 1: // Monsoon: glossy wet puddle sheen & rain ripples
+        canvas.drawOval(
+          Rect.fromCenter(
+            center: Offset(size.width * .54, size.height * .52),
+            width: size.width * .52,
+            height: size.height * .22,
+          ),
+          p
+            ..shader = LinearGradient(
+              colors: [
+                const Color(0x889FE3FF),
+                const Color(0x44408CA8),
+              ],
+            ).createShader(ground),
+        );
+        p.shader = null;
+        p
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.2;
+        for (final r in [(0.34, 0.56, 12.0), (0.69, 0.52, 9.5)]) {
+          canvas.drawOval(
+            Rect.fromCenter(
+              center: Offset(size.width * r.$1, size.height * r.$2),
+              width: r.$3 * 2,
+              height: r.$3 * .6,
+            ),
+            p..color = crestColor.withValues(alpha: .55),
+          );
+        }
+        p.style = PaintingStyle.fill;
+      case 2: // Forest: soft moss patches & grassy blade tufts
+        for (final m in [(0.30, 0.50, 18.0), (0.68, 0.48, 20.0)]) {
+          canvas.drawOval(
+            Rect.fromCenter(
+              center: Offset(size.width * m.$1, size.height * m.$2),
+              width: m.$3 * 2,
+              height: m.$3 * .45,
+            ),
+            p..color = detailColor.withValues(alpha: .35),
+          );
+        }
+        p
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.8
+          ..strokeCap = StrokeCap.round;
+        for (final bx in [0.19, 0.23, 0.28, 0.72, 0.76, 0.81]) {
+          final x = size.width * bx;
+          final y = size.height * .58;
+          canvas.drawLine(
+            Offset(x, y),
+            Offset(x + (bx < .5 ? -3.5 : 3.5), y - 6.5),
+            p..color = crestColor.withValues(alpha: .72),
+          );
+        }
+        p.style = PaintingStyle.fill;
+      case 3: // Glacial Tundra: crisp ice facets & frost highlights
+        for (final f in [
+          (0.24, 0.44, 0.42, 0.56),
+          (0.56, 0.40, 0.76, 0.54),
+        ]) {
+          canvas.drawPath(
+            Path()
+              ..moveTo(size.width * f.$1, size.height * f.$2)
+              ..lineTo(size.width * f.$3, size.height * f.$2)
+              ..lineTo(size.width * (f.$3 - .06), size.height * f.$4)
+              ..close(),
+            p..color = Colors.white.withValues(alpha: .42),
+          );
+        }
+        for (final pt in [(0.27, 0.56), (0.72, 0.54), (0.62, 0.65)]) {
+          canvas.drawCircle(
+            Offset(size.width * pt.$1, size.height * pt.$2),
+            2.1,
+            p..color = Colors.white.withValues(alpha: .82),
+          );
+        }
+      case 4: // Volcano Inferno: glowing molten lava fissures in dark basalt
+        p
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round;
+        final fissures = [
+          Path()
+            ..moveTo(size.width * .18, size.height * .54)
+            ..lineTo(size.width * .32, size.height * .58)
+            ..lineTo(size.width * .40, size.height * .66),
+          Path()
+            ..moveTo(size.width * .62, size.height * .64)
+            ..lineTo(size.width * .72, size.height * .56)
+            ..lineTo(size.width * .84, size.height * .54),
+        ];
+        for (final crack in fissures) {
+          canvas.drawPath(
+            crack,
+            p
+              ..strokeWidth = 4.2
+              ..color = detailColor.withValues(alpha: .48),
+          );
+          canvas.drawPath(
+            crack,
+            p
+              ..strokeWidth = 1.7
+              ..color = const Color(0xFFFFE07A).withValues(alpha: .92),
+          );
+        }
+        p.style = PaintingStyle.fill;
+      case 5: // Cosmic Orbit: lunar craters & glowing star crystals
+        for (final c in [
+          (0.26, 0.54, 12.0, 4.8),
+          (0.73, 0.52, 14.0, 5.2),
+          (0.60, 0.64, 8.0, 3.2),
+        ]) {
+          final rect = Rect.fromCenter(
+            center: Offset(size.width * c.$1, size.height * c.$2),
+            width: c.$3 * 2,
+            height: c.$4 * 2,
+          );
+          canvas.drawOval(rect, p..color = const Color(0x55100E2E));
+          canvas.drawArc(
+            rect,
+            .2,
+            2.7,
+            false,
+            p
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 1.2
+              ..color = detailColor.withValues(alpha: .52),
+          );
+          p.style = PaintingStyle.fill;
+        }
+        for (final pt in [(0.36, 0.44), (0.78, 0.47), (0.21, 0.62)]) {
+          canvas.drawCircle(
+            Offset(size.width * pt.$1, size.height * pt.$2),
+            1.9,
+            p..color = detailColor.withValues(alpha: .85),
+          );
+        }
+    }
+    canvas.restore();
+
+    // Subtle sunlit ridge line along the top crest.
     final crest = Path()
       ..moveTo(size.width * .14, size.height * .53)
       ..quadraticBezierTo(size.width * .28, size.height * .27, size.width * .50, size.height * .27)
@@ -362,39 +547,23 @@ class _DinoTrailLedgePainter extends CustomPainter {
       crest,
       p
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.6
+        ..strokeWidth = 1.7
         ..strokeCap = StrokeCap.round
-        ..color = Color.lerp(topColor, const Color(0xFFFFE7B3), .42)!.withValues(alpha: 0.52),
+        ..color = crestColor.withValues(alpha: 0.60),
     );
-    // Contact shadow anchored right beneath Dino's soles.
+    // Contact shadow anchored directly beneath Dino's soles (aligned at ledge middle).
     p.style = PaintingStyle.fill;
     canvas.drawOval(
       Rect.fromCenter(
-        center: Offset(size.width * .50, size.height * .46),
-        width: size.width * .54,
-        height: size.height * .22,
+        center: Offset(size.width * .50, size.height * .52),
+        width: size.width * .58,
+        height: size.height * .24,
       ),
       p
         ..shader = const RadialGradient(
-          colors: [Color(0xA6101620), Color(0x00101620)],
+          colors: [Color(0xB80E141D), Color(0x000E141D)],
         ).createShader(ground),
     );
-    p.shader = null;
-    for (final s in [
-      (0.24, 0.56, 3.8, 1.8),
-      (0.74, 0.54, 4.2, 2.0),
-      (0.39, 0.62, 2.8, 1.5),
-      (0.62, 0.60, 3.0, 1.5),
-    ]) {
-      canvas.drawOval(
-        Rect.fromCenter(
-          center: Offset(size.width * s.$1, size.height * s.$2),
-          width: s.$3 * 2,
-          height: s.$4 * 2,
-        ),
-        p..color = Color.lerp(bodyColor, const Color(0xFFFFE5B4), .24)!.withValues(alpha: 0.55),
-      );
-    }
   }
 
   @override

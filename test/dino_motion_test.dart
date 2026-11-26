@@ -5,7 +5,7 @@ void main() {
   test(
     'Idle gestures keep planted feet and settle when play interrupts them',
     () {
-      for (final sample in [4.5, 9.5, 13.5]) {
+      for (final sample in [4.5, 6.0, 9.5, 13.5, 17.1, 20.4, 23.1]) {
         final motion = DinoMotion();
         for (var i = 0; i < (sample * 120).round(); i++) {
           motion.update(
@@ -18,15 +18,24 @@ void main() {
         }
         expect(motion.state, DinoAnimationState.idle);
         if (sample == 4.5) expect(motion.yawn, greaterThan(.9));
+        if (sample == 6.0) expect(motion.yawn, lessThan(.01));
         if (sample == 9.5) expect(motion.look.abs(), greaterThan(.1));
         if (sample == 13.5) expect(motion.wave, greaterThan(.9));
-        for (final far in [false, true]) {
-          expect(motion.foot(far).dy, 113);
+        if (sample == 17.1) expect(motion.wag, greaterThan(.8));
+        if (sample == 20.4) expect(motion.stretch, greaterThan(.8));
+        if (sample == 23.1) expect(motion.bounce, greaterThan(.7));
+        if (sample < 15) {
+          for (final far in [false, true]) {
+            expect(motion.foot(far).dy, 113);
+          }
         }
         motion.update(.3, speed: 200, velocityY: -400, grounded: false);
         expect(motion.idleTime, 0);
         expect(motion.yawn, lessThan(.02));
         expect(motion.wave, lessThan(.02));
+        expect(motion.wag, lessThan(.02));
+        expect(motion.stretch, lessThan(.02));
+        expect(motion.bounce, lessThan(.02));
         expect(motion.state, DinoAnimationState.jump);
       }
     },

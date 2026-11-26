@@ -65,27 +65,50 @@ void drawCosmetic(
   canvas.translate(size.width * anchor.dx, size.height * anchor.dy);
   canvas.scale(size.width / 100 * fit.scale);
   final paint = Paint();
-  void oval(Rect r, Color color) => canvas.drawOval(r, paint..color = color);
-  void box(Rect r, double radius, Color color) => canvas.drawRRect(
-    RRect.fromRectAndRadius(r, Radius.circular(radius)),
-    paint..color = color,
+  Shader linear3d(Rect r, Color top, Color mid, Color bottom) =>
+      Gradient.linear(r.topLeft, r.bottomRight, [top, mid, bottom], const [0, .5, 1]);
+  void oval(Rect r, Color color) =>
+      canvas.drawOval(r, paint..shader = null..color = color);
+  void oval3d(Rect r, Color hi, Color mid, Color lo) => canvas.drawOval(
+    r,
+    paint
+      ..color = const Color(0xFFFFFFFF)
+      ..shader = linear3d(r, hi, mid, lo),
   );
+  void box3d(Rect r, double radius, Color hi, Color mid, Color lo) =>
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(r, Radius.circular(radius)),
+        paint
+          ..color = const Color(0xFFFFFFFF)
+          ..shader = linear3d(r, hi, mid, lo),
+      );
   switch (item.id) {
     case 'explorer_hat':
-      oval(const Rect.fromLTWH(-34, -5, 68, 12), const Color(0xFF80502D));
-      box(const Rect.fromLTWH(-23, -24, 46, 25), 12, const Color(0xFFD5A665));
-      box(const Rect.fromLTWH(-23, -7, 46, 7), 2, const Color(0xFF75472B));
-      oval(const Rect.fromLTWH(-31, -2, 64, 7), const Color(0xFFE5BB7C));
-      oval(const Rect.fromLTWH(4, -15, 8, 8), const Color(0xFFFFDB88));
+      oval(const Rect.fromLTWH(-28, -1, 56, 9), const Color(0x362E1404));
+      oval3d(const Rect.fromLTWH(-34, -5, 68, 12),
+          const Color(0xFFA06A3E), const Color(0xFF80502D), const Color(0xFF543018));
+      box3d(const Rect.fromLTWH(-23, -24, 46, 25), 12,
+          const Color(0xFFF0C684), const Color(0xFFD5A665), const Color(0xFF9C6E36));
+      box3d(const Rect.fromLTWH(-23, -7, 46, 7), 2,
+          const Color(0xFF8C5939), const Color(0xFF75472B), const Color(0xFF4B2B17));
+      oval3d(const Rect.fromLTWH(-31, -2, 64, 7),
+          const Color(0xFFF6D294), const Color(0xFFE5BB7C), const Color(0xFFB58648));
+      oval3d(const Rect.fromLTWH(4, -15, 8, 8),
+          const Color(0xFFFFF2B8), const Color(0xFFFFDB88), const Color(0xFFC28B2A));
     case 'winter_hat':
-      oval(const Rect.fromLTWH(-26, -25, 52, 34), const Color(0xFF4387B9));
-      box(const Rect.fromLTWH(-28, -4, 56, 10), 4, const Color(0xFF86CEE5));
-      oval(const Rect.fromLTWH(-7, -34, 14, 14), const Color(0xFFE1F5FA));
+      oval(const Rect.fromLTWH(-28, 0, 56, 8), const Color(0x38132C44));
+      oval3d(const Rect.fromLTWH(-26, -25, 52, 34),
+          const Color(0xFF6AB2E2), const Color(0xFF4387B9), const Color(0xFF275880));
+      box3d(const Rect.fromLTWH(-28, -4, 56, 10), 4,
+          const Color(0xFFB0E4F7), const Color(0xFF86CEE5), const Color(0xFF539AB5));
+      oval3d(const Rect.fromLTWH(-7, -34, 14, 14),
+          const Color(0xFFFFFFFF), const Color(0xFFE1F5FA), const Color(0xFF9EC7D8));
       for (int i = -18; i <= 18; i += 9) {
         canvas.drawLine(
           Offset(i.toDouble(), -18),
           Offset(i.toDouble(), -7),
           paint
+            ..shader = null
             ..color = const Color(0xFF6EB1D5)
             ..strokeWidth = 2,
         );
@@ -102,12 +125,29 @@ void drawCosmetic(
         ..close();
       canvas.drawPath(
         tail,
-        paint..color = mint ? const Color(0xFF087C80) : const Color(0xFFBF3638),
+        paint
+          ..color = const Color(0xFFFFFFFF)
+          ..shader = Gradient.linear(
+            const Offset(-43, -7),
+            const Offset(-12, 10),
+            mint
+                ? const [Color(0xFF39CCC0), Color(0xFF087C80)]
+                : const [Color(0xFFF36052), Color(0xFF9F2326)],
+          ),
       );
-      box(
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          const Rect.fromLTWH(-23, -1.5, 46, 11),
+          const Radius.circular(5),
+        ),
+        Paint()..color = const Color(0x45380E08),
+      );
+      box3d(
         const Rect.fromLTWH(-23, -3, 46, 11),
         5,
-        mint ? const Color(0xFF55D9CA) : const Color(0xFFE75244),
+        mint ? const Color(0xFF7BF2E4) : const Color(0xFFFF7A6A),
+        mint ? const Color(0xFF36C8BA) : const Color(0xFFE75244),
+        mint ? const Color(0xFF0A8583) : const Color(0xFFA72527),
       );
       final bib = Path()
         ..moveTo(0, 6)
@@ -116,10 +156,19 @@ void drawCosmetic(
         ..close();
       canvas.drawPath(
         bib,
-        paint..color = mint ? const Color(0xFF24AEA9) : const Color(0xFFD84138),
+        paint
+          ..color = const Color(0xFFFFFFFF)
+          ..shader = Gradient.linear(
+            const Offset(0, 5),
+            const Offset(18, 22),
+            mint
+                ? const [Color(0xFF42DBD0), Color(0xFF0D7C7B)]
+                : const [Color(0xFFF46154), Color(0xFF9C2224)],
+          ),
       );
     case 'leaf_crown':
-      box(const Rect.fromLTWH(-27, -4, 54, 7), 3, const Color(0xFF277B52));
+      box3d(const Rect.fromLTWH(-27, -4, 54, 7), 3,
+          const Color(0xFF42A872), const Color(0xFF277B52), const Color(0xFF164F33));
       for (var i = -2; i <= 2; i++) {
         final x = i * 11.0;
         final leaf = Path()
@@ -129,35 +178,49 @@ void drawCosmetic(
         canvas.drawPath(
           leaf,
           paint
-            ..color = i.isEven
-                ? const Color(0xFF63C778)
-                : const Color(0xFFB2E684),
+            ..color = const Color(0xFFFFFFFF)
+            ..shader = Gradient.linear(
+              Offset(x - 10, -24),
+              Offset(x + 5, -1),
+              i.isEven
+                  ? const [Color(0xFF93E59C), Color(0xFF3D9E59)]
+                  : const [Color(0xFFD1F7A3), Color(0xFF74BC5B)],
+            ),
         );
         canvas.drawLine(
           Offset(x, -3),
           Offset(x - 4, -19),
           paint
+            ..shader = null
             ..color = const Color(0xFF388957)
             ..strokeWidth = 1.4,
         );
       }
-      oval(const Rect.fromLTWH(12, -9, 8, 8), const Color(0xFFFFCB55));
+      oval3d(const Rect.fromLTWH(12, -9, 8, 8),
+          const Color(0xFFFFF0A8), const Color(0xFFFFCB55), const Color(0xFFBD801E));
     case 'aviator_hat':
-      box(const Rect.fromLTWH(-25, -24, 50, 28), 13, const Color(0xFF986441));
-      box(const Rect.fromLTWH(-28, -7, 12, 20), 5, const Color(0xFF75452E));
-      box(const Rect.fromLTWH(17, -7, 12, 20), 5, const Color(0xFF75452E));
-      box(const Rect.fromLTWH(-25, -8, 50, 6), 2, const Color(0xFFE1B97E));
+      oval(const Rect.fromLTWH(-27, -2, 54, 10), const Color(0x38281204));
+      box3d(const Rect.fromLTWH(-25, -24, 50, 28), 13,
+          const Color(0xFFBA8058), const Color(0xFF986441), const Color(0xFF5D371F));
+      box3d(const Rect.fromLTWH(-28, -7, 12, 20), 5,
+          const Color(0xFF966143), const Color(0xFF75452E), const Color(0xFF462516));
+      box3d(const Rect.fromLTWH(17, -7, 12, 20), 5,
+          const Color(0xFF966143), const Color(0xFF75452E), const Color(0xFF462516));
+      box3d(const Rect.fromLTWH(-25, -8, 50, 6), 2,
+          const Color(0xFFF6D196), const Color(0xFFE1B97E), const Color(0xFFA67C45));
       for (final x in [-17.0, 2.0]) {
-        box(Rect.fromLTWH(x, -16, 16, 13), 5, const Color(0xFFDBB36C));
-        box(Rect.fromLTWH(x + 2, -14, 12, 9), 3, const Color(0xFF6ECBD4));
-        oval(Rect.fromLTWH(x + 4, -13, 4, 3), const Color(0xCCFFFFFF));
+        box3d(Rect.fromLTWH(x, -16, 16, 13), 5,
+            const Color(0xFFF5D086), const Color(0xFFDBB36C), const Color(0xFF9B7233));
+        box3d(Rect.fromLTWH(x + 2, -14, 12, 9), 3,
+            const Color(0xFF9DF0F6), const Color(0xFF6ECBD4), const Color(0xFF358A94));
+        oval(Rect.fromLTWH(x + 4, -13, 4, 3), const Color(0xDDFFFFFF));
       }
     case 'space_helmet':
-      oval(const Rect.fromLTWH(-39, -16, 78, 70), const Color(0x228DEDF1));
+      oval(const Rect.fromLTWH(-39, -16, 78, 70), const Color(0x288DEDF1));
       canvas.drawOval(
         const Rect.fromLTWH(-39, -16, 78, 70),
         Paint()
-          ..color = const Color(0xFFB8EAF1)
+          ..color = const Color(0xFFCFF4F9)
           ..style = PaintingStyle.stroke
           ..strokeWidth = 3,
       );
@@ -167,15 +230,19 @@ void drawCosmetic(
         .8,
         false,
         Paint()
-          ..color = const Color(0xDDFFFFFF)
+          ..color = const Color(0xEEFFFFFF)
           ..style = PaintingStyle.stroke
           ..strokeWidth = 4
           ..strokeCap = StrokeCap.round,
       );
-      box(const Rect.fromLTWH(-33, 44, 66, 9), 5, const Color(0xFFE5F4F5));
-      oval(const Rect.fromLTWH(-40, 18, 16, 20), const Color(0xFF5EA9BA));
-      oval(const Rect.fromLTWH(-37, 22, 10, 12), const Color(0xFFCCEAF1));
-      box(const Rect.fromLTWH(18, 45, 9, 6), 2, const Color(0xFFF4BA55));
+      box3d(const Rect.fromLTWH(-33, 44, 66, 9), 5,
+          const Color(0xFFFFFFFF), const Color(0xFFE5F4F5), const Color(0xFF9CB8C2));
+      oval3d(const Rect.fromLTWH(-40, 18, 16, 20),
+          const Color(0xFF83CCE0), const Color(0xFF5EA9BA), const Color(0xFF367385));
+      oval3d(const Rect.fromLTWH(-37, 22, 10, 12),
+          const Color(0xFFEEFCFF), const Color(0xFFCCEAF1), const Color(0xFF8BB7C4));
+      box3d(const Rect.fromLTWH(18, 45, 9, 6), 2,
+          const Color(0xFFFFE594), const Color(0xFFF4BA55), const Color(0xFFB3781F));
     case 'leaf_cape':
       canvas.drawPath(
         Path()
@@ -186,7 +253,14 @@ void drawCosmetic(
           ..lineTo(-3, 19)
           ..quadraticBezierTo(8, -7, -10, -22)
           ..close(),
-        paint..color = const Color(0xFF318F61),
+        paint
+          ..color = const Color(0xFFFFFFFF)
+          ..shader = Gradient.linear(
+            const Offset(-28, -20),
+            const Offset(4, 26),
+            const [Color(0xFF58BC85), Color(0xFF318F61), Color(0xFF1A5A3A)],
+            const [0, .5, 1],
+          ),
       );
       canvas.drawLine(
         const Offset(-10, -17),
@@ -196,9 +270,12 @@ void drawCosmetic(
           ..strokeWidth = 2,
       );
     case 'star_pack':
-      box(const Rect.fromLTWH(-17, -16, 29, 38), 10, const Color(0xFF504A99));
-      box(const Rect.fromLTWH(-14, -14, 23, 20), 7, const Color(0xFF8E85D4));
-      box(const Rect.fromLTWH(-12, 9, 20, 10), 4, const Color(0xFF6961B6));
+      box3d(const Rect.fromLTWH(-17, -16, 29, 38), 10,
+          const Color(0xFF726BC4), const Color(0xFF504A99), const Color(0xFF2D2866));
+      box3d(const Rect.fromLTWH(-14, -14, 23, 20), 7,
+          const Color(0xFFABA3F0), const Color(0xFF8E85D4), const Color(0xFF5B53A3));
+      box3d(const Rect.fromLTWH(-12, 9, 20, 10), 4,
+          const Color(0xFF8880D4), const Color(0xFF6961B6), const Color(0xFF423C87));
       canvas.drawPath(
         Path()
           ..moveTo(-3, -11)
@@ -212,13 +289,24 @@ void drawCosmetic(
           ..lineTo(-13, -4)
           ..lineTo(-6, -5)
           ..close(),
-        paint..color = const Color(0xFFFFD96D),
+        paint
+          ..color = const Color(0xFFFFFFFF)
+          ..shader = Gradient.linear(
+            const Offset(-12, -11),
+            const Offset(7, 7),
+            const [Color(0xFFFFF4AE), Color(0xFFFFD96D), Color(0xFFD69A2B)],
+            const [0, .5, 1],
+          ),
       );
     case 'explorer_pack':
-      box(const Rect.fromLTWH(-16, -15, 27, 35), 8, const Color(0xFF6C432E));
-      box(const Rect.fromLTWH(-13, -13, 22, 17), 6, const Color(0xFFC18B52));
-      box(const Rect.fromLTWH(-11, 7, 18, 11), 3, const Color(0xFF9F6A3F));
-      box(const Rect.fromLTWH(-4, 0, 5, 8), 1, const Color(0xFFF2CB77));
+      box3d(const Rect.fromLTWH(-16, -15, 27, 35), 8,
+          const Color(0xFF8C5C41), const Color(0xFF6C432E), const Color(0xFF422618));
+      box3d(const Rect.fromLTWH(-13, -13, 22, 17), 6,
+          const Color(0xFFDFAB71), const Color(0xFFC18B52), const Color(0xFF8A5D2E));
+      box3d(const Rect.fromLTWH(-11, 7, 18, 11), 3,
+          const Color(0xFFBD8556), const Color(0xFF9F6A3F), const Color(0xFF6C4221));
+      box3d(const Rect.fromLTWH(-4, 0, 5, 8), 1,
+          const Color(0xFFFFEFA6), const Color(0xFFF2CB77), const Color(0xFFAF7E28));
   }
   canvas.restore();
 }

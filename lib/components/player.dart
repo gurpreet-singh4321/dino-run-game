@@ -1017,9 +1017,14 @@ class Player extends PositionComponent
       CartArt.rear(canvas, skinId: game.coinManager.equippedCartSkin);
       canvas.restore();
     }
-    // Keep the seated rig aligned with the same seat anchor as Workshop.
+    // Keep the seated rig aligned with the same seat anchor and curved cockpit
+    // rim clip as Workshop so nothing peeks past the door or front dashboard.
     canvas.save();
-    if (cartActive) canvas.translate(-9, 0);
+    if (cartActive) {
+      canvas.translate(-14, size.y - 50);
+      CartArt.clipOccupant(canvas);
+      canvas.translate(1.5, -(size.y - 50) + 1.5);
+    }
     // 3. Draw Dino Skin
     if (inSpaceMode && skin is NewDinoSkin) {
       (skin as NewDinoSkin).renderCharacter(

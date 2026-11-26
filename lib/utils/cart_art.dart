@@ -55,13 +55,44 @@ class CartArt {
     return recorder.endRecording();
   }
 
+  static Path _frontShellPath() => Path()
+    ..moveTo(-5, 13.5)
+    ..lineTo(28, 14.2)
+    ..quadraticBezierTo(36, 17.2, 44, 18.0)
+    ..quadraticBezierTo(48, 18.4, 52, 18.4)
+    ..quadraticBezierTo(57.5, 18.3, 61.5, 17.8)
+    ..quadraticBezierTo(63.2, 15.2, 64.5, 13.2)
+    ..quadraticBezierTo(66, 11.4, 68, 11.4)
+    ..lineTo(108, 11.4)
+    ..lineTo(108, 56)
+    ..lineTo(-5, 56)
+    ..close();
+
+  /// Clips a seated occupant above the curved cockpit door lip and behind the
+  /// front dashboard cowl (called in `CartArt` coordinate space).
+  static void clipOccupant(Canvas c) {
+    final p = Path()
+      ..moveTo(-12, -100)
+      ..lineTo(115, -100)
+      ..lineTo(115, 12.2)
+      ..lineTo(68, 12.2)
+      ..quadraticBezierTo(65.5, 12.6, 64.2, 14.5)
+      ..quadraticBezierTo(63, 16.4, 61.5, 18.6)
+      ..quadraticBezierTo(57.5, 19.2, 52, 19.3)
+      ..quadraticBezierTo(48, 19.3, 44, 18.9)
+      ..quadraticBezierTo(36, 18.1, 28, 15.2)
+      ..lineTo(-12, 14.5)
+      ..close();
+    c.clipPath(p);
+  }
+
   static void rear(Canvas c, {String skinId = 'fossil_rover'}) {
     final image = GearAssets.cart;
     if (image != null) {
       c.drawImageRect(
         image,
-        Rect.fromLTWH(0, 0, image.width.toDouble(), image.height * .31),
-        const Rect.fromLTWH(0, 3.1, 103, 15.22),
+        Rect.fromLTWH(0, 0, image.width.toDouble(), image.height * .36),
+        const Rect.fromLTWH(0, 3.1, 103, 17.68),
         Paint()
           ..filterQuality = FilterQuality.medium
           ..colorFilter = CartSkinCatalog.filter(skinId),
@@ -98,11 +129,13 @@ class CartArt {
     if (image != null) {
       final src = Rect.fromLTWH(
         0,
-        image.height * .31,
+        0,
         image.width.toDouble(),
-        image.height * .645,
+        image.height * .955,
       );
-      const dst = Rect.fromLTWH(0, 18.32, 103, 31.66);
+      const dst = Rect.fromLTWH(0, 3.1, 103, 46.88);
+      c.save();
+      c.clipPath(_frontShellPath());
       c.drawImageRect(
         image,
         src,
@@ -144,6 +177,7 @@ class CartArt {
         );
         c.restore();
       }
+      c.restore();
       return;
     }
     c.drawPicture(_body);

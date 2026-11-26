@@ -63,6 +63,10 @@ class _AnimatedDinoPreviewState extends State<AnimatedDinoPreview>
       ticker.start();
     } else if (!running && ticker.isActive) {
       ticker.stop();
+      if (_quiet) {
+        skin.resetMotion();
+        repaint.value++;
+      }
     }
   }
 
@@ -75,7 +79,10 @@ class _AnimatedDinoPreviewState extends State<AnimatedDinoPreview>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    _foreground = state == AppLifecycleState.resumed;
+    // Keep preview alive on `inactive` (e.g. side-by-side window blur); only
+    // pause when the app/tab is actually hidden or backgrounded.
+    _foreground = state == AppLifecycleState.resumed ||
+        state == AppLifecycleState.inactive;
     _syncTicker();
   }
 
@@ -102,7 +109,8 @@ class _AnimatedDinoPreviewState extends State<AnimatedDinoPreview>
     onTap: widget.interactive
         ? () {
             if (!_quiet && skin is NewDinoSkin) {
-              (skin as NewDinoSkin).motion.idleTime = 12.9;
+              const beats = [12.9, 16.2, 19.2, 22.7];
+              (skin as NewDinoSkin).motion.idleTime = beats[_hello % beats.length];
             }
             setState(() => _hello++);
           }
@@ -158,9 +166,9 @@ class _PreviewPainter extends CustomPainter {
     CartArt.rear(canvas, skinId: cartSkinId!);
     canvas.restore();
     canvas.save();
-    // Seated feet remain inside the chassis, including its transparent wheel gap.
-    canvas.clipRect(const Rect.fromLTWH(-10, -20, 130, 111));
-    canvas.translate(5, 9);
+    canvas.translate(0, 55);
+    CartArt.clipOccupant(canvas);
+    canvas.translate(1.5, -44.5);
     skin.renderCharacter(canvas, const Size(80, 96), 0);
     canvas.restore();
     canvas.translate(0, 55);
