@@ -134,6 +134,29 @@ class Player extends PositionComponent
 
   static final Paint _plasterPaint = Paint()..color = const Color(0xFFFF80AB);
   static final Paint _trailPaint = Paint();
+  static final Paint _deathFadePaint = Paint();
+  static final Paint _deathStarPaint = Paint()..color = const Color(0xFFFFD700);
+  static final Paint _flameOuterPaint = Paint()..color = const Color(0xFF45DDEB);
+  static final Paint _flameCorePaint = Paint()..color = const Color(0xFFFFE3A2);
+  static final Paint _strapPaint = Paint()
+    ..color = const Color(0xE6263238)
+    ..strokeWidth = 2.8
+    ..strokeCap = StrokeCap.round
+    ..style = PaintingStyle.stroke;
+  static final Paint _stripePaint = Paint()
+    ..color = const Color(0xD900E5FF)
+    ..strokeWidth = 1.0
+    ..strokeCap = StrokeCap.round
+    ..style = PaintingStyle.stroke;
+  static final Paint _buckleGoldPaint = Paint()
+    ..color = const Color(0xFFFFD54F);
+  static final Paint _buckleBgPaint = Paint()..color = const Color(0xFF263238);
+  static final Paint _buckleLedPaint = Paint()..color = const Color(0xFF00E5FF);
+  static final Paint _bubbleFillPaint = Paint();
+  static final Paint _bubbleRimPaint = Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 2.4;
+  static final Path _fxPath = Path();
 
   // Skin system
   late CharacterSkin skin;
@@ -844,10 +867,10 @@ class Player extends PositionComponent
       canvas.translate(-centerX, -centerY);
 
       final alpha = (1.0 - (deathTimer / 0.85)).clamp(0.0, 1.0);
-      final fadePaint = Paint()..color = Colors.white.withValues(alpha: alpha);
+      _deathFadePaint.color = Colors.white.withValues(alpha: alpha);
       canvas.saveLayer(
         Rect.fromLTWH(-20, -30, size.x + 40, size.y + 40),
-        fadePaint,
+        _deathFadePaint,
       );
       skin.renderCharacter(
         canvas,
@@ -859,14 +882,13 @@ class Player extends PositionComponent
       // Cute spinning dizzy golden stars above Dino's head
       final starAngle = deathTimer * 12.0;
       final headX = size.x * 0.65;
-      final headY = -12.0;
-      final starPaint = Paint()..color = const Color(0xFFFFD700);
+      const headY = -12.0;
 
       for (int i = 0; i < 3; i++) {
         final a = starAngle + (i * math.pi * 2 / 3);
         final sx = headX + math.cos(a) * 22.0;
         final sy = headY + math.sin(a) * 8.0;
-        canvas.drawCircle(Offset(sx, sy), 3.5, starPaint);
+        canvas.drawCircle(Offset(sx, sy), 3.5, _deathStarPaint);
       }
 
       // Cute pink band-aid plaster on forehead
@@ -1091,17 +1113,18 @@ class Player extends PositionComponent
     final nozzleY = rect.top + rect.height * .87;
     final length =
         (firing ? 28.0 : 13.0) * (1 + .12 * math.sin(_totalElapsed * 24));
-    for (final f in [.22, .44]) {
+    for (final f in const [.22, .44]) {
       final x = rect.left + rect.width * f;
-      final flame = Path()
+      _fxPath
+        ..reset()
         ..moveTo(x - 4, nozzleY)
         ..quadraticBezierTo(x - 6, nozzleY + length * .4, x, nozzleY + length)
         ..quadraticBezierTo(x + 6, nozzleY + length * .4, x + 4, nozzleY)
         ..close();
-      canvas.drawPath(flame, Paint()..color = const Color(0xFF45DDEB));
+      canvas.drawPath(_fxPath, _flameOuterPaint);
       canvas.drawOval(
         Rect.fromLTWH(x - 2, nozzleY, 4, length * .65),
-        Paint()..color = const Color(0xFFFFE3A2),
+        _flameCorePaint,
       );
     }
     GearAssets.drawJetpack(canvas, rect);
@@ -1113,42 +1136,20 @@ class Player extends PositionComponent
     final h = drawSize.height;
 
     // Dark padded tech strap across Dino's upper torso/belly (clearing head and eyes)
-    final strapPaint = Paint()
-      ..color = const Color(0xFF263238).withValues(alpha: 0.90)
-      ..strokeWidth = 2.8
-      ..strokeCap = StrokeCap.round
-      ..style = PaintingStyle.stroke;
-
-    final strapPath = Path()
+    _fxPath
+      ..reset()
       ..moveTo(w * 0.22, h * 0.64)
       ..quadraticBezierTo(w * 0.36, h * 0.68, w * 0.52, h * 0.67);
-    canvas.drawPath(strapPath, strapPaint);
+    canvas.drawPath(_fxPath, _strapPaint);
 
     // Cyan Telemetry Stripe on the harness strap
-    final stripePaint = Paint()
-      ..color = const Color(0xFF00E5FF).withValues(alpha: 0.85)
-      ..strokeWidth = 1.0
-      ..strokeCap = StrokeCap.round
-      ..style = PaintingStyle.stroke;
-    canvas.drawPath(strapPath, stripePaint);
+    canvas.drawPath(_fxPath, _stripePaint);
 
     // Sci-Fi Metallic Chest Buckle Badge with LED Indicator
     final buckleCenter = Offset(w * 0.40, h * 0.67);
-    canvas.drawCircle(
-      buckleCenter,
-      3.2,
-      Paint()..color = const Color(0xFFFFD54F),
-    );
-    canvas.drawCircle(
-      buckleCenter,
-      1.8,
-      Paint()..color = const Color(0xFF263238),
-    );
-    canvas.drawCircle(
-      buckleCenter,
-      0.9,
-      Paint()..color = const Color(0xFF00E5FF),
-    );
+    canvas.drawCircle(buckleCenter, 3.2, _buckleGoldPaint);
+    canvas.drawCircle(buckleCenter, 1.8, _buckleBgPaint);
+    canvas.drawCircle(buckleCenter, 0.9, _buckleLedPaint);
   }
 
   /// 🫧 Cute Iridescent Soap Bubble Shield centered on Dino
@@ -1185,7 +1186,11 @@ class Player extends PositionComponent
       stops: const [0.0, 0.45, 0.78, 1.0],
     ).createShader(bubbleRect);
 
-    canvas.drawCircle(center, bubbleRadius, Paint()..shader = bubbleFillShader);
+    canvas.drawCircle(
+      center,
+      bubbleRadius,
+      _bubbleFillPaint..shader = bubbleFillShader,
+    );
 
     // 2. Iridescent Rainbow Rim Stroke
     final rimShader = SweepGradient(
@@ -1206,16 +1211,13 @@ class Player extends PositionComponent
     canvas.drawCircle(
       center,
       bubbleRadius,
-      Paint()
-        ..shader = rimShader
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.4,
+      _bubbleRimPaint..shader = rimShader,
     );
 
     // 3. Curved Specular Reflection Arc (Top-Left Glass Highlight)
-    final sheenPath = Path();
+    _fxPath.reset();
     final sheenRadius = bubbleRadius * 0.82;
-    sheenPath.addArc(
+    _fxPath.addArc(
       Rect.fromCircle(center: center, radius: sheenRadius),
       math.pi * 1.15,
       math.pi * 0.45,
@@ -1225,7 +1227,7 @@ class Player extends PositionComponent
     _shieldSheenPaint.style = PaintingStyle.stroke;
     _shieldSheenPaint.strokeWidth = 3.2;
     _shieldSheenPaint.strokeCap = StrokeCap.round;
-    canvas.drawPath(sheenPath, _shieldSheenPaint);
+    canvas.drawPath(_fxPath, _shieldSheenPaint);
 
     // Secondary smaller bottom-right reflection dot
     _shieldDotPaint.color = Colors.white.withValues(alpha: 0.65 * alphaPulse);
@@ -1260,11 +1262,13 @@ class Player extends PositionComponent
     );
 
     // 1. Back Arc Glow Halo
-    final backHaloPath = Path()..addArc(hoopRect, math.pi, math.pi);
+    _fxPath
+      ..reset()
+      ..addArc(hoopRect, math.pi, math.pi);
     _magnetHaloBack.color = const Color(
       0xFF00E5FF,
     ).withValues(alpha: 0.18 * alphaPulse);
-    canvas.drawPath(backHaloPath, _magnetHaloBack);
+    canvas.drawPath(_fxPath, _magnetHaloBack);
 
     // 2. Back Arc Ring Gradient (Behind Dino)
     final ringShader = SweepGradient(
@@ -1280,7 +1284,7 @@ class Player extends PositionComponent
     ).createShader(hoopRect);
 
     _magnetRingBack.shader = ringShader;
-    canvas.drawPath(backHaloPath, _magnetRingBack);
+    canvas.drawPath(_fxPath, _magnetRingBack);
 
     // 3. Back Orbiting Sparkle Nodes (oy < 0)
     for (int i = 0; i < 4; i++) {

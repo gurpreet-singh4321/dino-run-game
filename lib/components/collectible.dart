@@ -34,6 +34,29 @@ class Collectible extends PositionComponent
   double _magnetVy = 0.0;
   double _magnetTime = 0.0;
 
+  static final math.Random _rng = math.Random();
+  static final Paint _rimPaint = Paint()..color = const Color(0xFFA67128);
+  static final Paint _glintPaint = Paint()
+    ..strokeWidth = 2.2
+    ..strokeCap = StrokeCap.round;
+  static final Paint _coinGlowPaint = Paint()
+    ..color = const Color(0x40FFEA00);
+  static final Paint _doubleCoinGlowPaint = Paint()
+    ..color = const Color(0x59FFEA00);
+  static final Paint _auraPaint = Paint();
+  static final Paint _sparkPaint = Paint()..color = Colors.white;
+  static final Paint _arcPaint = Paint()
+    ..color = const Color(0xFF00E5FF)
+    ..strokeWidth = 1.5
+    ..style = PaintingStyle.stroke;
+  static final Path _arcPath = Path();
+
+  static final ui.Picture _jetpackBadgePic = _recordJetpackBadgePic();
+  static final ui.Picture _shieldBadgePic = _recordShieldBadgePic();
+  static final ui.Picture _magnetBadgePic = _recordMagnetBadgePic();
+  static final ui.Picture _giantBadgePic = _recordGiantBadgePic();
+  static final ui.Picture _eggShellPic = _recordEggShellPic();
+
   Collectible({required this.collectType, required Vector2 position})
     : super(position: position, size: Vector2.all(42)) {
     resetCollectible();
@@ -157,7 +180,7 @@ class Collectible extends PositionComponent
     switch (collectType) {
       case CollectibleType.coin:
         final bonus =
-            (multLvl > 0 && math.Random().nextDouble() < multLvl * 0.2) ? 2 : 1;
+            (multLvl > 0 && _rng.nextDouble() < multLvl * 0.2) ? 2 : 1;
         game.score += (25 * bonus * cosmicBonus).toInt();
         game.coinManager.collectCoins(bonus);
         game.hud.triggerCoinPulse();
@@ -257,7 +280,7 @@ class Collectible extends PositionComponent
       canvas.drawCircle(
         Offset(-rimOffset, 0),
         15,
-        Paint()..color = const Color(0xFFA67128),
+        _rimPaint,
       );
     }
 
@@ -268,11 +291,8 @@ class Collectible extends PositionComponent
       final t = _glintTimer / 0.35;
       final gx = -13.0 + 26.0 * t;
       final glintAlpha = 0.75 * math.sin(t * math.pi);
-      final glintPaint = Paint()
-        ..color = Colors.white.withValues(alpha: glintAlpha)
-        ..strokeWidth = 2.2
-        ..strokeCap = StrokeCap.round;
-      canvas.drawLine(Offset(gx - 4, -8), Offset(gx + 4, 8), glintPaint);
+      _glintPaint.color = Colors.white.withValues(alpha: glintAlpha);
+      canvas.drawLine(Offset(gx - 4, -8), Offset(gx + 4, 8), _glintPaint);
     }
     canvas.restore();
   }
@@ -283,11 +303,7 @@ class Collectible extends PositionComponent
     final scaleX = math.cos(_animTimer * 5.0).abs().clamp(0.08, 1.0);
 
     // Outer bright golden glow halo
-    canvas.drawCircle(
-      center,
-      19,
-      Paint()..color = const Color(0xFFFFEA00).withValues(alpha: 0.25),
-    );
+    canvas.drawCircle(center, 19, _coinGlowPaint);
 
     canvas.save();
     canvas.translate(center.dx, center.dy);
@@ -301,11 +317,7 @@ class Collectible extends PositionComponent
     final scaleX2 = math.cos((_animTimer + 0.18) * 5.0).abs().clamp(0.08, 1.0);
 
     // Double coin glowing aura
-    canvas.drawCircle(
-      center,
-      23,
-      Paint()..color = const Color(0xFFFFEA00).withValues(alpha: 0.35),
-    );
+    canvas.drawCircle(center, 23, _doubleCoinGlowPaint);
 
     // 1. Back Coin (Offset top-left)
     canvas.save();
@@ -322,6 +334,13 @@ class Collectible extends PositionComponent
 
   /// 🚀 JETPACK / ROCKET POWERUP: Sleek cyan/silver rocket with flaming thrusters & badge
   void _renderJetpack(Canvas canvas) {
+    canvas.drawPicture(_jetpackBadgePic);
+    GearAssets.drawJetpack(canvas, const Rect.fromLTWH(10, 2, 24, 36));
+  }
+
+  static ui.Picture _recordJetpackBadgePic() {
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
     canvas.drawCircle(
       const Offset(21, 21),
       20,
@@ -335,139 +354,78 @@ class Collectible extends PositionComponent
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.5,
     );
-    GearAssets.drawJetpack(canvas, const Rect.fromLTWH(10, 2, 24, 36));
+    return recorder.endRecording();
   }
 
   void _renderShield(Canvas canvas) {
-    final cx = size.x / 2;
-    final cy = size.y / 2;
+    canvas.save();
+    canvas.translate(size.x / 2, size.y / 2);
+    canvas.drawPicture(_shieldBadgePic);
+    canvas.restore();
+  }
 
-    // 1. Protective Cyan Energy Glow
+  static ui.Picture _recordShieldBadgePic() {
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
     canvas.drawCircle(
-      Offset(cx, cy),
+      Offset.zero,
       22,
       Paint()..color = const Color(0xFF29B6F6).withValues(alpha: 0.30),
     );
-
-    // 2. Shield Body Path
     final shieldPath = Path()
-      ..moveTo(cx, cy - 16)
-      ..lineTo(cx + 14, cy - 16)
-      ..quadraticBezierTo(cx + 15, cy + 2, cx, cy + 17)
-      ..quadraticBezierTo(cx - 15, cy + 2, cx - 14, cy - 16)
+      ..moveTo(0, -16)
+      ..lineTo(14, -16)
+      ..quadraticBezierTo(15, 2, 0, 17)
+      ..quadraticBezierTo(-15, 2, -14, -16)
       ..close();
 
-    final shieldGradient = const LinearGradient(
+    const shieldGradient = LinearGradient(
       begin: Alignment.topCenter,
       end: Alignment.bottomCenter,
       colors: [Color(0xFF0288D1), Color(0xFF01579B)],
     );
-    final shieldRect = Rect.fromLTWH(cx - 15, cy - 16, 30, 33);
+    const shieldRect = Rect.fromLTWH(-15, -16, 30, 33);
     canvas.drawPath(
       shieldPath,
       Paint()..shader = shieldGradient.createShader(shieldRect),
     );
-
-    // Golden Rim Border
-    final borderPaint = Paint()
-      ..color = const Color(0xFFFFD700)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.2;
-    canvas.drawPath(shieldPath, borderPaint);
-
-    // Golden Star Emblem in Center
+    canvas.drawPath(
+      shieldPath,
+      Paint()
+        ..color = const Color(0xFFFFD700)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.2,
+    );
     final starPath = Path();
     for (int i = 0; i < 5; i++) {
       final aOuter = (i * 72 - 90) * math.pi / 180;
       final aInner = ((i + 0.5) * 72 - 90) * math.pi / 180;
-      final rO = 6.5;
-      final rI = 2.8;
+      const rO = 6.5;
+      const rI = 2.8;
       if (i == 0) {
-        starPath.moveTo(
-          cx + math.cos(aOuter) * rO,
-          cy - 1 + math.sin(aOuter) * rO,
-        );
+        starPath.moveTo(math.cos(aOuter) * rO, -1 + math.sin(aOuter) * rO);
       } else {
-        starPath.lineTo(
-          cx + math.cos(aOuter) * rO,
-          cy - 1 + math.sin(aOuter) * rO,
-        );
+        starPath.lineTo(math.cos(aOuter) * rO, -1 + math.sin(aOuter) * rO);
       }
-      starPath.lineTo(
-        cx + math.cos(aInner) * rI,
-        cy - 1 + math.sin(aInner) * rI,
-      );
+      starPath.lineTo(math.cos(aInner) * rI, -1 + math.sin(aInner) * rI);
     }
     starPath.close();
     canvas.drawPath(starPath, Paint()..color = const Color(0xFFFFD700));
+    return recorder.endRecording();
   }
 
   /// 🧲 HORSESHOE MAGNET POWERUP: Classic Red/Blue Magnet with silver pole tips & force arcs
   void _renderMagnet(Canvas canvas) {
     final cx = size.x / 2;
     final cy = size.y / 2;
-
-    // 1. Magnetic Field Glow
-    canvas.drawCircle(
-      Offset(cx, cy),
-      22,
-      Paint()..color = const Color(0xFFAB47BC).withValues(alpha: 0.30),
-    );
-
-    // 2. Circular Purple Container Badge
-    final badgeRect = Rect.fromCircle(center: Offset(cx, cy), radius: 19);
-    canvas.drawCircle(
-      Offset(cx, cy),
-      19,
-      Paint()
-        ..shader = const RadialGradient(
-          colors: [Color(0xFF8E24AA), Color(0xFF4A148C)],
-        ).createShader(badgeRect),
-    );
-    canvas.drawCircle(
-      Offset(cx, cy),
-      19,
-      Paint()
-        ..color = Colors.white.withValues(alpha: 0.8)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.8,
-    );
-
-    // 3. Horseshoe Magnet U-Shape
-    final uPath = Path()
-      ..moveTo(cx - 10, cy - 8)
-      ..lineTo(cx - 10, cy + 3)
-      ..cubicTo(cx - 10, cy + 13, cx + 10, cy + 13, cx + 10, cy + 3)
-      ..lineTo(cx + 10, cy - 8)
-      ..lineTo(cx + 5, cy - 8)
-      ..lineTo(cx + 5, cy + 3)
-      ..cubicTo(cx + 5, cy + 8, cx - 5, cy + 8, cx - 5, cy + 3)
-      ..lineTo(cx - 5, cy - 8)
-      ..close();
-
-    // Red North Arm (Left)
     canvas.save();
-    canvas.clipRect(Rect.fromLTWH(cx - 12, cy - 10, 12, 25));
-    canvas.drawPath(uPath, Paint()..color = const Color(0xFFE53935));
+    canvas.translate(cx, cy);
+    canvas.drawPicture(_magnetBadgePic);
     canvas.restore();
 
-    // Blue South Arm (Right)
-    canvas.save();
-    canvas.clipRect(Rect.fromLTWH(cx, cy - 10, 12, 25));
-    canvas.drawPath(uPath, Paint()..color = const Color(0xFF1E88E5));
-    canvas.restore();
-
-    // Silver Pole Tips
-    final tipPaint = Paint()..color = const Color(0xFFECEFF1);
-    canvas.drawRect(Rect.fromLTWH(cx - 10, cy - 9, 5, 4), tipPaint);
-    canvas.drawRect(Rect.fromLTWH(cx + 5, cy - 9, 5, 4), tipPaint);
-
-    // Magnetic Force Spark Arcs between tips
-    final arcPaint = Paint()
-      ..color = const Color(0xFF00E5FF)
-      ..strokeWidth = 1.5
-      ..style = PaintingStyle.stroke;
-    final arcPath = Path()
+    // Animated magnetic force spark arc between tips
+    _arcPath
+      ..reset()
       ..moveTo(cx - 7, cy - 11)
       ..quadraticBezierTo(
         cx,
@@ -475,7 +433,60 @@ class Collectible extends PositionComponent
         cx + 7,
         cy - 11,
       );
-    canvas.drawPath(arcPath, arcPaint);
+    canvas.drawPath(_arcPath, _arcPaint);
+  }
+
+  static ui.Picture _recordMagnetBadgePic() {
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    canvas.drawCircle(
+      Offset.zero,
+      22,
+      Paint()..color = const Color(0xFFAB47BC).withValues(alpha: 0.30),
+    );
+    const badgeRect = Rect.fromLTWH(-19, -19, 38, 38);
+    canvas.drawCircle(
+      Offset.zero,
+      19,
+      Paint()
+        ..shader = const RadialGradient(
+          colors: [Color(0xFF8E24AA), Color(0xFF4A148C)],
+        ).createShader(badgeRect),
+    );
+    canvas.drawCircle(
+      Offset.zero,
+      19,
+      Paint()
+        ..color = Colors.white.withValues(alpha: 0.8)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.8,
+    );
+
+    final uPath = Path()
+      ..moveTo(-10, -8)
+      ..lineTo(-10, 3)
+      ..cubicTo(-10, 13, 10, 13, 10, 3)
+      ..lineTo(10, -8)
+      ..lineTo(5, -8)
+      ..lineTo(5, 3)
+      ..cubicTo(5, 8, -5, 8, -5, 3)
+      ..lineTo(-5, -8)
+      ..close();
+
+    canvas.save();
+    canvas.clipRect(const Rect.fromLTWH(-12, -10, 12, 25));
+    canvas.drawPath(uPath, Paint()..color = const Color(0xFFE53935));
+    canvas.restore();
+
+    canvas.save();
+    canvas.clipRect(const Rect.fromLTWH(0, -10, 12, 25));
+    canvas.drawPath(uPath, Paint()..color = const Color(0xFF1E88E5));
+    canvas.restore();
+
+    final tipPaint = Paint()..color = const Color(0xFFECEFF1);
+    canvas.drawRect(const Rect.fromLTWH(-10, -9, 5, 4), tipPaint);
+    canvas.drawRect(const Rect.fromLTWH(5, -9, 5, 4), tipPaint);
+    return recorder.endRecording();
   }
 
   /// ⭐ GIANT MEGA STAR POWERUP: Vibrant Golden Star with expanding magenta aura
@@ -485,16 +496,21 @@ class Collectible extends PositionComponent
 
     // 1. Expanding Aura Glow
     final glowRadius = 20.0 + math.sin(_floatOffset * 4) * 3.0;
-    canvas.drawCircle(
-      Offset(cx, cy),
-      glowRadius,
-      Paint()..color = const Color(0xFFFF4081).withValues(alpha: 0.35),
-    );
+    _auraPaint.color = const Color(0x59FF4081);
+    canvas.drawCircle(Offset(cx, cy), glowRadius, _auraPaint);
 
-    // 2. Purple Badge
-    final badgeRect = Rect.fromCircle(center: Offset(cx, cy), radius: 19);
+    canvas.save();
+    canvas.translate(cx, cy);
+    canvas.drawPicture(_giantBadgePic);
+    canvas.restore();
+  }
+
+  static ui.Picture _recordGiantBadgePic() {
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    const badgeRect = Rect.fromLTWH(-19, -19, 38, 38);
     canvas.drawCircle(
-      Offset(cx, cy),
+      Offset.zero,
       19,
       Paint()
         ..shader = const RadialGradient(
@@ -502,7 +518,7 @@ class Collectible extends PositionComponent
         ).createShader(badgeRect),
     );
     canvas.drawCircle(
-      Offset(cx, cy),
+      Offset.zero,
       19,
       Paint()
         ..color = const Color(0xFFFFD700)
@@ -510,30 +526,29 @@ class Collectible extends PositionComponent
         ..strokeWidth = 2.0,
     );
 
-    // 3. Mega Golden 5-Pointed Star
     final starPath = Path();
     for (int i = 0; i < 5; i++) {
       final aOuter = (i * 72 - 90) * math.pi / 180;
       final aInner = ((i + 0.5) * 72 - 90) * math.pi / 180;
-      final rO = 12.0;
-      final rI = 5.2;
+      const rO = 12.0;
+      const rI = 5.2;
       if (i == 0) {
-        starPath.moveTo(cx + math.cos(aOuter) * rO, cy + math.sin(aOuter) * rO);
+        starPath.moveTo(math.cos(aOuter) * rO, math.sin(aOuter) * rO);
       } else {
-        starPath.lineTo(cx + math.cos(aOuter) * rO, cy + math.sin(aOuter) * rO);
+        starPath.lineTo(math.cos(aOuter) * rO, math.sin(aOuter) * rO);
       }
-      starPath.lineTo(cx + math.cos(aInner) * rI, cy + math.sin(aInner) * rI);
+      starPath.lineTo(math.cos(aInner) * rI, math.sin(aInner) * rI);
     }
     starPath.close();
 
-    final starGradient = const RadialGradient(
+    const starGradient = RadialGradient(
       colors: [Color(0xFFFFFF8D), Color(0xFFFFD700), Color(0xFFFFAB00)],
     );
     canvas.drawPath(
       starPath,
       Paint()
         ..shader = starGradient.createShader(
-          Rect.fromCircle(center: Offset(cx, cy), radius: 12),
+          const Rect.fromLTWH(-12, -12, 24, 24),
         ),
     );
     canvas.drawPath(
@@ -543,6 +558,7 @@ class Collectible extends PositionComponent
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.0,
     );
+    return recorder.endRecording();
   }
 
   void _renderDinoEgg(Canvas canvas) {
@@ -551,40 +567,50 @@ class Collectible extends PositionComponent
 
     // 1. Golden Life Pulse Aura
     final pulse = 0.85 + math.sin(_floatOffset * 5.0) * 0.15;
-    final auraRadius = 22.0 * pulse;
-    canvas.drawCircle(
-      Offset(cx, cy),
-      auraRadius,
-      Paint()..color = const Color(0xFFFFD700).withValues(alpha: 0.35 * pulse),
-    );
+    _auraPaint.color = const Color(0xFFFFD700).withValues(alpha: 0.35 * pulse);
+    canvas.drawCircle(Offset(cx, cy), 22.0 * pulse, _auraPaint);
 
-    // 2. Dinosaur Egg Shell Body (Ovoid Shape)
+    canvas.save();
+    canvas.translate(cx, cy);
+    canvas.drawPicture(_eggShellPic);
+    canvas.restore();
+
+    // 5. Sparkle Starlets Orbiting the Egg
+    for (int i = 0; i < 3; i++) {
+      final a = _floatOffset * 3.0 + (i * math.pi * 2 / 3);
+      final sx = cx + math.cos(a) * 17.0;
+      final sy = cy + math.sin(a) * 17.0;
+      canvas.drawCircle(Offset(sx, sy), 1.5, _sparkPaint);
+    }
+  }
+
+  static ui.Picture _recordEggShellPic() {
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
     final eggPath = Path()
-      ..moveTo(cx, cy - 18)
-      ..cubicTo(cx + 14, cy - 18, cx + 16, cy + 10, cx + 12, cy + 18)
-      ..cubicTo(cx + 8, cy + 22, cx - 8, cy + 22, cx - 12, cy + 18)
-      ..cubicTo(cx - 16, cy + 10, cx - 14, cy - 18, cx, cy - 18)
+      ..moveTo(0, -18)
+      ..cubicTo(14, -18, 16, 10, 12, 18)
+      ..cubicTo(8, 22, -8, 22, -12, 18)
+      ..cubicTo(-16, 10, -14, -18, 0, -18)
       ..close();
 
-    final eggGradient = RadialGradient(
-      center: const Alignment(-0.3, -0.4),
-      colors: const [
-        Color(0xFFFFF9C4), // Golden ivory shell
+    const eggGradient = RadialGradient(
+      center: Alignment(-0.3, -0.4),
+      colors: [
+        Color(0xFFFFF9C4),
         Color(0xFFFFE082),
-        Color(0xFFFFB300), // Amber gold base
+        Color(0xFFFFB300),
         Color(0xFFFF8F00),
       ],
-      stops: const [0.0, 0.35, 0.75, 1.0],
+      stops: [0.0, 0.35, 0.75, 1.0],
     );
     canvas.drawPath(
       eggPath,
       Paint()
         ..shader = eggGradient.createShader(
-          Rect.fromCenter(center: Offset(cx, cy), width: 32, height: 40),
+          const Rect.fromLTWH(-16, -20, 32, 40),
         ),
     );
-
-    // Golden Shell Rim Outline
     canvas.drawPath(
       eggPath,
       Paint()
@@ -593,7 +619,6 @@ class Collectible extends PositionComponent
         ..strokeWidth = 1.6,
     );
 
-    // 3. Prehistoric Turquoise & Emerald Spots
     final spotPaint1 = Paint()
       ..color = const Color(0xFF00E5FF).withValues(alpha: 0.75);
     final spotPaint2 = Paint()
@@ -602,28 +627,27 @@ class Collectible extends PositionComponent
       ..color = const Color(0xFFFF4081).withValues(alpha: 0.75);
 
     canvas.drawOval(
-      Rect.fromCenter(center: Offset(cx - 5, cy - 6), width: 6.5, height: 8),
+      const Rect.fromLTWH(-8.25, -10, 6.5, 8),
       spotPaint1,
     );
     canvas.drawOval(
-      Rect.fromCenter(center: Offset(cx + 6, cy + 4), width: 7.5, height: 9),
+      const Rect.fromLTWH(2.25, -0.5, 7.5, 9),
       spotPaint2,
     );
     canvas.drawOval(
-      Rect.fromCenter(center: Offset(cx - 4, cy + 10), width: 5.5, height: 6),
+      const Rect.fromLTWH(-6.75, 7, 5.5, 6),
       spotPaint3,
     );
     canvas.drawOval(
-      Rect.fromCenter(center: Offset(cx + 5, cy - 10), width: 4.5, height: 5.5),
+      const Rect.fromLTWH(2.75, -12.75, 4.5, 5.5),
       spotPaint2,
     );
 
-    // 4. Glowing Prehistoric Fossil Crack with Pulsing Energy
     final crackPath = Path()
-      ..moveTo(cx - 6, cy - 1)
-      ..lineTo(cx - 1, cy + 3)
-      ..lineTo(cx + 4, cy + 1)
-      ..lineTo(cx + 8, cy + 7);
+      ..moveTo(-6, -1)
+      ..lineTo(-1, 3)
+      ..lineTo(4, 1)
+      ..lineTo(8, 7);
     canvas.drawPath(
       crackPath,
       Paint()
@@ -632,13 +656,6 @@ class Collectible extends PositionComponent
         ..style = PaintingStyle.stroke
         ..strokeCap = StrokeCap.round,
     );
-
-    // 5. Sparkle Starlets Orbiting the Egg
-    for (int i = 0; i < 3; i++) {
-      final a = _floatOffset * 3.0 + (i * math.pi * 2 / 3);
-      final sx = cx + math.cos(a) * 17.0;
-      final sy = cy + math.sin(a) * 17.0;
-      canvas.drawCircle(Offset(sx, sy), 1.5, Paint()..color = Colors.white);
-    }
+    return recorder.endRecording();
   }
 }

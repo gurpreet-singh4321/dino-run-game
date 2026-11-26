@@ -9,6 +9,9 @@ import '../game/game_state.dart';
 /// 3. Velocity-based aerodynamic wind streaks.
 class ForegroundAtmosphere extends PositionComponent with HasGameReference<DinoGame> {
   double _scrollOffset = 0;
+  final Paint _streakPaint = Paint()
+    ..strokeWidth = 2.0
+    ..strokeCap = StrokeCap.round;
 
   ForegroundAtmosphere() {
     priority = 25; // Renders in front of gameplay plane, behind UI HUD
@@ -45,10 +48,7 @@ class ForegroundAtmosphere extends PositionComponent with HasGameReference<DinoG
     if (currentSpeed < 320) return;
 
     final intensity = ((currentSpeed - 320) / 130.0).clamp(0.0, 1.0);
-    final streakPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.22 * intensity)
-      ..strokeWidth = 2.0
-      ..strokeCap = StrokeCap.round;
+    _streakPaint.color = Colors.white.withValues(alpha: 0.22 * intensity);
 
     for (int i = 0; i < 8; i++) {
       final seed = i * 137.5;
@@ -57,7 +57,7 @@ class ForegroundAtmosphere extends PositionComponent with HasGameReference<DinoG
       final sy = (i < 4) ? (25.0 + (i * 22.0)) : (h - 90.0 + ((i - 4) * 20.0));
       final len = 65.0 + (i % 4) * 45.0;
 
-      canvas.drawLine(Offset(sx, sy), Offset(sx + len, sy), streakPaint);
+      canvas.drawLine(Offset(sx, sy), Offset(sx + len, sy), _streakPaint);
     }
   }
 }

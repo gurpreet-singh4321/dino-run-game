@@ -54,47 +54,86 @@ class Meteor extends PositionComponent with CollisionCallbacks, HasGameReference
 
   @override
   void render(Canvas canvas) {
-    // Draw trail
+    // Tapered glowing plasma wake along recent trail samples.
     for (int i = 0; i < trail.length; i++) {
-      final alpha = (i / trail.length) * 0.6;
+      final t = (i + 1) / trail.length;
       final trailPos = trail[i] - position;
       canvas.drawCircle(
         Offset(trailPos.x, trailPos.y),
-        size.x * 0.15 * (i / trail.length),
-        Paint()..color = GameColors.meteorFire.withValues(alpha: alpha),
+        size.x * 0.28 * t,
+        Paint()
+          ..color = Color.lerp(
+            GameColors.meteorFire,
+            const Color(0xFFFFF176),
+            t * 0.6,
+          )!.withValues(alpha: t * 0.48),
       );
     }
 
-    // Rotate the meteor
     final center = Offset(size.x / 2, size.y / 2);
+    final r = size.x * 0.42;
+
+    // Atmospheric incandescent halo.
+    canvas.drawCircle(
+      center,
+      r * 1.45,
+      Paint()
+        ..shader = RadialGradient(
+          colors: [
+            GameColors.meteorGlow.withValues(alpha: 0.45),
+            GameColors.meteorFire.withValues(alpha: 0.18),
+            Colors.transparent,
+          ],
+        ).createShader(Rect.fromCircle(center: center, radius: r * 1.45)),
+    );
+
     canvas.save();
     canvas.translate(center.dx, center.dy);
     canvas.rotate(_angle);
 
-    // Meteor body
-    canvas.drawCircle(
-      Offset.zero,
-      size.x * 0.4,
-      Paint()..color = GameColors.meteorBody,
+    // Jagged molten-cracked asteroid body.
+    final rock = Path();
+    for (var i = 0; i < 8; i++) {
+      final a = i * (math.pi * 2 / 8);
+      final rad = r * (i.isEven ? 1.04 : 0.85);
+      final pt = Offset(math.cos(a) * rad, math.sin(a) * rad);
+      if (i == 0) {
+        rock.moveTo(pt.dx, pt.dy);
+      } else {
+        rock.lineTo(pt.dx, pt.dy);
+      }
+    }
+    rock.close();
+    canvas.drawPath(
+      rock,
+      Paint()
+        ..shader = const RadialGradient(
+          center: Alignment(-0.3, -0.3),
+          colors: [Color(0xFF9C7A82), Color(0xFF4F3841), Color(0xFF26171C)],
+        ).createShader(Rect.fromCircle(center: Offset.zero, radius: r)),
     );
 
-    // Craters
+    // Glowing magma fissure veins + impact craters.
+    canvas.drawPath(
+      Path()
+        ..moveTo(-r * 0.45, -r * 0.1)
+        ..lineTo(0, r * 0.25)
+        ..lineTo(r * 0.45, -r * 0.2),
+      Paint()
+        ..color = const Color(0xFFFFAB40)
+        ..strokeWidth = 1.6
+        ..strokeCap = StrokeCap.round
+        ..style = PaintingStyle.stroke,
+    );
     canvas.drawCircle(
-      Offset(size.x * 0.1, -size.x * 0.05),
-      size.x * 0.1,
+      Offset(r * 0.24, -r * 0.15),
+      r * 0.22,
       Paint()..color = GameColors.meteorCrater,
     );
     canvas.drawCircle(
-      Offset(-size.x * 0.08, size.x * 0.12),
-      size.x * 0.07,
+      Offset(-r * 0.20, r * 0.26),
+      r * 0.16,
       Paint()..color = GameColors.meteorCrater,
-    );
-
-    // Fire glow
-    canvas.drawCircle(
-      Offset.zero,
-      size.x * 0.45,
-      Paint()..color = GameColors.meteorGlow.withValues(alpha: 0.3),
     );
 
     canvas.restore();

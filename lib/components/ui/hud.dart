@@ -1,5 +1,6 @@
 import '../../game/desert_journey.dart';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flame/components.dart';
 import '../../game/dino_game.dart';
@@ -14,6 +15,62 @@ class Hud extends PositionComponent with HasGameReference<DinoGame> {
   late final TextPaint _smallPaint;
   late final TextPaint _coinPaint;
   late final TextPaint _biomePaint;
+
+  int _lastScore = -1;
+  String _cachedScoreStr = '000000';
+  int _lastHiScore = -1;
+  String _cachedHiStr = 'HI 000000';
+  int _lastCoins = -1;
+  String _cachedCoinsStr = '0';
+
+  static final Paint _hudPaint = Paint();
+  static final Paint _heartShadowPaint = Paint()..color = Colors.black54;
+  static final Paint _journeyBgPaint = Paint()..color = const Color(0xDD25384A);
+  static final Paint _journeyBarPaint = Paint()
+    ..color = const Color(0xFFFFD367);
+  static final Path _unitHeartPath = Path()
+    ..moveTo(0, 1)
+    ..cubicTo(-2, -0.5, -1, -1.5, 0, -0.5)
+    ..cubicTo(1, -1.5, 2, -0.5, 0, 1);
+  static final ui.Picture _pausePic = _recordPausePic();
+  static final ui.Picture _activeCartTokenPic = _recordCartTokenPic(true);
+  static final ui.Picture _inactiveCartTokenPic = _recordCartTokenPic(false);
+
+  static ui.Picture _recordPausePic() {
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    final shadowPaint = Paint()..color = const Color(0x66000000);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        const Rect.fromLTWH(-8, -9.5, 6, 20),
+        const Radius.circular(2),
+      ),
+      shadowPaint,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        const Rect.fromLTWH(2, -9.5, 6, 20),
+        const Radius.circular(2),
+      ),
+      shadowPaint,
+    );
+    final barPaint = Paint()..color = Colors.white;
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        const Rect.fromLTWH(-9, -11, 6, 20),
+        const Radius.circular(2),
+      ),
+      barPaint,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        const Rect.fromLTWH(1, -11, 6, 20),
+        const Radius.circular(2),
+      ),
+      barPaint,
+    );
+    return recorder.endRecording();
+  }
 
   double _scorePopTimer = 0.0;
   double _controlArrival = 0;
@@ -161,7 +218,11 @@ class Hud extends PositionComponent with HasGameReference<DinoGame> {
     final rightX = game.size.x - 20.0;
 
     // 1. Plain Font Score & High Score (top-right, NO card background)
-    final scoreStr = score.toString().padLeft(6, '0');
+    if (score != _lastScore) {
+      _lastScore = score;
+      _cachedScoreStr = score.toString().padLeft(6, '0');
+    }
+    final scoreStr = _cachedScoreStr;
     final scorePos = Vector2(rightX, 14);
 
     if (_scorePopTimer > 0) {
@@ -191,9 +252,13 @@ class Hud extends PositionComponent with HasGameReference<DinoGame> {
       _scorePaint.render(canvas, scoreStr, scorePos, anchor: Anchor.topRight);
     }
 
+    if (highScore != _lastHiScore) {
+      _lastHiScore = highScore;
+      _cachedHiStr = 'HI ${highScore.toString().padLeft(6, '0')}';
+    }
     _smallPaint.render(
       canvas,
-      'HI ${highScore.toString().padLeft(6, '0')}',
+      _cachedHiStr,
       Vector2(rightX, 46),
       anchor: Anchor.topRight,
     );
@@ -220,17 +285,21 @@ class Hud extends PositionComponent with HasGameReference<DinoGame> {
     }
     CoinArt.draw(
       canvas,
-      Rect.fromCenter(center: coinCenter, width: 24, height: 24),
+      const Rect.fromLTWH(14, 15, 24, 24),
     );
     canvas.restore();
 
+    if (coins != _lastCoins) {
+      _lastCoins = coins;
+      _cachedCoinsStr = '$coins';
+    }
     canvas.save();
     if (coinScale != 1.0) {
       canvas.translate(55, 27);
       canvas.scale(coinScale, coinScale);
       canvas.translate(-55, -27);
     }
-    _coinPaint.render(canvas, '$coins', Vector2(45, 16));
+    _coinPaint.render(canvas, _cachedCoinsStr, Vector2(45, 16));
     canvas.restore();
 
     // 3. Lives (under coins)
@@ -238,7 +307,7 @@ class Hud extends PositionComponent with HasGameReference<DinoGame> {
     for (int i = 0; i < 3; i++) {
       final color = i < lives
           ? GameColors.uiRed
-          : Colors.grey.withValues(alpha: 0.4);
+          : const Color(0x669E9E9E);
       _drawHeart(canvas, Offset(26.0 + i * 22.0, 52.0), 8.0, color);
     }
 
@@ -269,7 +338,7 @@ class Hud extends PositionComponent with HasGameReference<DinoGame> {
       final rect = Rect.fromLTWH(cx - 140, 80, 280, 23);
       canvas.drawRRect(
         RRect.fromRectAndRadius(rect, const Radius.circular(10)),
-        Paint()..color = const Color(0xDD25384A),
+        _journeyBgPaint,
       );
       _smallPaint.render(
         canvas,
@@ -287,7 +356,7 @@ class Hud extends PositionComponent with HasGameReference<DinoGame> {
           ),
           const Radius.circular(2),
         ),
-        Paint()..color = const Color(0xFFFFD367),
+        _journeyBarPaint,
       );
     }
     // 5. Pause Button (top-center, plain bars)
@@ -301,69 +370,48 @@ class Hud extends PositionComponent with HasGameReference<DinoGame> {
         : math.sin(_controlArrival * math.pi * 3) * (1 - _controlArrival);
     canvas.save();
     canvas.translate(cx, cy);
-    canvas.rotate(wave * .08);
-    canvas.scale(1 + wave * .06);
-    canvas.translate(-cx, -cy);
-    final barShadow = Paint()
-      ..color = Colors.black45
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
-    canvas.drawRect(Rect.fromLTWH(cx - 8, cy - 10, 6, 20), barShadow);
-    canvas.drawRect(Rect.fromLTWH(cx + 2, cy - 10, 6, 20), barShadow);
-
-    final barPaint = Paint()..color = Colors.white;
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(cx - 9, cy - 11, 6, 20),
-        const Radius.circular(2),
-      ),
-      barPaint,
-    );
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(cx + 1, cy - 11, 6, 20),
-        const Radius.circular(2),
-      ),
-      barPaint,
-    );
+    if (wave != 0.0) {
+      canvas.rotate(wave * .08);
+      canvas.scale(1 + wave * .06);
+    }
+    canvas.drawPicture(_pausePic);
     canvas.restore();
   }
 
   void _drawHeart(Canvas canvas, Offset center, double size, Color color) {
-    final path = Path();
-    path.moveTo(center.dx, center.dy + size);
-    path.cubicTo(
-      center.dx - size * 2,
-      center.dy - size * 0.5,
-      center.dx - size,
-      center.dy - size * 1.5,
-      center.dx,
-      center.dy - size * 0.5,
-    );
-    path.cubicTo(
-      center.dx + size,
-      center.dy - size * 1.5,
-      center.dx + size * 2,
-      center.dy - size * 0.5,
-      center.dx,
-      center.dy + size,
-    );
-    canvas.drawPath(
-      path.shift(const Offset(1, 1)),
-      Paint()..color = Colors.black54,
-    );
-    canvas.drawPath(path, Paint()..color = color);
+    _hudPaint.color = color;
+    canvas.save();
+    canvas.translate(center.dx + 1, center.dy + 1);
+    canvas.scale(size, size);
+    canvas.drawPath(_unitHeartPath, _heartShadowPaint);
+    canvas.restore();
+
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+    canvas.scale(size, size);
+    canvas.drawPath(_unitHeartPath, _hudPaint);
+    canvas.restore();
   }
 
   void _drawCartToken(Canvas canvas, Offset center, {required bool active}) {
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+    canvas.drawPicture(active ? _activeCartTokenPic : _inactiveCartTokenPic);
+    canvas.restore();
+  }
+
+  static ui.Picture _recordCartTokenPic(bool active) {
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
     const r = 9.0;
     canvas.drawCircle(
-      center.translate(0.8, 1.2),
+      const Offset(0.8, 1.2),
       r,
       Paint()..color = Colors.black54,
     );
-    final circleRect = Rect.fromCircle(center: center, radius: r);
+    const circleRect = Rect.fromLTWH(-r, -r, r * 2, r * 2);
     canvas.drawCircle(
-      center,
+      Offset.zero,
       r,
       Paint()
         ..shader = LinearGradient(
@@ -375,7 +423,7 @@ class Hud extends PositionComponent with HasGameReference<DinoGame> {
         ).createShader(circleRect),
     );
     canvas.drawCircle(
-      center,
+      Offset.zero,
       r - 0.6,
       Paint()
         ..style = PaintingStyle.stroke
@@ -383,28 +431,27 @@ class Hud extends PositionComponent with HasGameReference<DinoGame> {
         ..color = active ? const Color(0xFF6E4312) : const Color(0x995B6B7A),
     );
 
-    // Miniature side-profile rover/cart inside the medallion.
     final ink = Paint()
       ..color = active ? const Color(0xFF1F2B3D) : const Color(0x889BA9B6);
     final body = Path()
-      ..moveTo(center.dx - 5.4, center.dy + 1.4)
-      ..lineTo(center.dx - 5.2, center.dy - 1.4)
-      ..lineTo(center.dx - 2.6, center.dy - 3.6)
-      ..lineTo(center.dx + 2.2, center.dy - 3.4)
-      ..lineTo(center.dx + 4.8, center.dy - 1.1)
-      ..lineTo(center.dx + 5.6, center.dy + 1.4)
+      ..moveTo(-5.4, 1.4)
+      ..lineTo(-5.2, -1.4)
+      ..lineTo(-2.6, -3.6)
+      ..lineTo(2.2, -3.4)
+      ..lineTo(4.8, -1.1)
+      ..lineTo(5.6, 1.4)
       ..close();
     canvas.drawPath(body, ink);
     canvas.drawRRect(
       RRect.fromRectAndRadius(
-        Rect.fromLTWH(center.dx - 1.8, center.dy - 2.7, 3.0, 1.6),
+        const Rect.fromLTWH(-1.8, -2.7, 3.0, 1.6),
         const Radius.circular(0.8),
       ),
       Paint()
         ..color = active ? const Color(0xFFFFE599) : const Color(0x55232E38),
     );
-    for (final wx in [center.dx - 3.2, center.dx + 3.2]) {
-      final wPos = Offset(wx, center.dy + 2.1);
+    for (final wx in const [-3.2, 3.2]) {
+      final wPos = Offset(wx, 2.1);
       canvas.drawCircle(wPos, 2.0, ink);
       canvas.drawCircle(
         wPos,
@@ -413,5 +460,6 @@ class Hud extends PositionComponent with HasGameReference<DinoGame> {
           ..color = active ? const Color(0xFFFFE082) : const Color(0x66C7D2DC),
       );
     }
+    return recorder.endRecording();
   }
 }

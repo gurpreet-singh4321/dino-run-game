@@ -30,8 +30,35 @@ class NewDinoSkin extends CharacterSkin {
     scale: .88,
   );
 
+  static Image? _dressedTorsoImage;
+  static final Picture _starterBandanaPic = _recordStarterBandana();
+  static final Picture _headCastShadowPic = _recordHeadCastShadow();
+  static final Picture _armCastShadowPic = _recordArmCastShadow();
+
   static Future<void> preload() async {
     await Flame.images.load('new_dino_rig.png');
+    if (_dressedTorsoImage == null) {
+      final recorder = PictureRecorder();
+      final canvas = Canvas(recorder);
+      canvas.save();
+      canvas.scale(2.0, 2.0);
+      canvas.translate(-35, -53);
+      final rig = Flame.images.fromCache('new_dino_rig.png');
+      canvas.drawImageRect(
+        rig,
+        _regions[1],
+        const Rect.fromLTWH(35, 53, 45, 44),
+        Paint()..filterQuality = FilterQuality.medium,
+      );
+      _drawDefaultCostume(canvas, 0, 0);
+      canvas.restore();
+      final picture = recorder.endRecording();
+      try {
+        _dressedTorsoImage = await picture.toImage(90, 88);
+      } finally {
+        picture.dispose();
+      }
+    }
   }
 
   @override
@@ -277,10 +304,25 @@ class NewDinoSkin extends CharacterSkin {
       45,
       44 - motion.landing + motion.launch + motion.stretch * 1.4,
     );
-    canvas.saveLayer(torsoRect.inflate(2), Paint());
-    _part(canvas, 1, torsoRect);
-    _drawDefaultCostume(canvas, torsoRect);
-    canvas.restore();
+    final dressed = _dressedTorsoImage;
+    if (dressed != null) {
+      _paint.colorFilter = null;
+      canvas.drawImageRect(
+        dressed,
+        const Rect.fromLTWH(0, 0, 90, 88),
+        torsoRect,
+        _paint,
+      );
+    } else {
+      canvas.saveLayer(torsoRect.inflate(2), _workPaint);
+      _part(canvas, 1, torsoRect);
+      _drawDefaultCostume(
+        canvas,
+        motion.bodyY,
+        -motion.landing + motion.launch + motion.stretch * 1.4,
+      );
+      canvas.restore();
+    }
     _drawStarterBandana(canvas);
     _drawHeadCastShadow(canvas);
     canvas.save();
@@ -332,12 +374,12 @@ class NewDinoSkin extends CharacterSkin {
     canvas.restore();
   }
 
+  static final Paint _workPaint = Paint();
+
   /// Renders Dino's built-in 3D explorer vest, stitched utility belt, and
   /// gold compass buckle masked via `srcATop` onto the torso silhouette so
   /// the costume wraps 100% flush around every curve with zero edge gap.
-  void _drawDefaultCostume(Canvas canvas, Rect torsoRect) {
-    final dy = motion.bodyY;
-    final squash = -motion.landing + motion.launch + motion.stretch * 1.4;
+  static void _drawDefaultCostume(Canvas canvas, double dy, double squash) {
     final p = Paint()..blendMode = BlendMode.srcATop;
 
     // Subtle tail-junction ambient occlusion on the lower left hip.
@@ -526,10 +568,17 @@ class NewDinoSkin extends CharacterSkin {
 
   /// Starter Crimson Trail Bandana at the collar unless a Neck cosmetic overrides it.
   void _drawStarterBandana(Canvas canvas) {
-    final hasNeckCosmetic = cosmetics.any((c) => c.slot == CosmeticSlot.neck);
-    if (hasNeckCosmetic) return;
-    final dy = motion.bodyY;
-    final ny = 58.0 + dy;
+    if (cosmetics.any((c) => c.slot == CosmeticSlot.neck)) return;
+    canvas.save();
+    canvas.translate(0, motion.bodyY);
+    canvas.drawPicture(_starterBandanaPic);
+    canvas.restore();
+  }
+
+  static Picture _recordStarterBandana() {
+    final recorder = PictureRecorder();
+    final canvas = Canvas(recorder);
+    const ny = 58.0;
     final tail = Path()
       ..moveTo(46, ny + 1)
       ..lineTo(31, ny - 3.5)
@@ -541,8 +590,8 @@ class NewDinoSkin extends CharacterSkin {
       tail,
       Paint()
         ..shader = Gradient.linear(
-          Offset(31, ny - 3),
-          Offset(48, ny + 6),
+          const Offset(31, ny - 3),
+          const Offset(48, ny + 6),
           const [Color(0xFFEC594A), Color(0xFFAE2A2D)],
         ),
     );
@@ -554,16 +603,14 @@ class NewDinoSkin extends CharacterSkin {
       ..close();
     canvas.drawPath(
       collar.shift(const Offset(0, 1.4)),
-      Paint()
-        ..color = const Color(0x3D451208)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.0),
+      Paint()..color = const Color(0x2E451208),
     );
     canvas.drawPath(
       collar,
       Paint()
         ..shader = Gradient.linear(
-          Offset(46, ny),
-          Offset(72, ny + 7),
+          const Offset(46, ny),
+          const Offset(72, ny + 7),
           const [Color(0xFFFF725E), Color(0xFFDD3F34), Color(0xFF9F2323)],
           const [0, .55, 1],
         ),
@@ -577,26 +624,57 @@ class NewDinoSkin extends CharacterSkin {
       bib,
       Paint()
         ..shader = Gradient.linear(
-          Offset(56, ny + 4),
-          Offset(67, ny + 14),
+          const Offset(56, ny + 4),
+          const Offset(67, ny + 14),
           const [Color(0xFFF35B4C), Color(0xFFB32C2C)],
         ),
     );
+    canvas.drawPath(
+      Path()
+        ..moveTo(49, ny + 1)
+        ..quadraticBezierTo(60, ny + 5.2, 70, ny + .8),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.0
+        ..strokeCap = StrokeCap.round
+        ..color = const Color(0x88FFB8AE),
+    );
+    canvas.drawOval(
+      Rect.fromCenter(center: const Offset(62.2, ny + 5.2), width: 6.2, height: 4.8),
+      Paint()
+        ..shader = Gradient.radial(
+          const Offset(61.0, ny + 4.2),
+          3.8,
+          const [Color(0xFFFF8876), Color(0xFFD13430), Color(0xFF8C1C1C)],
+          const [0, .55, 1],
+        ),
+    );
+    return recorder.endRecording();
   }
 
   /// Dynamic 3D ambient shadow cast by the head onto Dino's chest and collar.
   void _drawHeadCastShadow(Canvas canvas) {
     final cy = 62.5 + motion.headY * .65 + motion.bodyY * .35;
+    canvas.save();
+    canvas.translate(60, cy);
+    canvas.drawPicture(_headCastShadowPic);
+    canvas.restore();
+  }
+
+  static Picture _recordHeadCastShadow() {
+    final recorder = PictureRecorder();
+    final canvas = Canvas(recorder);
     canvas.drawOval(
-      Rect.fromCenter(center: Offset(60, cy), width: 32, height: 11),
+      Rect.fromCenter(center: Offset.zero, width: 32, height: 11),
       Paint()
         ..shader = Gradient.radial(
-          Offset(60, cy - 1),
+          const Offset(0, -1),
           17,
           const [Color(0x524A1E04), Color(0x224A1E04), Color(0x004A1E04)],
           const [0, .55, 1],
         ),
     );
+    return recorder.endRecording();
   }
 
   /// Soft 3D cast shadow beneath the near arm onto Dino's torso/vest.
@@ -606,6 +684,13 @@ class NewDinoSkin extends CharacterSkin {
     canvas.save();
     canvas.translate(50, 74 + motion.bodyY);
     canvas.rotate(swing * .42 * motion.run);
+    canvas.drawPicture(_armCastShadowPic);
+    canvas.restore();
+  }
+
+  static Picture _recordArmCastShadow() {
+    final recorder = PictureRecorder();
+    final canvas = Canvas(recorder);
     canvas.drawOval(
       const Rect.fromLTWH(-4, -1, 13, 21),
       Paint()
@@ -615,7 +700,7 @@ class NewDinoSkin extends CharacterSkin {
           const [Color(0x38502306), Color(0x00502306)],
         ),
     );
-    canvas.restore();
+    return recorder.endRecording();
   }
 
   void _expression(Canvas canvas) {

@@ -31,6 +31,13 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
 
   double _scrollOffset = 0;
   final List<GroundGap> _gaps = [];
+  final List<GroundGap> _sortedGapsScratch = [];
+  final Path _groundPath = Path();
+  final Paint _bgPaint = Paint();
+  String? _cachedBgKey;
+  final Paint _highlightPaint = Paint()..strokeWidth = 2.5;
+  final Paint _pebblePaint = Paint();
+  final Paint _stripPaint = Paint();
   double _time = 0;
 
   // Space mode: ground slides down
@@ -231,30 +238,42 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
     final bottomColor = game.biomeManager.interpolatedGroundBottom;
     // Condition 2: Ensure ground covers the full bottom region on all screen sizes
     final effectiveGroundHeight = math.max(groundHeight, game.size.y - y);
-
-    // Draw ground segments (clipping gaps)
-    final groundPath = Path();
-    double currentX = 0;
-
-    final sortedGaps = List<GroundGap>.from(_gaps)
-      ..sort((a, b) => a.x.compareTo(b.x));
-
-    for (final gap in sortedGaps) {
-      if (gap.x > currentX) {
-        groundPath.addRect(
-          Rect.fromLTWH(currentX, y, gap.x - currentX, effectiveGroundHeight),
-        );
-      }
-      currentX = math.max(currentX, gap.x + gap.width);
-    }
-    if (currentX < w) {
-      groundPath.addRect(
-        Rect.fromLTWH(currentX, y, w - currentX, effectiveGroundHeight),
-      );
-    }
+    final rect = Rect.fromLTWH(0, y, w, effectiveGroundHeight);
 
     canvas.save();
-    canvas.clipPath(groundPath);
+    if (_gaps.isEmpty) {
+      _sortedGapsScratch.clear();
+      canvas.clipRect(rect);
+    } else {
+      // Draw ground segments (clipping gaps)
+      _groundPath.reset();
+      double currentX = 0;
+
+      _sortedGapsScratch
+        ..clear()
+        ..addAll(_gaps)
+        ..sort((a, b) => a.x.compareTo(b.x));
+
+      for (final gap in _sortedGapsScratch) {
+        if (gap.x > currentX) {
+          _groundPath.addRect(
+            Rect.fromLTWH(
+              currentX,
+              y,
+              gap.x - currentX,
+              effectiveGroundHeight,
+            ),
+          );
+        }
+        currentX = math.max(currentX, gap.x + gap.width);
+      }
+      if (currentX < w) {
+        _groundPath.addRect(
+          Rect.fromLTWH(currentX, y, w - currentX, effectiveGroundHeight),
+        );
+      }
+      canvas.clipPath(_groundPath);
+    }
 
     final currentBiome = game.biomeManager.effectiveBiome.name;
     final detailAlpha =
@@ -263,84 +282,87 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
                 : 1.0)
             .clamp(0.0, 1.0);
 
-    // Ground fill gradient
-    final rect = Rect.fromLTWH(0, y, w, effectiveGroundHeight);
-    final Gradient gradient;
-    if (currentBiome == 'DESERT') {
-      gradient = const LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        stops: [0.0, 0.16, 0.42, 0.72, 1.0],
-        colors: [
-          Color(0xFFFFDB94), // Sunlit sand cap
-          Color(0xFFD98C51), // Weathered sandstone
-          Color(0xFFBE6844), // Terracotta strata
-          Color(0xFF934C3C), // Cool rock shadows
-          Color(0xFF633A36), // Deep canyon bedrock
-        ],
-      );
-    } else if (currentBiome == 'COSMOS') {
-      gradient = const LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        stops: [0.0, 0.14, 0.42, 0.75, 1.0],
-        colors: [
-          Color(0xFF2C1A57), // Surface twilight purple-indigo
-          Color(0xFF1E113E), // Rich obsidian lunar crust
-          Color(0xFF140B2C), // Deep space bedrock
-          Color(0xFF0C061D), // Subterranean cosmic rock
-          Color(0xFF060310), // Void abyss
-        ],
-      );
-    } else if (currentBiome == 'FOREST') {
-      gradient = const LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        stops: [0.0, 0.12, 0.36, 0.68, 1.0],
-        colors: [
-          Color(0xFF9CCC65), // Vibrant sunlit lime-emerald moss
-          Color(0xFF689F38), // Lush green forest turf
-          Color(0xFF3E6B20), // Rich fertile forest humus soil
-          Color(0xFF264015), // Dark nutrient-dense peat
-          Color(0xFF122008), // Deep ancient root-rock bedrock
-        ],
-      );
-    } else if (currentBiome == 'ICE') {
-      gradient = const LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        stops: [0.0, 0.12, 0.35, 0.68, 1.0],
-        colors: [
-          Color(
-            0xFFFFFFFF,
-          ), // Pure crystalline diamond ice & fresh powder snow crest
-          Color(0xFFB2EBF2), // Translucent sunlit frost
-          Color(0xFF4DD0E1), // Vibrant cyan glacial ice layer
-          Color(0xFF00838F), // Deep arctic sapphire permafrost
-          Color(0xFF00363A), // Subterranean glacial bedrock abyss
-        ],
-      );
-    } else if (currentBiome == 'VOLCANO') {
-      gradient = const LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        stops: [0.0, 0.14, 0.38, 0.70, 1.0],
-        colors: [
-          Color(0xFF37474F), // Charred obsidian crust with glowing heat cracks
-          Color(0xFF263238), // Smoldering basalt rock layer
-          Color(0xFF1E1210), // Dark volcanic stone with embedded embers
-          Color(0xFF3E1107), // Subterranean magma-heated bedrock
-          Color(0xFF180402), // Deep volcanic magma chamber floor
-        ],
-      );
-    } else {
-      gradient = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [topColor, bottomColor],
-      );
+    // Ground fill gradient (cached when biome/colors/bounds unchanged)
+    final bgKey =
+        '$currentBiome|${topColor.toARGB32()}|${bottomColor.toARGB32()}|$y|$effectiveGroundHeight|$w';
+    if (_cachedBgKey != bgKey) {
+      _cachedBgKey = bgKey;
+      final Gradient gradient;
+      if (currentBiome == 'DESERT') {
+        gradient = const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          stops: [0.0, 0.16, 0.42, 0.72, 1.0],
+          colors: [
+            Color(0xFFFFDB94), // Sunlit sand cap
+            Color(0xFFD98C51), // Weathered sandstone
+            Color(0xFFBE6844), // Terracotta strata
+            Color(0xFF934C3C), // Cool rock shadows
+            Color(0xFF633A36), // Deep canyon bedrock
+          ],
+        );
+      } else if (currentBiome == 'COSMOS') {
+        gradient = const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          stops: [0.0, 0.14, 0.42, 0.75, 1.0],
+          colors: [
+            Color(0xFF2C1A57), // Surface twilight purple-indigo
+            Color(0xFF1E113E), // Rich obsidian lunar crust
+            Color(0xFF140B2C), // Deep space bedrock
+            Color(0xFF0C061D), // Subterranean cosmic rock
+            Color(0xFF060310), // Void abyss
+          ],
+        );
+      } else if (currentBiome == 'FOREST') {
+        gradient = const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          stops: [0.0, 0.12, 0.36, 0.68, 1.0],
+          colors: [
+            Color(0xFF9CCC65), // Vibrant sunlit lime-emerald moss
+            Color(0xFF689F38), // Lush green forest turf
+            Color(0xFF3E6B20), // Rich fertile forest humus soil
+            Color(0xFF264015), // Dark nutrient-dense peat
+            Color(0xFF122008), // Deep ancient root-rock bedrock
+          ],
+        );
+      } else if (currentBiome == 'ICE') {
+        gradient = const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          stops: [0.0, 0.12, 0.35, 0.68, 1.0],
+          colors: [
+            Color(0xFFFFFFFF), // Crystalline diamond ice crest
+            Color(0xFFB2EBF2), // Translucent sunlit frost
+            Color(0xFF4DD0E1), // Vibrant cyan glacial ice layer
+            Color(0xFF00838F), // Deep arctic sapphire permafrost
+            Color(0xFF00363A), // Subterranean glacial bedrock abyss
+          ],
+        );
+      } else if (currentBiome == 'VOLCANO') {
+        gradient = const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          stops: [0.0, 0.14, 0.38, 0.70, 1.0],
+          colors: [
+            Color(0xFF37474F), // Charred obsidian crust
+            Color(0xFF263238), // Smoldering basalt rock layer
+            Color(0xFF1E1210), // Dark volcanic stone
+            Color(0xFF3E1107), // Subterranean magma-heated bedrock
+            Color(0xFF180402), // Deep volcanic magma chamber floor
+          ],
+        );
+      } else {
+        gradient = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [topColor, bottomColor],
+        );
+      }
+      _bgPaint.shader = gradient.createShader(rect);
     }
-    canvas.drawRect(rect, Paint()..shader = gradient.createShader(rect));
+    canvas.drawRect(rect, _bgPaint);
 
     // Blit cached ground texture tile strips (seamlessly scaled to effectiveGroundHeight)
     _renderGroundTiles(canvas, w, y, effectiveGroundHeight, detailAlpha);
@@ -357,15 +379,8 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
                           : (currentBiome == 'VOLCANO'
                                 ? const Color(0xFFFF6D00)
                                 : topColor))));
-    canvas.drawLine(
-      Offset(0, y),
-      Offset(w, y),
-      Paint()
-        ..color = topHighlightColor.withValues(alpha: 0.9)
-        ..strokeWidth = 2.5,
-    );
-
-    canvas.clipRect(Rect.fromLTWH(0, y, w, effectiveGroundHeight));
+    _highlightPaint.color = topHighlightColor.withValues(alpha: 0.9);
+    canvas.drawLine(Offset(0, y), Offset(w, y), _highlightPaint);
 
     // Fallback small pebbles (deterministic scrolling positions)
     if (currentBiome != 'DESERT' &&
@@ -375,19 +390,19 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
         currentBiome != 'FOREST' &&
         currentBiome != 'ICE' &&
         currentBiome != 'VOLCANO') {
-      final pebblePaint = Paint()..color = bottomColor.withValues(alpha: 0.3);
+      _pebblePaint.color = bottomColor.withValues(alpha: 0.3);
       for (int i = 0; i < 12; i++) {
         final seedX = (i * 127.0);
         final px = (seedX - _scrollOffset) % (w + 40.0) - 20.0;
         final py = y + 14 + (i * 3.7) % (effectiveGroundHeight - 24);
-        canvas.drawCircle(Offset(px, py), 2.0, pebblePaint);
+        canvas.drawCircle(Offset(px, py), 2.0, _pebblePaint);
       }
     }
 
     canvas.restore();
 
     // Render Lava Gaps & True Bottom-Up Roaring Fire Pit over each gap
-    for (final gap in sortedGaps) {
+    for (final gap in _sortedGapsScratch) {
       if (gap.x > w || gap.x + gap.width < -50) continue;
       _renderLavaGeyser(canvas, gap, y, w);
     }
@@ -457,7 +472,7 @@ class Ground extends PositionComponent with HasGameReference<DinoGame> {
     final pic = _biomeTilePictures[biome] ?? _biomeTilePictures['DESERT'];
 
     final double offsetX = (-_scrollOffset) % tileWidth;
-    final paint = Paint()..color = Color.fromRGBO(255, 255, 255, alpha);
+    final paint = _stripPaint..color = Color.fromRGBO(255, 255, 255, alpha);
 
     double currentX = offsetX;
     if (currentX > 0) currentX -= tileWidth;

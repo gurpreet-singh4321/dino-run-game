@@ -40,6 +40,47 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
   ui.Image? _cosmosBgImage;
   ui.Image? _orbitBgImage;
 
+  final Paint _skyPaint = Paint();
+  String? _cachedSkyKey;
+  final Paint _tilePaint = Paint()..filterQuality = FilterQuality.low;
+  final Paint _workPaint = Paint();
+  final Paint _strokeWorkPaint = Paint()..style = PaintingStyle.stroke;
+  final Paint _rainNearPaint = Paint()
+    ..color = const Color(0xAAFFFFFF)
+    ..strokeWidth = 2.0
+    ..strokeCap = StrokeCap.round;
+  final Paint _rainFarPaint = Paint()
+    ..color = const Color(0x44FFFFFF)
+    ..strokeWidth = 1.2
+    ..strokeCap = StrokeCap.round;
+  final Paint _snowPaint = Paint()
+    ..color = Colors.white.withValues(alpha: 0.85);
+  final Paint _ashOrangePaint = Paint()
+    ..color = const Color(0xFFFF5722).withValues(alpha: 0.7);
+  final Paint _ashYellowPaint = Paint()
+    ..color = const Color(0xFFFFEB3B).withValues(alpha: 0.8);
+  final Paint _sporeGlowPaint = Paint()
+    ..color = const Color(0xFFC8E6C9).withValues(alpha: 0.16);
+  final Paint _sporeCorePaint = Paint()
+    ..color = const Color(0xFFC8E6C9).withValues(alpha: 0.50);
+  final Paint _starSpikePaint = Paint()
+    ..strokeWidth = 1.2
+    ..strokeCap = StrokeCap.round;
+  final Paint _speedLinePaint = Paint()
+    ..color = Colors.white.withValues(alpha: 0.35)
+    ..strokeWidth = 1.5
+    ..strokeCap = StrokeCap.round;
+  final Paint _speedGlowPaint = Paint()
+    ..color = const Color(0xFF80D8FF).withValues(alpha: 0.20)
+    ..strokeWidth = 3.0
+    ..strokeCap = StrokeCap.round;
+  final Paint _heatWavePaint = Paint()
+    ..color = const Color(0x18FFE082)
+    ..strokeWidth = 1.8
+    ..style = ui.PaintingStyle.stroke;
+  final Path _heatWavePath = Path();
+  final Path _lightningBoltPath = Path();
+
   Future<ui.Image?> _loadImageSafely(List<String> paths) async {
     for (final path in paths) {
       try {
@@ -492,20 +533,30 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     }
 
     // Normal or Launch Space transition
-    final Gradient gradient;
+    final Color topColor;
+    final Color bottomColor;
     if (sp > 0) {
-      final topColor = Color.lerp(skyTop, const Color(0xFF050510), sp)!;
-      final bottomColor = Color.lerp(skyBottom, const Color(0xFF0A0A25), sp)!;
-      gradient = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [topColor, bottomColor],
-      );
+      topColor = Color.lerp(skyTop, const Color(0xFF050510), sp)!;
+      bottomColor = Color.lerp(skyBottom, const Color(0xFF0A0A25), sp)!;
     } else {
-      gradient = _getGroundGradient(currentBiome, skyTop, skyBottom);
+      topColor = skyTop;
+      bottomColor = skyBottom;
+    }
+    final skyKey =
+        '${sp > 0 ? "S" : currentBiome}|${topColor.toARGB32()}|${bottomColor.toARGB32()}|${rect.width}|${rect.height}';
+    if (_cachedSkyKey != skyKey) {
+      _cachedSkyKey = skyKey;
+      final gradient = sp > 0
+          ? LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [topColor, bottomColor],
+            )
+          : _getGroundGradient(currentBiome, topColor, bottomColor);
+      _skyPaint.shader = gradient.createShader(rect);
     }
 
-    canvas.drawRect(rect, Paint()..shader = gradient.createShader(rect));
+    canvas.drawRect(rect, _skyPaint);
 
     final biomeAlpha = (1.0 - sp).clamp(0.0, 1.0); // fade biome elements out
 
@@ -618,19 +669,9 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
           ).createShader(stormCeiling),
       );
 
-      final rainPaintNear = Paint()
-        ..color = const Color(0xAAFFFFFF)
-        ..strokeWidth = 2.0
-        ..strokeCap = StrokeCap.round;
-
-      final rainPaintFar = Paint()
-        ..color = const Color(0x44FFFFFF)
-        ..strokeWidth = 1.2
-        ..strokeCap = StrokeCap.round;
-
       for (int i = 0; i < _rainDrops.length; i++) {
         final drop = _rainDrops[i];
-        final p = (i % 2 == 0) ? rainPaintNear : rainPaintFar;
+        final p = (i % 2 == 0) ? _rainNearPaint : _rainFarPaint;
         canvas.drawLine(
           Offset(drop.x, drop.y),
           Offset(drop.x - drop.length * 0.35, drop.y + drop.length),
@@ -639,73 +680,62 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       }
 
       if (_lightningFlashAlpha > 0.05) {
-        canvas.drawRect(
-          rect,
-          Paint()
-            ..color = const Color(
-              0xFFE0F7FA,
-            ).withValues(alpha: _lightningFlashAlpha * 0.35),
-        );
+        _workPaint.color = const Color(
+          0xFFE0F7FA,
+        ).withValues(alpha: _lightningFlashAlpha * 0.35);
+        canvas.drawRect(rect, _workPaint);
 
         if (_lightningBoltPoints.length > 1) {
-          final boltPath = Path()
+          _lightningBoltPath
+            ..reset()
             ..moveTo(_lightningBoltPoints[0].dx, _lightningBoltPoints[0].dy);
           for (int i = 1; i < _lightningBoltPoints.length; i++) {
-            boltPath.lineTo(
+            _lightningBoltPath.lineTo(
               _lightningBoltPoints[i].dx,
               _lightningBoltPoints[i].dy,
             );
           }
 
-          final boltGlow = Paint()
+          _strokeWorkPaint
             ..color = const Color(
               0xFF4DEEEA,
-            ).withValues(alpha: _lightningFlashAlpha)
-            ..strokeWidth = 6.0
-            ..style = ui.PaintingStyle.stroke
-            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
-          canvas.drawPath(boltPath, boltGlow);
+            ).withValues(alpha: _lightningFlashAlpha * 0.45)
+            ..strokeWidth = 8.0;
+          canvas.drawPath(_lightningBoltPath, _strokeWorkPaint);
 
-          final boltCore = Paint()
+          _strokeWorkPaint
             ..color = Colors.white.withValues(alpha: _lightningFlashAlpha)
-            ..strokeWidth = 2.5
-            ..style = ui.PaintingStyle.stroke;
-          canvas.drawPath(boltPath, boltCore);
+            ..strokeWidth = 2.5;
+          canvas.drawPath(_lightningBoltPath, _strokeWorkPaint);
         }
       }
     }
 
     // Snowflakes for ICE Age
     if (currentBiome == 'ICE') {
-      final sfPaint = Paint()..color = Colors.white.withValues(alpha: 0.85);
       for (final sf in _snowFlakes) {
-        canvas.drawCircle(Offset(sf.x, sf.y), sf.radius, sfPaint);
+        canvas.drawCircle(Offset(sf.x, sf.y), sf.radius, _snowPaint);
       }
     }
 
     // Volcanic ash embers for VOLCANO
     if (currentBiome == 'VOLCANO') {
-      final ashOrange = Paint()
-        ..color = const Color(0xFFFF5722).withValues(alpha: 0.7);
-      final ashYellow = Paint()
-        ..color = const Color(0xFFFFEB3B).withValues(alpha: 0.8);
       for (int i = 0; i < _ashParticles.length; i++) {
         final ash = _ashParticles[i];
         canvas.drawCircle(
           Offset(ash.x, ash.y),
           ash.radius,
-          (i % 2 == 0) ? ashOrange : ashYellow,
+          (i % 2 == 0) ? _ashOrangePaint : _ashYellowPaint,
         );
       }
     }
 
-    // Forest pollen spores for FOREST
+    // Forest pollen spores for FOREST (crisp 2-stop halo, zero blur shader overhead)
     if (currentBiome == 'FOREST') {
-      final sporePaint = Paint()
-        ..color = const Color(0xFFC8E6C9).withValues(alpha: 0.5)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
       for (final spore in _forestSpores) {
-        canvas.drawCircle(Offset(spore.x, spore.y), spore.radius, sporePaint);
+        final center = Offset(spore.x, spore.y);
+        canvas.drawCircle(center, spore.radius * 1.8, _sporeGlowPaint);
+        canvas.drawCircle(center, spore.radius, _sporeCorePaint);
       }
     }
 
@@ -731,13 +761,12 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     if (orbit == null) {
       OrbitalScenery.draw(canvas, Size(w, h), sp);
     } else {
+      _tilePaint.color = Colors.white.withValues(alpha: sp);
       canvas.drawImageRect(
         orbit,
         Rect.fromLTWH(0, 0, orbit.width.toDouble(), orbit.height.toDouble()),
         Rect.fromLTWH(0, 0, w, h),
-        Paint()
-          ..color = Colors.white.withValues(alpha: sp)
-          ..filterQuality = FilterQuality.low,
+        _tilePaint,
       );
     }
 
@@ -769,11 +798,8 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       );
       final starAlpha = sp * (0.35 + twinkle * 0.65);
       final starSize = 1.0 + twinkle * 1.6;
-      canvas.drawCircle(
-        Offset(star.x, star.y),
-        starSize,
-        Paint()..color = Colors.white.withValues(alpha: starAlpha),
-      );
+      _workPaint.color = Colors.white.withValues(alpha: starAlpha);
+      canvas.drawCircle(Offset(star.x, star.y), starSize, _workPaint);
     }
 
     // 2. Giant Colored Celestial Stars with 4-point Diamond Diffraction Spikes
@@ -784,12 +810,12 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       Offset(w * 0.88, h * 0.68),
       Offset(w * 0.35, h * 0.72),
     ];
-    final giantStarColors = [
-      const Color(0xFF00E5FF), // Cyan
-      const Color(0xFFFFD54F), // Gold
-      const Color(0xFFFF4081), // Magenta
-      const Color(0xFF76FF03), // Emerald
-      const Color(0xFF7C4DFF), // Violet
+    const giantStarColors = [
+      Color(0xFF00E5FF), // Cyan
+      Color(0xFFFFD54F), // Gold
+      Color(0xFFFF4081), // Magenta
+      Color(0xFF76FF03), // Emerald
+      Color(0xFF7C4DFF), // Violet
     ];
 
     for (int i = 0; i < giantStarPositions.length; i++) {
@@ -798,32 +824,23 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       final pulse = 0.85 + 0.15 * math.sin(_time * 3.0 + i * 1.7);
 
       // Star core
-      canvas.drawCircle(
-        pos,
-        3.2 * pulse,
-        Paint()..color = Colors.white.withValues(alpha: sp),
-      );
+      _workPaint.color = Colors.white.withValues(alpha: sp);
+      canvas.drawCircle(pos, 3.2 * pulse, _workPaint);
       // Color halo
-      canvas.drawCircle(
-        pos,
-        8.0 * pulse,
-        Paint()..color = color.withValues(alpha: 0.16 * sp),
-      );
+      _workPaint.color = color.withValues(alpha: 0.16 * sp);
+      canvas.drawCircle(pos, 8.0 * pulse, _workPaint);
       // 4-Point Diamond Cross Spikes
-      final spikePaint = Paint()
-        ..color = color.withValues(alpha: 0.60 * sp)
-        ..strokeWidth = 1.2
-        ..strokeCap = StrokeCap.round;
+      _starSpikePaint.color = color.withValues(alpha: 0.60 * sp);
       final spikeLen = 11.0 * pulse;
       canvas.drawLine(
         Offset(pos.dx - spikeLen, pos.dy),
         Offset(pos.dx + spikeLen, pos.dy),
-        spikePaint,
+        _starSpikePaint,
       );
       canvas.drawLine(
         Offset(pos.dx, pos.dy - spikeLen),
         Offset(pos.dx, pos.dy + spikeLen),
-        spikePaint,
+        _starSpikePaint,
       );
     }
   }
@@ -882,16 +899,6 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     // During returning: lines move upward (player coming down)
     final direction = phase == SpacePhase.launch ? 1.0 : -1.0;
 
-    final linePaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.35)
-      ..strokeWidth = 1.5
-      ..strokeCap = StrokeCap.round;
-
-    final glowPaint = Paint()
-      ..color = const Color(0xFF80D8FF).withValues(alpha: 0.20)
-      ..strokeWidth = 3.0
-      ..strokeCap = StrokeCap.round;
-
     for (int i = 0; i < 30; i++) {
       final seed = (i * 137 + 42) % 997;
       final fx = (seed / 997.0) * w;
@@ -904,12 +911,12 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
       canvas.drawLine(
         Offset(fx, baseY),
         Offset(fx, baseY + lineLen * direction),
-        linePaint,
+        _speedLinePaint,
       );
       canvas.drawLine(
         Offset(fx, baseY),
         Offset(fx, baseY + lineLen * direction * 0.6),
-        glowPaint,
+        _speedGlowPaint,
       );
     }
   }
@@ -1173,9 +1180,8 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
   void _drawDesertWind(Canvas canvas) {
     for (final dust in _desertSandDust) {
       final curY = dust.y + math.sin(_time * 2.2 + dust.phase) * dust.waveAmp;
-      final dustPaint = Paint()
-        ..color = dust.color.withValues(alpha: dust.alpha);
-      canvas.drawCircle(Offset(dust.x, curY), dust.radius, dustPaint);
+      _workPaint.color = dust.color.withValues(alpha: dust.alpha);
+      canvas.drawCircle(Offset(dust.x, curY), dust.radius, _workPaint);
     }
   }
 
@@ -2238,19 +2244,15 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     _drawCamelCaravan(canvas, yGround);
 
     // 3. Atmospheric Heat Mirage Shimmer above Horizon
-    final heatWavePaint = Paint()
-      ..color = const Color(0x18FFE082)
-      ..strokeWidth = 1.8
-      ..style = ui.PaintingStyle.stroke;
     for (int hw = 0; hw < 2; hw++) {
-      final hwPath = Path();
+      _heatWavePath.reset();
       final baseY = yGround - 18 + hw * 8;
-      hwPath.moveTo(0, baseY);
+      _heatWavePath.moveTo(0, baseY);
       for (double x = 0; x <= size.x; x += 25) {
         final wy = baseY + math.sin(_time * 4.0 + x * 0.04 + hw * 1.5) * 2.0;
-        hwPath.lineTo(x, wy);
+        _heatWavePath.lineTo(x, wy);
       }
-      canvas.drawPath(hwPath, heatWavePaint);
+      canvas.drawPath(_heatWavePath, _heatWavePaint);
     }
   }
 
@@ -2349,9 +2351,7 @@ class SkyBackground extends PositionComponent with HasGameReference<DinoGame> {
     final scroll = _bgScrollOffset * scrollSpeed;
 
     final srcRect = Rect.fromLTWH(0, 0, imgW, imgH);
-    final paint = Paint()
-      ..filterQuality = FilterQuality.low
-      ..color = Colors.white.withValues(alpha: alpha);
+    final paint = _tilePaint..color = Colors.white.withValues(alpha: alpha);
 
     final baseIndex = (scroll / tileW).floor();
     double startX = -(scroll % tileW);

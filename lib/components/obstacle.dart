@@ -406,101 +406,141 @@ class Obstacle extends PositionComponent
     final lava = biome == 'VOLCANO';
     final desert = biome == 'DESERT';
     final base = desert
-        ? const Color(0xFFBB7948)
+        ? const Color(0xFFC57B45)
         : forest
-        ? const Color(0xFF77503B)
+        ? const Color(0xFF774E38)
         : ice
-        ? const Color(0xFF64BBD6)
+        ? const Color(0xFF5FBAD7)
         : lava
-        ? const Color(0xFF41394A)
-        : const Color(0xFF6757A4);
+        ? const Color(0xFF3E3446)
+        : const Color(0xFF5D4EA0);
     final light = desert
-        ? const Color(0xFFFFD38E)
+        ? const Color(0xFFFFDF9B)
         : forest
-        ? const Color(0xFFAD8056)
+        ? const Color(0xFFB5865A)
         : ice
-        ? const Color(0xFFDEF9FF)
+        ? const Color(0xFFE7FCFF)
         : lava
-        ? const Color(0xFF8E6975)
-        : const Color(0xFFBC9EEB);
+        ? const Color(0xFF936A77)
+        : const Color(0xFFC4A7F2);
     final outline = desert
-        ? const Color(0xFF70482F)
+        ? const Color(0xFF6B3F26)
         : forest
-        ? const Color(0xFF45372F)
+        ? const Color(0xFF3D2A20)
         : ice
-        ? const Color(0xFF397DAB)
-        : const Color(0xFF332B50);
+        ? const Color(0xFF2D709E)
+        : lava
+        ? const Color(0xFF1F161D)
+        : const Color(0xFF2C234A);
+
     canvas.drawOval(
-      Rect.fromLTWH(w * .06, h - 6, w * .9, 8),
-      Paint()..color = Colors.black26,
+      Rect.fromLTWH(w * .05, h - 6, w * .92, 8),
+      Paint()..color = const Color(0x40070B12),
     );
+
     if (forest && type == ObstacleType.bush) {
+      // Sculpted hollow mossy timber log with concentric heartwood, shelf fungi & hanging vines.
       final rect = Rect.fromLTRB(w * .02, h * .07, w * .98, h - 2);
       canvas.drawRRect(
-        RRect.fromRectAndRadius(rect, Radius.circular(h * .3)),
+        RRect.fromRectAndRadius(rect, Radius.circular(h * .32)),
         Paint()
           ..shader = LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
             colors: [light, base, outline],
+            stops: const [0, .48, 1],
           ).createShader(rect),
       );
-      final end = Rect.fromLTWH(w * .69, h * .1, w * .27, h * .84);
-      canvas.drawOval(end, Paint()..color = const Color(0xFFE5BB7B));
+      // Warm end-grain cut face with concentric growth rings + dark hollow cavity.
+      final end = Rect.fromLTWH(w * .68, h * .11, w * .28, h * .82);
+      canvas.drawOval(
+        end,
+        Paint()
+          ..shader = RadialGradient(
+            center: const Alignment(-.2, -.2),
+            colors: const [Color(0xFFF3CF93), Color(0xFFCC9757)],
+          ).createShader(end),
+      );
       for (var i = 0; i < 3; i++) {
         canvas.drawOval(
-          end.deflate(3 + i * 3),
+          end.deflate(3.5 + i * 3.5),
           Paint()
-            ..color = base
+            ..color = base.withValues(alpha: .72)
             ..style = PaintingStyle.stroke
-            ..strokeWidth = 1.5,
+            ..strokeWidth = 1.4,
         );
       }
+      canvas.drawOval(
+        end.deflate(end.width * .28),
+        Paint()..color = outline,
+      );
+      // Curved bark ridges + knot + sunlit highlight.
       for (var i = 0; i < 4; i++) {
         canvas.drawPath(
           Path()
-            ..moveTo(w * .08, h * (.22 + i * .18))
-            ..quadraticBezierTo(
-              w * .4,
-              h * (.14 + i * .18),
-              w * .68,
-              h * (.24 + i * .18),
-            ),
+            ..moveTo(w * .07, h * (.22 + i * .18))
+            ..quadraticBezierTo(w * .38, h * (.13 + i * .18), w * .68, h * (.25 + i * .18)),
           Paint()
-            ..color = outline
+            ..color = outline.withValues(alpha: .78)
             ..style = PaintingStyle.stroke
-            ..strokeWidth = 2,
+            ..strokeWidth = 2.0
+            ..strokeCap = StrokeCap.round,
+        );
+      }
+      // Small golden bracket fungi growing on trunk side.
+      for (final f in [(w * .26, h * .58, 9.0), (w * .44, h * .46, 7.0)]) {
+        canvas.drawOval(
+          Rect.fromCenter(center: Offset(f.$1, f.$2), width: f.$3 * 1.6, height: f.$3 * .7),
+          Paint()..color = const Color(0xFFFFD885),
         );
       }
     } else if (forest && type != ObstacleType.rock) {
-      final rect = Rect.fromLTRB(w * .09, h * .08, w * .92, h - 2);
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(rect, Radius.circular(w * .18)),
+      // Sculpted ancient gnarled woodland totem trunk with flared roots & vine band.
+      final trunk = Path()
+        ..moveTo(w * .14, h * .08)
+        ..lineTo(w * .86, h * .08)
+        ..quadraticBezierTo(w * .82, h * .55, w * .95, h - 1)
+        ..lineTo(w * .05, h - 1)
+        ..quadraticBezierTo(w * .18, h * .55, w * .14, h * .08)
+        ..close();
+      canvas.drawPath(
+        trunk,
         Paint()
           ..shader = LinearGradient(
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
             colors: [light, base, outline],
-          ).createShader(rect),
+            stops: const [0, .48, 1],
+          ).createShader(Rect.fromLTWH(0, 0, w, h)),
       );
       for (var i = 0; i < 5; i++) {
-        final x = w * (.2 + i * .14);
-        canvas.drawLine(
-          Offset(x, h * .22),
-          Offset(x + w * .03, h * .89),
+        final x = w * (.22 + i * .13);
+        canvas.drawPath(
+          Path()
+            ..moveTo(x, h * .20)
+            ..quadraticBezierTo(x + (i.isEven ? 3 : -3), h * .56, x + w * .02, h * .92),
           Paint()
-            ..color = outline.withValues(alpha: .6)
-            ..strokeWidth = 2,
+            ..color = outline.withValues(alpha: .65)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1.9
+            ..strokeCap = StrokeCap.round,
         );
       }
+      // Beveled wood crown ring & lush hanging moss collar.
+      canvas.drawOval(Rect.fromLTWH(w * .09, h * .02, w * .82, h * .18), Paint()..color = light);
       canvas.drawOval(
-        Rect.fromLTWH(w * .09, h * .02, w * .83, h * .18),
-        Paint()..color = light,
+        Rect.fromLTWH(w * .24, h * .06, w * .52, h * .09),
+        Paint()..color = base..style = PaintingStyle.stroke..strokeWidth = 1.8,
       );
-      canvas.drawOval(
-        Rect.fromLTWH(w * .26, h * .065, w * .48, h * .08),
+      canvas.drawPath(
+        Path()
+          ..moveTo(w * .16, h * .34)
+          ..quadraticBezierTo(w * .52, h * .46, w * .84, h * .38),
         Paint()
-          ..color = base
+          ..color = biome == 'RAIN' ? const Color(0xFF42A88B) : const Color(0xFF69B54E)
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 2,
+          ..strokeWidth = 4.0
+          ..strokeCap = StrokeCap.round,
       );
     } else {
       final path = Path()
@@ -512,30 +552,42 @@ class Obstacle extends PositionComponent
         ..lineTo(w * .98, h * .55)
         ..lineTo(w * .94, h)
         ..close();
-      if (desert || (ice && type == ObstacleType.rock)) {
+      if (desert) {
+        // Multi-lobed organic desert canyon sandstone formation (no uniform dome arch).
         path.reset();
-        path.moveTo(w * .05, h);
-        path.quadraticBezierTo(-w * .05, h * .3, w * .3, h * .08);
-        path.quadraticBezierTo(w * .6, -h * .1, w * .85, h * .19);
-        path.quadraticBezierTo(w * 1.02, h * .42, w * .96, h);
+        path.moveTo(w * .03, h);
+        path.cubicTo(w * .02, h * .62, w * .12, h * .28, w * .34, h * .12);
+        path.quadraticBezierTo(w * .49, 0, w * .64, h * .14);
+        path.quadraticBezierTo(w * .79, h * .10, w * .90, h * .34);
+        path.quadraticBezierTo(w * .99, h * .62, w * .96, h);
+        path.close();
+      } else if (ice && type == ObstacleType.rock) {
+        path.reset();
+        path.moveTo(w * .04, h);
+        path.lineTo(w * .10, h * .44);
+        path.lineTo(w * .34, h * .06);
+        path.lineTo(w * .62, h * .18);
+        path.lineTo(w * .78, h * .09);
+        path.lineTo(w * .96, h * .52);
+        path.lineTo(w * .96, h);
         path.close();
       } else if (biome == 'RAIN' && type == ObstacleType.rock) {
         path.reset();
         path.moveTo(w * .03, h);
-        path.lineTo(w * .06, h * .17);
-        path.lineTo(w * .27, h * .06);
-        path.lineTo(w * .91, h * .12);
-        path.lineTo(w * .97, h);
+        path.quadraticBezierTo(w * .02, h * .28, w * .28, h * .07);
+        path.quadraticBezierTo(w * .65, h * .01, w * .91, h * .16);
+        path.quadraticBezierTo(w * 1.0, h * .55, w * .97, h);
         path.close();
       } else if (biome == 'COSMOS' && type == ObstacleType.pillar) {
         path.reset();
-        path.moveTo(w * .06, h);
-        path.lineTo(w * .12, h * .1);
-        path.lineTo(w * .31, h * .03);
-        path.lineTo(w * .84, h * .03);
-        path.lineTo(w * .94, h);
+        path.moveTo(w * .08, h);
+        path.lineTo(w * .14, h * .10);
+        path.lineTo(w * .34, h * .02);
+        path.lineTo(w * .80, h * .04);
+        path.lineTo(w * .92, h);
         path.close();
       }
+
       canvas.drawPath(
         path,
         Paint()
@@ -543,43 +595,119 @@ class Obstacle extends PositionComponent
             colors: [light, base, outline],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
+            stops: const [0, .52, 1],
           ).createShader(Rect.fromLTWH(0, 0, w, h)),
       );
-      canvas.drawPath(
-        path,
-        Paint()
-          ..color = outline
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 2,
-      );
-      canvas.drawPath(
-        Path()
-          ..moveTo(w * .48, 3)
-          ..lineTo(w * .39, h * .54)
-          ..lineTo(w * .08, h * .9)
-          ..moveTo(w * .39, h * .54)
-          ..lineTo(w * .92, h * .68),
-        Paint()
-          ..color = light.withValues(alpha: .7)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = ice ? 3 : 2,
-      );
-      if (lava) {
+
+      // Clipped biome surface strata, shaded planes, fossils & glowing fissures.
+      canvas.save();
+      canvas.clipPath(path);
+      if (desert) {
+        // Upper sunlit cap sheen + layered red-ochre canyon sandstone terraces.
+        canvas.drawOval(
+          Rect.fromCenter(center: Offset(w * .38, h * .18), width: w * .58, height: h * .28),
+          Paint()..color = const Color(0x55FFF0BE),
+        );
+        for (final b in [(h * .30, .20), (h * .52, .26), (h * .74, .34)]) {
+          canvas.drawPath(
+            Path()
+              ..moveTo(0, b.$1)
+              ..quadraticBezierTo(w * .42, b.$1 - 6, w, b.$1 + 4)
+              ..lineTo(w, b.$1 + 12)
+              ..quadraticBezierTo(w * .42, b.$1 + 4, 0, b.$1 + 11)
+              ..close(),
+            Paint()..color = outline.withValues(alpha: b.$2),
+          );
+        }
+        // Subtle sunlit right-shoulder secondary boulder shelf.
+        canvas.drawOval(
+          Rect.fromLTWH(w * .56, h * .40, w * .44, h * .52),
+          Paint()
+            ..shader = LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [base, outline],
+            ).createShader(Rect.fromLTWH(w * .56, h * .40, w * .44, h * .52)),
+        );
+      } else if (ice) {
+        // Internal translucent crystal refraction planes.
         canvas.drawPath(
           Path()
-            ..moveTo(w * .63, h * .15)
-            ..lineTo(w * .52, h * .39)
-            ..lineTo(w * .64, h * .53)
-            ..lineTo(w * .47, h * .86),
+            ..moveTo(w * .36, h * .06)
+            ..lineTo(w * .66, h * .38)
+            ..lineTo(w * .46, h * .98)
+            ..lineTo(w * .98, h * .98)
+            ..lineTo(w * .98, 0)
+            ..close(),
+          Paint()..color = const Color(0x380E4266),
+        );
+      } else {
+        // Right-side chiseled rock shadow plane.
+        canvas.drawPath(
+          Path()
+            ..moveTo(w * .48, 0)
+            ..lineTo(w * .42, h * .55)
+            ..lineTo(w * .96, h)
+            ..lineTo(w, 0)
+            ..close(),
+          Paint()..color = outline.withValues(alpha: .36),
+        );
+      }
+
+      if (!desert) {
+        canvas.drawPath(
+          Path()
+            ..moveTo(w * .48, 3)
+            ..lineTo(w * .40, h * .52)
+            ..lineTo(w * .14, h * .88),
           Paint()
-            ..color = const Color(0xFFFFA04B)
+            ..color = light.withValues(alpha: .42)
             ..style = PaintingStyle.stroke
-            ..strokeWidth = 3,
+            ..strokeCap = StrokeCap.round
+            ..strokeWidth = ice ? 2.2 : 1.5,
+        );
+      }
+
+      if (lava) {
+        final lavaCrack = Path()
+          ..moveTo(w * .63, h * .14)
+          ..lineTo(w * .50, h * .39)
+          ..lineTo(w * .65, h * .53)
+          ..lineTo(w * .46, h * .88);
+        canvas.drawPath(
+          lavaCrack,
+          Paint()
+            ..color = const Color(0x99FF5722)
+            ..style = PaintingStyle.stroke
+            ..strokeCap = StrokeCap.round
+            ..strokeWidth = 6,
+        );
+        canvas.drawPath(
+          lavaCrack,
+          Paint()
+            ..color = const Color(0xFFFFE57F)
+            ..style = PaintingStyle.stroke
+            ..strokeCap = StrokeCap.round
+            ..strokeWidth = 2.2,
         );
       }
       if (!forest && !ice && !lava && !desert) {
+        // Glowing etched Cosmic monolith glyph & cyan crystals.
+        canvas.drawCircle(
+          Offset(w * .50, h * .44),
+          w * .14,
+          Paint()
+            ..color = const Color(0xFF7AF6EA)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 2.2,
+        );
+        canvas.drawCircle(
+          Offset(w * .50, h * .44),
+          w * .05,
+          Paint()..color = const Color(0xFFFFD8FF),
+        );
         for (var i = 0; i < 3; i++) {
-          final x = w * (.25 + i * .25), y = h * (.34 + i * .12);
+          final x = w * (.25 + i * .25), y = h * (.24 + i * .19);
           canvas.drawPath(
             Path()
               ..moveTo(x, y - 6)
@@ -591,29 +719,40 @@ class Obstacle extends PositionComponent
           );
         }
       }
+      canvas.restore();
+
+      if (!desert) {
+        canvas.drawPath(
+          path,
+          Paint()
+            ..color = outline.withValues(alpha: .72)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1.6,
+        );
+      }
     }
-    // Texture is recorded once, rather than regenerated during each frame.
+
+    // Crisp granular rock/sand flecks anchored via deterministic seed.
     final grain = math.Random(_seed);
-    for (var i = 0; i < 20; i++) {
+    for (var i = 0; i < 24; i++) {
       canvas.drawOval(
         Rect.fromLTWH(
-          w * (.2 + grain.nextDouble() * .6),
-          h * (.3 + grain.nextDouble() * .6),
-          1 + grain.nextDouble() * 3,
-          1,
+          w * (.18 + grain.nextDouble() * .64),
+          h * (.25 + grain.nextDouble() * .65),
+          1.2 + grain.nextDouble() * 2.6,
+          1.2,
         ),
-        Paint()..color = light.withValues(alpha: .35),
+        Paint()..color = light.withValues(alpha: .32),
       );
     }
+
     if (desert) {
+      // Subtle weathered ammonite fossil relief etched organically into rock face.
       final fossil = Path();
-      for (var i = 0; i < 32; i++) {
-        final t = i / 31 * math.pi * 3.5;
-        final r = w * .025 + i / 31 * w * .17;
-        final point = Offset(
-          w * .5 + math.cos(t) * r,
-          h * .56 + math.sin(t) * r,
-        );
+      for (var i = 0; i < 28; i++) {
+        final t = i / 27 * math.pi * 3.2;
+        final r = w * .018 + i / 27 * w * .115;
+        final point = Offset(w * .42 + math.cos(t) * r, h * .54 + math.sin(t) * r);
         if (i == 0) {
           fossil.moveTo(point.dx, point.dy);
         } else {
@@ -623,15 +762,24 @@ class Obstacle extends PositionComponent
       canvas.drawPath(
         fossil,
         Paint()
-          ..color = const Color(0xFFF4D5A0)
+          ..color = outline.withValues(alpha: .42)
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 3
+          ..strokeWidth = 2.6
+          ..strokeCap = StrokeCap.round,
+      );
+      canvas.drawPath(
+        fossil.shift(const Offset(-0.7, -0.7)),
+        Paint()
+          ..color = light.withValues(alpha: .55)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.6
           ..strokeCap = StrokeCap.round,
       );
     }
+
     if (biome == 'COSMOS' && type != ObstacleType.pillar) {
       for (var i = 0; i < 3; i++) {
-        final x = w * (.08 + i * .29), top = h * (.12 + (i % 2) * .16);
+        final x = w * (.08 + i * .29), top = h * (.10 + (i % 2) * .16);
         final shard = Path()
           ..moveTo(x, h * .96)
           ..lineTo(x, top + h * .16)
@@ -643,45 +791,45 @@ class Obstacle extends PositionComponent
           shard,
           Paint()
             ..shader = LinearGradient(
-              colors: [const Color(0xFFACF9EF), light, base],
+              colors: [const Color(0xFFBCFFF8), light, base],
             ).createShader(Rect.fromLTWH(x, top, w * .24, h)),
         );
         canvas.drawLine(
           Offset(x + w * .12, top),
           Offset(x + w * .12, h * .9),
-          Paint()
-            ..color = outline
-            ..strokeWidth = 1.5,
+          Paint()..color = const Color(0x99FFFFFF)..strokeWidth = 1.4,
         );
       }
     }
+
     if (forest) {
+      // Plush layered emerald foliage / rainforest fern puffs crowning the trunk/log.
+      final leafLight = biome == 'RAIN' ? const Color(0xFF49BD9F) : const Color(0xFF72BA52);
+      final leafDark = biome == 'RAIN' ? const Color(0xFF216B62) : const Color(0xFF397029);
       for (var i = 0; i < 5; i++) {
+        final rect = Rect.fromLTWH(w * (.06 + i * .16), h * (.06 + (i % 2) * .06), w * .26, h * .14);
         canvas.drawOval(
-          Rect.fromLTWH(
-            w * (.08 + i * .16),
-            h * (.08 + (i % 2) * .06),
-            w * .25,
-            h * .13,
-          ),
+          rect,
           Paint()
-            ..color = biome == 'RAIN'
-                ? const Color(0xFF359C8C)
-                : const Color(0xFF59993E),
+            ..shader = LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [leafLight, leafDark],
+            ).createShader(rect),
         );
       }
     }
+
     if (ice) {
       canvas.drawPath(
         Path()
           ..moveTo(w * .23, h * .16)
           ..lineTo(w * .48, 0)
           ..lineTo(w * .76, h * .12)
-          ..lineTo(w * .68, h * .21)
-          ..lineTo(w * .46, h * .13)
-          ..lineTo(w * .34, h * .23)
+          ..quadraticBezierTo(w * .66, h * .24, w * .52, h * .16)
+          ..quadraticBezierTo(w * .36, h * .26, w * .23, h * .16)
           ..close(),
-        Paint()..color = const Color(0xFFF0FEFF),
+        Paint()..color = const Color(0xFFF5FEFF),
       );
     }
   }
@@ -774,121 +922,92 @@ class Obstacle extends PositionComponent
       // Ground shadow (+4px offset, radial gradient)
       _renderGroundShadow(canvas, w, h, shadowMult);
 
-      // Saguaro cactus green gradient body
       final trunkWidth = w * 0.44;
       final trunkRect = Rect.fromLTWH((w - trunkWidth) / 2, 0, trunkWidth, h);
-      final cactusGradient = const LinearGradient(
-        colors: [Color(0xFF66BB6A), Color(0xFF2E7D32), Color(0xFF1B5E20)],
-      );
-      final paint = Paint()..shader = cactusGradient.createShader(trunkRect);
+      final paint = Paint()
+        ..shader = const LinearGradient(
+          colors: [
+            Color(0xFF8BE07C),
+            Color(0xFF429B47),
+            Color(0xFF1F5D25),
+            Color(0xFF133B17),
+          ],
+          stops: [0.0, 0.36, 0.78, 1.0],
+        ).createShader(trunkRect);
 
-      // Main central trunk
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(trunkRect, Radius.circular(trunkWidth * 0.45)),
-        paint,
-      );
-
-      // Vertical rib line highlights
-      final ribPaint = Paint()
-        ..color = const Color(0xFF81C784).withValues(alpha: 0.7)
-        ..strokeWidth = 2.0;
-      canvas.drawLine(
-        Offset(w * 0.42, h * 0.05),
-        Offset(w * 0.42, h * 0.95),
-        ribPaint,
-      );
-      canvas.drawLine(
-        Offset(w * 0.58, h * 0.05),
-        Offset(w * 0.58, h * 0.95),
-        ribPaint,
-      );
-
-      // Spine needle dot clusters
-      final spinePaint = Paint()..color = const Color(0xFFDCEDC8);
-      for (double sy = h * 0.15; sy < h * 0.85; sy += 16) {
-        canvas.drawCircle(
-          Offset((w - trunkWidth) / 2 - 1, sy),
-          1.5,
-          spinePaint,
-        );
-        canvas.drawCircle(
-          Offset((w + trunkWidth) / 2 + 1, sy),
-          1.5,
-          spinePaint,
-        );
+      void drawBloom(Offset center, double r) {
+        final petal = Paint()..color = const Color(0xFFFF5C93);
+        final inner = Paint()..color = const Color(0xFFFFD54F);
+        for (var k = 0; k < 5; k++) {
+          final a = k * (math.pi * 2 / 5) - math.pi / 2;
+          canvas.drawCircle(
+            center + Offset(math.cos(a) * r * .58, math.sin(a) * r * .58),
+            r * .56,
+            petal,
+          );
+        }
+        canvas.drawCircle(center, r * .46, inner);
       }
 
-      // Branch growth: starts at 0.05 scale, grows to 1.0 over 2.5 seconds
+      // Curved sculpted saguaro arms rendered first behind trunk highlight.
       final double branchScale = (age / 2.0).clamp(0.05, 1.0);
       final branchCount = tall ? (2 + rng.nextInt(2)) : (1 + rng.nextInt(2));
-
       for (int i = 0; i < branchCount; i++) {
         final isRight = (i % 2 == 0);
-        final yPos = h * (0.2 + i * 0.28);
-        final branchLen = w * (0.32 + rng.nextDouble() * 0.3) * branchScale;
-        final branchThickness = 11.0;
-        final upLen = h * (0.18 + rng.nextDouble() * 0.15) * branchScale;
+        final yPos = h * (0.24 + i * 0.26);
+        final branchLen = w * (0.30 + rng.nextDouble() * 0.24) * branchScale;
+        final upLen = h * (0.18 + rng.nextDouble() * 0.14) * branchScale;
+        final dir = isRight ? 1.0 : -1.0;
+        final armStart = Offset(w * 0.5 + dir * trunkWidth * 0.34, yPos);
+        final armElbow = Offset(w * 0.5 + dir * (trunkWidth * 0.34 + branchLen), yPos);
+        final armTip = Offset(armElbow.dx, yPos - upLen);
 
-        canvas.save();
-        canvas.translate(isRight ? w * 0.65 : w * 0.35, yPos);
-
-        // Horizontal arm
-        canvas.drawRRect(
-          RRect.fromRectAndRadius(
-            Rect.fromLTWH(
-              isRight ? 0 : -branchLen,
-              -branchThickness / 2,
-              branchLen,
-              branchThickness,
-            ),
-            Radius.circular(branchThickness / 2),
-          ),
-          paint,
+        final armStroke = Paint()
+          ..shader = paint.shader
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 10.5
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round;
+        canvas.drawPath(
+          Path()
+            ..moveTo(armStart.dx, armStart.dy)
+            ..quadraticBezierTo(armElbow.dx, armElbow.dy, armTip.dx, armTip.dy),
+          armStroke,
         );
-
-        // Vertical arm tip going up
-        final tipX =
-            (isRight ? branchLen : -branchLen) +
-            (isRight ? -branchThickness / 2 : -branchThickness / 2);
-        canvas.drawRRect(
-          RRect.fromRectAndRadius(
-            Rect.fromLTWH(
-              tipX,
-              -upLen - branchThickness / 2,
-              branchThickness,
-              upLen + branchThickness,
-            ),
-            Radius.circular(branchThickness / 2),
-          ),
-          paint,
-        );
-
-        // Arm flower blossom
-        canvas.drawCircle(
-          Offset(tipX + branchThickness / 2, -upLen - branchThickness / 2),
-          4.0,
-          Paint()..color = const Color(0xFFFF4081),
-        );
-        canvas.drawCircle(
-          Offset(tipX + branchThickness / 2, -upLen - branchThickness / 2),
-          1.8,
-          Paint()..color = const Color(0xFFFFEB3B),
-        );
-
-        canvas.restore();
+        drawBloom(armTip.translate(0, -4.5), 4.0);
       }
 
-      // Top main flower blossom
-      canvas.drawCircle(
-        Offset(w / 2, 0),
-        5.5,
-        Paint()..color = const Color(0xFFFF4081),
+      // Main sculpted central trunk + sunlit rim + organic rib flutes.
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(trunkRect, Radius.circular(trunkWidth * 0.48)),
+        paint,
       );
-      canvas.drawCircle(
-        Offset(w / 2, 0),
-        2.2,
-        Paint()..color = const Color(0xFFFFEB3B),
+      final ribPaint = Paint()
+        ..color = const Color(0xFFA5F090).withValues(alpha: 0.65)
+        ..strokeWidth = 1.8
+        ..strokeCap = StrokeCap.round;
+      canvas.drawLine(Offset(w * 0.41, h * 0.06), Offset(w * 0.41, h * 0.94), ribPaint);
+      canvas.drawLine(
+        Offset(w * 0.57, h * 0.06),
+        Offset(w * 0.57, h * 0.94),
+        Paint()..color = const Color(0xFF14421A).withValues(alpha: .5)..strokeWidth = 1.6..strokeCap = StrokeCap.round,
       );
+
+      // Grouped radial spine needle tufts along left & right rib ridges.
+      final spinePaint = Paint()
+        ..color = const Color(0xFFF3F9D2)
+        ..strokeWidth = 1.2
+        ..strokeCap = StrokeCap.round;
+      for (double sy = h * 0.15; sy < h * 0.88; sy += 15) {
+        final leftX = (w - trunkWidth) / 2;
+        final rightX = (w + trunkWidth) / 2;
+        canvas.drawLine(Offset(leftX, sy), Offset(leftX - 4.0, sy - 2.2), spinePaint);
+        canvas.drawLine(Offset(leftX, sy), Offset(leftX - 4.2, sy + 1.8), spinePaint);
+        canvas.drawLine(Offset(rightX, sy), Offset(rightX + 4.0, sy - 2.2), spinePaint);
+        canvas.drawLine(Offset(rightX, sy), Offset(rightX + 4.2, sy + 1.8), spinePaint);
+      }
+
+      drawBloom(Offset(w / 2, 1.5), 5.6);
     });
   }
 
@@ -1534,20 +1653,46 @@ class Obstacle extends PositionComponent
           ..strokeWidth = 2,
       );
       final lipY = hanging ? h - 18 : 0.0;
+      final capRect = Rect.fromLTWH(0, lipY, w, 18);
       canvas.drawRRect(
-        RRect.fromRectAndRadius(
-          Rect.fromLTWH(0, lipY, w, 18),
-          const Radius.circular(5),
-        ),
-        Paint()..color = colors[1],
+        RRect.fromRectAndRadius(capRect, const Radius.circular(6)),
+        Paint()
+          ..shader = LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [colors[0], colors[1], colors[2]],
+          ).createShader(capRect),
+      );
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(capRect, const Radius.circular(6)),
+        Paint()..color = colors.last..style = PaintingStyle.stroke..strokeWidth = 1.6,
       );
       canvas.drawLine(
-        Offset(4, lipY + 3),
-        Offset(w - 4, lipY + 3),
+        Offset(5, lipY + 3.5),
+        Offset(w - 5, lipY + 3.5),
         Paint()
-          ..color = colors.first
-          ..strokeWidth = 2,
+          ..color = colors.first.withValues(alpha: .85)
+          ..strokeCap = StrokeCap.round
+          ..strokeWidth = 2.2,
       );
+      if (type == ObstacleType.pipePair) {
+        final glowEdgeY = hanging ? h : 0.0;
+        final glowRect = Rect.fromLTWH(2, hanging ? h : -12, w - 4, 12);
+        canvas.drawRect(
+          glowRect,
+          Paint()
+            ..shader = LinearGradient(
+              begin: hanging ? Alignment.topCenter : Alignment.bottomCenter,
+              end: hanging ? Alignment.bottomCenter : Alignment.topCenter,
+              colors: [colors.first.withValues(alpha: .36), Colors.transparent],
+            ).createShader(glowRect),
+        );
+        canvas.drawLine(
+          Offset(4, glowEdgeY),
+          Offset(w - 4, glowEdgeY),
+          Paint()..color = colors.first.withValues(alpha: .72)..strokeWidth = 1.6,
+        );
+      }
       for (var y = 28.0; y < h - 22; y += 34) {
         if (_epoch == 'FOREST' || _epoch == 'RAIN') {
           canvas.drawOval(

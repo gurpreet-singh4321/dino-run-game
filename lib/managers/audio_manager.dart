@@ -3,12 +3,13 @@ import 'package:flame_audio/flame_audio.dart';
 import 'settings_manager.dart';
 
 /// Manages dual background music tracks & sequence for Dino Run Epochs:
-/// - Title Screen Music: pixel_jump_title.mp3 (loops infinitely on title/menu)
+/// - Title Screen Music: pixel_jump_1.mp3 (loops infinitely on title/menu)
 /// - Gameplay Music Sequence: pixel_jump_1.mp3 -> pixel_jump.mp3 (loops infinitely during gameplay)
 class AudioManager {
   static bool _initialized = false;
   static double _currentVolume = 0.6;
   static String? _currentTrack;
+  static bool _isTitleMode = false;
   static AudioPlayer? _bgmPlayer;
   static StreamSubscription? _playerCompleteSub;
 
@@ -16,7 +17,6 @@ class AudioManager {
 
   static Future<void> preloadAll() async {
     await FlameAudio.audioCache.loadAll([
-      'pixel_jump_title.mp3',
       'one_more_try.mp3',
       'pixel_jump_1.mp3',
       'pixel_jump.mp3',
@@ -55,13 +55,15 @@ class AudioManager {
     } catch (_) {}
   }
 
-  /// Play title screen song (pixel_jump_title.mp3) looping indefinitely
+  /// Play title screen song (pixel_jump_1.mp3) looping indefinitely
   static void playTitleBgm() {
-    _playSingle('pixel_jump_title.mp3', loop: true);
+    _isTitleMode = true;
+    _playSingle('pixel_jump_1.mp3', loop: true);
   }
 
   /// Play game over song (one_more_try.mp3) looping indefinitely
   static Future<void> playGameOverBgm() async {
+    _isTitleMode = false;
     if (_currentVolume <= 0) return;
     try {
       await init();
@@ -80,6 +82,7 @@ class AudioManager {
 
   /// Play gameplay music sequence: "Pixel Jump 1.mp3" FIRST, then switch to "pixel_jump.mp3" looping!
   static Future<void> playGameplayBgm() async {
+    _isTitleMode = false;
     if (_currentVolume <= 0) return;
     try {
       await init();
@@ -109,8 +112,8 @@ class AudioManager {
       await init();
       if (_bgmPlayer?.state == PlayerState.playing) return;
 
-      final track = _currentTrack ?? 'pixel_jump_title.mp3';
-      if (track == 'pixel_jump_1.mp3') {
+      final track = _currentTrack ?? 'pixel_jump_1.mp3';
+      if (!_isTitleMode && track == 'pixel_jump_1.mp3') {
         await playGameplayBgm();
       } else {
         await _playSingle(track, loop: true);

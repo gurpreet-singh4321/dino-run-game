@@ -8,17 +8,112 @@ import '../game/dino_game.dart';
 import '../game/game_state.dart';
 import '../game/hazard_contact.dart';
 
-/// Lightweight particle system with actual visible particles.
+/// Lightweight particle system with pooled particles and zero per-frame allocations.
 class ParticlePool extends PositionComponent with HasGameReference<DinoGame> {
   final List<_Particle> _particles = [];
+  final List<_Particle> _freePool = [];
   final math.Random _rng = math.Random();
+  int _oldestIndex = 0;
 
   static const maxParticles = 192;
-  void clear() => _particles.clear();
+  void clear() {
+    _freePool.addAll(_particles);
+    _particles.clear();
+    _oldestIndex = 0;
+  }
+
   int get activeParticleCount => _particles.length;
 
+  void _spawnParticle({
+    required double x,
+    required double y,
+    required double vx,
+    required double vy,
+    required double life,
+    required double maxLife,
+    required Color color,
+    required double radius,
+    HazardMaterial? material,
+    double angle = 0,
+    bool isLine = false,
+    double length = 0,
+    bool isRing = false,
+    double startRadius = 0,
+    double endRadius = 0,
+  }) {
+    final _Particle p;
+    if (_particles.length >= maxParticles) {
+      if (_oldestIndex >= _particles.length) _oldestIndex = 0;
+      p = _particles[_oldestIndex];
+      _oldestIndex = (_oldestIndex + 1) % maxParticles;
+      p.reset(
+        x: x,
+        y: y,
+        vx: vx,
+        vy: vy,
+        life: life,
+        maxLife: maxLife,
+        color: color,
+        radius: radius,
+        material: material,
+        angle: angle,
+        isLine: isLine,
+        length: length,
+        isRing: isRing,
+        startRadius: startRadius,
+        endRadius: endRadius,
+      );
+      return;
+    }
+    if (_freePool.isNotEmpty) {
+      p = _freePool.removeLast()
+        ..reset(
+          x: x,
+          y: y,
+          vx: vx,
+          vy: vy,
+          life: life,
+          maxLife: maxLife,
+          color: color,
+          radius: radius,
+          material: material,
+          angle: angle,
+          isLine: isLine,
+          length: length,
+          isRing: isRing,
+          startRadius: startRadius,
+          endRadius: endRadius,
+        );
+    } else {
+      p = _Particle(
+        x: x,
+        y: y,
+        vx: vx,
+        vy: vy,
+        life: life,
+        maxLife: maxLife,
+        color: color,
+        radius: radius,
+        material: material,
+        angle: angle,
+        isLine: isLine,
+        length: length,
+        isRing: isRing,
+        startRadius: startRadius,
+        endRadius: endRadius,
+      );
+    }
+    _particles.add(p);
+  }
+
   void _addParticle(_Particle particle) {
-    if (_particles.length >= maxParticles) _particles.removeAt(0);
+    if (_particles.length >= maxParticles) {
+      if (_oldestIndex >= _particles.length) _oldestIndex = 0;
+      _freePool.add(_particles[_oldestIndex]);
+      _particles[_oldestIndex] = particle;
+      _oldestIndex = (_oldestIndex + 1) % maxParticles;
+      return;
+    }
     _particles.add(particle);
   }
 
@@ -354,17 +449,15 @@ class ParticlePool extends PositionComponent with HasGameReference<DinoGame> {
     double maxRadius,
   ) {
     for (int i = 0; i < count; i++) {
-      _addParticle(
-        _Particle(
-          x: pos.x + (_rng.nextDouble() - 0.5) * 10,
-          y: pos.y + (_rng.nextDouble() - 0.5) * 10,
-          vx: (_rng.nextDouble() - 0.5) * spread,
-          vy: -(_rng.nextDouble()) * spread * 0.8,
-          life: maxLife,
-          maxLife: maxLife,
-          color: color,
-          radius: 1.5 + _rng.nextDouble() * 3,
-        ),
+      _spawnParticle(
+        x: pos.x + (_rng.nextDouble() - 0.5) * 10,
+        y: pos.y + (_rng.nextDouble() - 0.5) * 10,
+        vx: (_rng.nextDouble() - 0.5) * spread,
+        vy: -(_rng.nextDouble()) * spread * 0.8,
+        life: maxLife,
+        maxLife: maxLife,
+        color: color,
+        radius: 1.5 + _rng.nextDouble() * 3,
       );
     }
   }
@@ -384,16 +477,33 @@ class ParticlePool extends PositionComponent with HasGameReference<DinoGame> {
 
       p.life -= dt;
       if (p.life <= 0) {
-        _particles.removeAt(i);
+        final lastIdx = _particles.length - 1;
+        if (i != lastIdx) {
+          _particles[i] = _particles[lastIdx];
+        }
+        _freePool.add(_particles.removeLast());
       }
     }
   }
 
   static final _paint = Paint();
+  static final Path _wingPath = Path();
+  static final Path _beakUnitPath = Path()
+    ..moveTo(0, -2)
+    ..lineTo(5, 0)
+    ..lineTo(0, 2)
+    ..close();
+  static final Path _rockUnitPath = Path()
+    ..moveTo(-1, 1)
+    ..lineTo(-0.6, -1)
+    ..lineTo(1, -0.4)
+    ..lineTo(0.5, 1)
+    ..close();
 
   @override
   void render(Canvas canvas) {
-    for (final p in _particles) {
+    for (int i = 0; i < _particles.length; i++) {
+      final p = _particles[i];
       final alpha = (p.life / p.maxLife).clamp(0.0, 1.0);
       _paint.color = p.color.withValues(alpha: alpha);
       if (p.material != null) {
@@ -408,35 +518,25 @@ class ParticlePool extends PositionComponent with HasGameReference<DinoGame> {
           case HazardMaterial.feathers:
             canvas.drawOval(Rect.fromLTWH(-r, -r / 2, r * 2, r), _paint);
             final flap = math.sin((p.maxLife - p.life) * 35) * r;
-            canvas.drawPath(
-              Path()
-                ..moveTo(-r / 2, 0)
-                ..quadraticBezierTo(0, -r + flap, r / 2, -r * 1.3 + flap)
-                ..lineTo(r / 2, 0)
-                ..close(),
-              _paint,
-            );
+            _wingPath
+              ..reset()
+              ..moveTo(-r / 2, 0)
+              ..quadraticBezierTo(0, -r + flap, r / 2, -r * 1.3 + flap)
+              ..lineTo(r / 2, 0)
+              ..close();
+            canvas.drawPath(_wingPath, _paint);
             _paint.color = const Color(0xFFFFD25A).withValues(alpha: alpha);
-            canvas.drawPath(
-              Path()
-                ..moveTo(r, -2)
-                ..lineTo(r + 5, 0)
-                ..lineTo(r, 2)
-                ..close(),
-              _paint,
-            );
+            canvas.save();
+            canvas.translate(r, 0);
+            canvas.drawPath(_beakUnitPath, _paint);
+            canvas.restore();
           case HazardMaterial.plant:
             canvas.drawOval(Rect.fromLTWH(-r, -r * 2, r * 2, r * 4), _paint);
           default:
-            canvas.drawPath(
-              Path()
-                ..moveTo(-r, r)
-                ..lineTo(-r * .6, -r)
-                ..lineTo(r, -r * .4)
-                ..lineTo(r * .5, r)
-                ..close(),
-              _paint,
-            );
+            canvas.save();
+            canvas.scale(r, r);
+            canvas.drawPath(_rockUnitPath, _paint);
+            canvas.restore();
         }
         canvas.restore();
       } else if (p.isRing) {
@@ -462,7 +562,7 @@ class ParticlePool extends PositionComponent with HasGameReference<DinoGame> {
 class _Particle {
   double x, y, vx, vy, life, maxLife, radius;
   Color color;
-  final HazardMaterial? material;
+  HazardMaterial? material;
   double angle;
   bool isLine;
   double length;
@@ -487,6 +587,40 @@ class _Particle {
     this.startRadius = 0,
     this.endRadius = 0,
   });
+
+  void reset({
+    required double x,
+    required double y,
+    required double vx,
+    required double vy,
+    required double life,
+    required double maxLife,
+    required Color color,
+    required double radius,
+    HazardMaterial? material,
+    double angle = 0,
+    bool isLine = false,
+    double length = 0,
+    bool isRing = false,
+    double startRadius = 0,
+    double endRadius = 0,
+  }) {
+    this.x = x;
+    this.y = y;
+    this.vx = vx;
+    this.vy = vy;
+    this.life = life;
+    this.maxLife = maxLife;
+    this.color = color;
+    this.radius = radius;
+    this.material = material;
+    this.angle = angle;
+    this.isLine = isLine;
+    this.length = length;
+    this.isRing = isRing;
+    this.startRadius = startRadius;
+    this.endRadius = endRadius;
+  }
 }
 
 class HighSpeedStreaks extends PositionComponent
