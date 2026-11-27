@@ -57,6 +57,20 @@
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&family=Noto+Color+Emoji&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
 
   <style>
+    @font-face {
+      font-family: 'Fredoka';
+      font-style: normal;
+      font-weight: 600 800;
+      font-display: swap;
+      src: url('assets/assets/fonts/Fredoka.ttf') format('truetype');
+    }
+    @font-face {
+      font-family: 'Nunito';
+      font-style: normal;
+      font-weight: 600 800;
+      font-display: swap;
+      src: url('assets/assets/fonts/Nunito.ttf') format('truetype');
+    }
     body, html {
       margin: 0;
       padding: 0;
@@ -73,31 +87,38 @@
       width: 100% !important;
       height: 100% !important;
     }
-    #boot-scene {position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px 24px;box-sizing:border-box;background:linear-gradient(180deg,rgba(20,34,53,.70),rgba(18,29,45,.48) 50%,rgba(14,23,36,.72)),url('assets/assets/images/biomes/desert_fossil_canyon.png') center/cover;color:#1f2d42;font-family:Fredoka,Nunito,sans-serif;transition:opacity .28s ease;pointer-events:none;}
+    #boot-scene {position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px 24px;box-sizing:border-box;background:linear-gradient(180deg,rgba(20,34,53,.70),rgba(18,29,45,.48) 50%,rgba(14,23,36,.72)),url('assets/assets/images/biomes/desert_fossil_canyon.png') center/cover;color:#1f2d42;font-family:Fredoka,Nunito,sans-serif;pointer-events:none;}
     #boot-scene .boot-wrap {width:min(840px,100%);display:flex;align-items:center;gap:24px;}
-    #boot-scene .boot-dino {flex:4;height:275px;position:relative;display:flex;align-items:flex-end;justify-content:center;padding-bottom:12px;box-sizing:border-box;}
-    #boot-scene .boot-ledge {position:absolute;bottom:2px;width:min(220px,80%);height:28px;border-radius:50%;background:linear-gradient(180deg,#8d6945,#4b3624);border-top:1.5px solid rgba(255,231,179,.45);box-shadow:0 5px 12px rgba(11,16,24,.55);}
-    #boot-scene .boot-dino img {position:relative;height:100%;max-height:263px;width:auto;aspect-ratio:240/280;object-fit:contain;display:block;}
+    #boot-scene .boot-dino {flex:4;display:flex;align-items:center;justify-content:center;overflow:visible;}
+    #boot-scene .boot-dino-stage {position:relative;height:196px;aspect-ratio:86/100;display:flex;align-items:flex-end;justify-content:center;overflow:visible;}
+    #boot-scene .boot-ledge {position:absolute;left:50%;transform:translateX(-50%);bottom:-13%;width:154%;height:26%;border-radius:50% 50% 38% 38% / 82% 82% 24% 24%;background:linear-gradient(180deg,#ffd88e,#d68d50 56%,#8a4831);border-top:1.8px solid rgba(255,240,196,.65);box-shadow:0 6px 14px rgba(11,16,24,.55);}
+    #boot-scene .boot-hill-img {display:none;position:absolute;left:50%;transform:translateX(-50%);bottom:-13%;width:154%;height:26%;object-fit:contain;pointer-events:none;}
+    #boot-scene .boot-dino img#boot-dino-img {position:relative;width:100%;height:100%;object-fit:contain;display:block;transform-origin:50% 93%;animation:boot-dino-breathe 2.6s ease-in-out infinite;will-change:transform;}
     #boot-scene .boot-panel {flex:5;min-width:0;display:flex;flex-direction:column;align-items:center;gap:12px;}
-    #boot-scene .boot-crest {padding:9px 24px 14px;border-radius:14px;background:linear-gradient(180deg,#2b3e59,#152132);border:2px solid #0c121a;box-shadow:0 5px 0 #0a1018,inset 0 0 0 1.4px rgba(216,174,94,.85);text-align:center;}
-    #boot-scene h1 {margin:0;font-size:clamp(26px,3.6vw,36px);line-height:1.15;font-weight:700;color:#fff8e6;text-shadow:0 2px 4px rgba(11,17,26,.85);}
+    #boot-scene .boot-crest {height:66px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;padding:8px 24px 12px;border-radius:14px;background:linear-gradient(180deg,#2b3e59,#152132);border:2px solid #0c121a;box-shadow:0 3.5px 0 #0a1018,inset 0 0 0 1.4px rgba(216,174,94,.85);text-align:center;}
+    #boot-scene h1 {margin:0;font-size:36px;line-height:1.1;white-space:nowrap;font-weight:700;color:#fff8e6;text-shadow:0 2px 4px rgba(11,17,26,.85);}
     #boot-scene h1 span {color:#ffcb55;}
-    #boot-scene .boot-card {width:100%;box-sizing:border-box;padding:14px 18px 16px;border-radius:22px;background:linear-gradient(180deg,#fffcf3,#f3e7cd);border:2.2px solid #5d462b;box-shadow:0 4px 0 #43311d,0 8px 16px rgba(16,24,36,.35),inset 0 0 0 1.8px #d5b070;text-align:center;}
-    #boot-scene .boot-card p {margin:0 0 12px;font-size:17px;font-weight:700;color:#1f2d42;}
-    .boot-track {height:10px;padding:2.5px;background:#1d2c42;border:1.6px solid #c2974d;border-radius:10px;overflow:hidden;}
-    .boot-track-fill {width:6%;height:100%;border-radius:6px;background:linear-gradient(180deg,#ffe08a,#ffcb55);animation:boot-warmup 2.0s ease-out forwards;}
-    #boot-scene .boot-status {margin:9px 0 0;font-size:13px;font-weight:700;color:#3e4c61;font-family:Nunito,sans-serif;}
-    @media(max-width:560px) {#boot-scene .boot-wrap {flex-direction:column;gap:10px;} #boot-scene .boot-dino {flex:none;width:100%;height:175px;}}
-    @keyframes boot-warmup {from {width:6%;}to {width:28%;}}
-    @media(prefers-reduced-motion:reduce) {.boot-track-fill {animation:none;width:28%;}}
+    #boot-scene .boot-card {width:100%;height:114px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:center;padding:14px 18px 16px;border-radius:22px;background:linear-gradient(180deg,#fffcf3,#f3e7cd);border:2.2px solid #5d462b;box-shadow:0 4px 0 #43311d,0 8px 16px rgba(16,24,36,.35),inset 0 0 0 1.8px #d5b070;text-align:center;}
+    #boot-scene .boot-card p {margin:0 0 11px;font-size:17px;line-height:20px;font-weight:700;color:#1f2d42;white-space:nowrap;}
+    .boot-track {box-sizing:border-box;height:18px;padding:2.5px;background:#1d2c42;border:1.6px solid #c2974d;border-radius:10px;overflow:hidden;}
+    .boot-track-fill {width:6%;height:100%;border-radius:6px;background:linear-gradient(90deg,#ffd166 0%,#ffeaa4 45%,#ffcb55 90%);background-size:200% 100%;animation:boot-warmup 3.2s cubic-bezier(.2,.7,.3,1) forwards,boot-sheen 1.4s linear infinite;}
+    #boot-scene .boot-status {margin:9px 0 0;font-size:13px;line-height:17px;font-weight:700;color:#5d6b80;font-family:Nunito,sans-serif;white-space:nowrap;}
+    @media(max-width:560px) {#boot-scene .boot-wrap {flex-direction:column;gap:10px;} #boot-scene .boot-dino {flex:none;width:100%;} #boot-scene .boot-dino-stage {height:136px;}}
+    @media(max-height:290px) {#boot-scene .boot-dino-stage {height:116px;} #boot-scene .boot-panel {gap:8px;} #boot-scene .boot-crest {height:48px;padding:6px 18px 10px;} #boot-scene h1 {font-size:26px;} #boot-scene .boot-card {height:92px;padding:10px 14px 12px;} #boot-scene .boot-card p {font-size:15px;line-height:18px;margin-bottom:8px;} .boot-track {height:15px;} #boot-scene .boot-status {margin-top:6px;font-size:12px;line-height:14px;}}
+    @keyframes boot-dino-breathe {0%,100% {transform:translateY(0px) scale(1,1);} 50% {transform:translateY(-2px) scale(1.012,.986);}}
+    @keyframes boot-warmup {from {width:6%;}to {width:42%;}}
+    @keyframes boot-sheen {from {background-position:200% 0;}to {background-position:-200% 0;}}
+    @media(prefers-reduced-motion:reduce) {#boot-scene .boot-dino img#boot-dino-img {animation:none;} .boot-track-fill {animation:none;width:42%;}}
   </style>
 </head>
 <body>
   <div id="boot-scene" role="status" aria-label="Loading Dino Run Epochs">
     <div class="boot-wrap">
       <div class="boot-dino">
-        <div class="boot-ledge"></div>
-        <img src="assets/assets/images/boot_dino.png" alt="" width="240" height="280">
+        <div id="boot-dino-stage" class="boot-dino-stage">
+          <div id="boot-ledge" class="boot-ledge"></div>
+          <img id="boot-dino-img" src="assets/assets/images/boot_dino.png" alt="" width="240" height="280">
+        </div>
       </div>
       <div class="boot-panel">
         <div class="boot-crest"><h1>Dino Run <span>Epochs</span></h1></div>
@@ -110,6 +131,51 @@
     </div>
   </div>
   <script>
+    (function applyCachedBootStage() {
+      try {
+        const raw = window.localStorage && window.localStorage.getItem('dino_boot_stage_v2');
+        if (!raw) return;
+        const stage = JSON.parse(raw);
+        const container = document.getElementById('boot-dino-stage');
+        const img = document.getElementById('boot-dino-img');
+        const ledge = document.getElementById('boot-ledge');
+        if (container && stage.hill) {
+          const hill = document.createElement('img');
+          hill.id = 'boot-hill-img';
+          hill.className = 'boot-hill-img';
+          hill.alt = '';
+          hill.src = stage.hill;
+          hill.style.display = 'block';
+          container.insertBefore(hill, img || null);
+          if (ledge) ledge.style.display = 'none';
+        }
+        if (img && stage.open) {
+          img.src = stage.open;
+          img.classList.add('boot-stage-cached');
+          if (stage.blink) {
+            const preloadBlink = new Image();
+            preloadBlink.src = stage.blink;
+            const blinkCycle = function() {
+              if (!document.getElementById('boot-scene')) return;
+              img.src = stage.blink;
+              setTimeout(function() {
+                if (!document.getElementById('boot-scene')) return;
+                img.src = stage.open;
+              }, 145);
+              setTimeout(blinkCycle, 3100);
+            };
+            setTimeout(blinkCycle, 1350);
+          }
+        }
+      } catch (_) {}
+    })();
+    window.saveDinoBootStage = function(payload) {
+      try {
+        if (window.localStorage && payload) {
+          window.localStorage.setItem('dino_boot_stage_v2', payload);
+        }
+      } catch (_) {}
+    };
     window.finishDinoBoot = function() {
       const scene=document.getElementById('boot-scene');
       if(scene) scene.remove();

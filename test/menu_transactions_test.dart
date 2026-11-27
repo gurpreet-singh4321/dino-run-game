@@ -74,9 +74,17 @@ void main() {
       final run = await game(tester);
       await tester.pumpWidget(app(AdventureWardrobe(game: run)));
       expect(find.text('Powers'), findsNothing);
-      await tester.tap(find.byTooltip('Next items'));
+      await tester.scrollUntilVisible(
+        find.text('Moon explorer'),
+        120,
+        scrollable: find
+            .descendant(
+              of: find.byType(GridView).first,
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 350));
       expect(find.text('Moon explorer').hitTestable(), findsOneWidget);
       await tester.tap(find.text('Neck'));
       await tester.pump();

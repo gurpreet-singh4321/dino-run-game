@@ -8,8 +8,13 @@ import '../../game/dino_game.dart';
 import '../../managers/coin_manager.dart';
 import '../../managers/audio_manager.dart';
 import '../../skins/new_dino_skin.dart';
+import '../../skins/skin.dart';
+import '../../skins/skin_registry.dart';
 import '../../utils/scenery_cache.dart';
 import '../../utils/boot_handoff.dart';
+import '../../utils/boot_preview_cache.dart';
+import 'animated_dino_preview.dart';
+import 'dino_hill_top.dart';
 import 'illustrated_menu.dart';
 import 'menu_chrome.dart';
 import 'pause_menu.dart';
@@ -25,18 +30,38 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   int completed = 0;
   bool ready = false;
   bool _handedOff = false;
+  bool _gameMounted = false;
+  bool _flightActive = false;
+  bool _handoffDone = false;
   ui.Image? scenery;
   ui.Image? bootDino;
+  CharacterSkin? _splashSkin;
   String? error;
-  static const total = 9;
+  static const total = 8;
+  final GlobalKey _rootKey = GlobalKey();
+  final GlobalKey _splashDinoKey = GlobalKey();
+  final GlobalKey _menuDinoKey = GlobalKey();
+  Rect? _fromRect;
+  Rect? _toRect;
   late final AnimationController _progress = AnimationController(
     vsync: this,
-    value: 0.28,
+    value: 0.42,
   );
+  late final AnimationController _handoff = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 680),
+  )..addStatusListener((status) {
+      if (status == AnimationStatus.completed && mounted) {
+        setState(() {
+          _handoffDone = true;
+          _flightActive = false;
+        });
+      }
+    });
 
   @override
   void initState() {
@@ -46,6 +71,7 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   void dispose() {
+    _handoff.dispose();
     _progress.dispose();
     super.dispose();
   }
@@ -53,7 +79,7 @@ class _SplashScreenState extends State<SplashScreen>
   void _step() {
     if (!mounted) return;
     setState(() => completed++);
-    final target = (0.28 + 0.72 * (completed / total)).clamp(0.28, 1.0);
+    final target = (0.42 + 0.58 * (completed / total)).clamp(0.42, 1.0);
     _progress.animateTo(
       target,
       duration: const Duration(milliseconds: 200),
@@ -65,6 +91,33 @@ class _SplashScreenState extends State<SplashScreen>
     if (_handedOff) return;
     _handedOff = true;
     WidgetsBinding.instance.addPostFrameCallback((_) => finishDinoBoot());
+  }
+
+  Rect? _measureLocalRect(GlobalKey key) {
+    final box = key.currentContext?.findRenderObject() as RenderBox?;
+    final root = _rootKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null || root == null || !box.hasSize || !root.hasSize) {
+      return null;
+    }
+    final topLeft = box.localToGlobal(Offset.zero, ancestor: root);
+    return topLeft & box.size;
+  }
+
+  void _onMenuReady() {
+    if (!mounted || _flightActive || _handoffDone) return;
+    _toRect = _measureLocalRect(_menuDinoKey);
+    if (MediaQuery.disableAnimationsOf(context) ||
+        _fromRect == null ||
+        _toRect == null ||
+        _splashSkin == null) {
+      setState(() {
+        _handoffDone = true;
+        _flightActive = false;
+      });
+      return;
+    }
+    setState(() => _flightActive = true);
+    _handoff.forward(from: 0);
   }
 
   Future<ui.Image> _loadBootDino() async {
@@ -82,19 +135,26 @@ class _SplashScreenState extends State<SplashScreen>
       completed = 0;
       error = null;
     });
-    _progress.value = 0.28;
+    _progress.value = 0.42;
     try {
-      // Reveal the Flutter splash once the matching desert backdrop and boot
-      // Dino cutout are decoded so removing the HTML overlay has zero pop.
+      // Decode desert backdrop and Dino rig first so the HTML handoff reveals
+      // the live clothed Dino on the same epoch hilltop with zero naked pop-in.
       try {
-        final results = await Future.wait([
+        final results = await Future.wait<Object?>([
           SceneryCache.load(SceneryCache.paths.first),
           _loadBootDino(),
+          NewDinoSkin.preload(),
         ]);
+        SkinRegistry.setCosmetics(widget.coinManager.equippedCosmetics.values);
+        final skin = SkinRegistry.createInstance(SkinRegistry.defaultSkin.id)
+          ..cosmetics = List.of(SkinRegistry.defaultSkin.cosmetics);
+        unawaited(cacheBootStagePreview(skin));
         if (mounted) {
           setState(() {
-            scenery = results[0];
-            bootDino = results[1];
+            scenery = results[0] as ui.Image?;
+            bootDino = results[1] as ui.Image?;
+            _splashSkin = skin;
+            ready = true;
           });
         }
       } catch (_) {}
@@ -105,8 +165,19 @@ class _SplashScreenState extends State<SplashScreen>
       await Future.wait([
         GearAssets.preload().then((_) => _step()),
         NewDinoSkin.preload().then((_) {
-          if (mounted) setState(() => ready = true);
-          _step();
+          if (_splashSkin == null) {
+            SkinRegistry.setCosmetics(
+              widget.coinManager.equippedCosmetics.values,
+            );
+            final skin = SkinRegistry.createInstance(SkinRegistry.defaultSkin.id)
+              ..cosmetics = List.of(SkinRegistry.defaultSkin.cosmetics);
+            if (mounted) {
+              setState(() {
+                _splashSkin = skin;
+                ready = true;
+              });
+            }
+          }
         }),
         ...SceneryCache.paths.skip(1).map((name) async {
           // Optional scenery can fall back to the game's native painted sky.
@@ -119,29 +190,19 @@ class _SplashScreenState extends State<SplashScreen>
       // Music warming does not hold the first screen behind six audio downloads.
       unawaited(AudioManager.preloadAll().catchError((Object _) {}));
       if (!mounted) return;
-      unawaited(
-        precacheImage(EpochScenery.imageFor(0), context).catchError((Object _) {}),
-      );
+      await precacheImage(
+        EpochScenery.imageFor(0),
+        context,
+      ).catchError((Object _) {});
+      if (!mounted) return;
       await _progress.animateTo(
         1.0,
         duration: const Duration(milliseconds: 220),
         curve: Curves.easeOut,
       );
       if (!mounted) return;
-      Navigator.of(context).pushReplacement(
-        PageRouteBuilder<void>(
-          transitionDuration: const Duration(milliseconds: 340),
-          pageBuilder: (context, animation, secondaryAnimation) =>
-              FadeTransition(
-                opacity: animation.drive(CurveTween(curve: Curves.easeOutCubic)),
-                child: GamePlayScreen(
-                  coinManager: widget.coinManager,
-                  initialScenery: scenery,
-                  initialBootDino: bootDino,
-                ),
-              ),
-        ),
-      );
+      _fromRect = _measureLocalRect(_splashDinoKey);
+      setState(() => _gameMounted = true);
     } catch (_) {
       if (mounted) {
         setState(() => error = 'Dino could not load. Try again.');
@@ -151,24 +212,114 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   @override
-  Widget build(BuildContext context) => AnimatedBuilder(
-    animation: _progress,
-    builder: (context, _) => SplashArtwork(
-      scenery: scenery,
-      bootDino: bootDino,
-      ready: ready,
-      animateEntrance: false,
-      progress: _progress.value,
-      error: error,
-      onRetry: _load,
-    ),
+  Widget build(BuildContext context) => Stack(
+    key: _rootKey,
+    children: [
+      if (_gameMounted)
+        GamePlayScreen(
+          coinManager: widget.coinManager,
+          initialScenery: scenery,
+          initialBootDino: bootDino,
+          menuDinoKey: _menuDinoKey,
+          showMenuDino: _handoffDone,
+          onMenuReady: _onMenuReady,
+          embeddedLoading: true,
+        ),
+      if (!_handoffDone)
+        AnimatedBuilder(
+          animation: Listenable.merge([_progress, _handoff]),
+          builder: (context, _) {
+            final t = _flightActive ? _handoff.value : 0.0;
+            final splashFade = _flightActive
+                ? (1.0 - Curves.easeOut.transform((t * 1.85).clamp(0.0, 1.0)))
+                : 1.0;
+            final glideT = _flightActive
+                ? Curves.easeInOutCubic.transform(t)
+                : 0.0;
+            final rect = (_flightActive && _fromRect != null && _toRect != null)
+                ? Rect.lerp(_fromRect, _toRect, glideT)
+                : null;
+            return Stack(
+              children: [
+                if (splashFade > 0.001)
+                  Opacity(
+                    opacity: splashFade,
+                    child: SplashArtwork(
+                      scenery: scenery,
+                      bootDino: bootDino,
+                      skin: _splashSkin,
+                      dinoStageKey: _splashDinoKey,
+                      showDinoStage: !_flightActive,
+                      ready: ready,
+                      animateEntrance: false,
+                      progress: _progress.value,
+                      error: error,
+                      onRetry: _load,
+                    ),
+                  ),
+                if (rect != null && _splashSkin != null)
+                  Positioned.fromRect(
+                    rect: rect,
+                    child: IgnorePointer(
+                      child: _SplashHillAndDino(
+                        skin: _splashSkin!,
+                        width: rect.width,
+                        height: rect.height,
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
+    ],
   );
+}
+
+class _SplashHillAndDino extends StatelessWidget {
+  final CharacterSkin skin;
+  final double width;
+  final double height;
+  const _SplashHillAndDino({
+    required this.skin,
+    required this.width,
+    required this.height,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final ledgeHeight = (height * .26).clamp(24.0, 86.0);
+    return SizedBox(
+      width: width,
+      height: height,
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.bottomCenter,
+        children: [
+          Positioned(
+            bottom: -ledgeHeight * .50,
+            width: width * 1.54,
+            height: ledgeHeight,
+            child: const RepaintBoundary(
+              child: CustomPaint(painter: DinoHillTopPainter(0)),
+            ),
+          ),
+          Positioned.fill(
+            child: AnimatedDinoPreview(template: skin),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 /// The real loading screen, separately renderable for compact-device review.
 class SplashArtwork extends StatefulWidget {
   final ui.Image? scenery;
   final ui.Image? bootDino;
+  final CharacterSkin? skin;
+  final GlobalKey? dinoStageKey;
+  final bool showDinoStage;
   final bool ready, animateEntrance;
   final double progress;
   final String? error;
@@ -177,6 +328,9 @@ class SplashArtwork extends StatefulWidget {
     super.key,
     this.scenery,
     this.bootDino,
+    this.skin,
+    this.dinoStageKey,
+    this.showDinoStage = true,
     this.ready = false,
     this.animateEntrance = true,
     this.progress = 0,
@@ -282,163 +436,208 @@ class _SplashArtworkState extends State<SplashArtwork>
                       },
                       child: Builder(
                         builder: (context) {
-                          final dinoStage = RepaintBoundary(
+                          final dinoHeight = small ? 116.0 : (portrait ? 136.0 : 196.0);
+                          final dinoWidth = dinoHeight * .86;
+                          final ledgeHeight = (dinoHeight * .26).clamp(24.0, 62.0);
+                          final dinoStage = Align(
+                            alignment: Alignment.center,
                             child: SizedBox(
-                              height: small ? 155 : (portrait ? 175 : 275),
-                              child: Stack(
-                                alignment: Alignment.bottomCenter,
-                                children: [
-                                  Positioned(
-                                    bottom: 2,
-                                    width: small ? 140 : 220,
-                                    height: small ? 24 : 36,
-                                    child: const CustomPaint(
-                                      painter: _SplashLedgePainter(),
-                                    ),
-                                  ),
-                                  Positioned.fill(
-                                    bottom: small ? 6 : 12,
-                                    child: Center(
-                                      child: AspectRatio(
-                                        aspectRatio: 240 / 280,
-                                        child: widget.bootDino != null
-                                            ? RawImage(
-                                                image: widget.bootDino,
-                                                fit: BoxFit.contain,
-                                              )
-                                            : Image.asset(
-                                                'assets/images/boot_dino.png',
-                                                fit: BoxFit.contain,
-                                              ),
+                              key: widget.dinoStageKey,
+                              height: dinoHeight,
+                              width: dinoWidth,
+                              child: Visibility(
+                                visible: widget.showDinoStage,
+                                maintainState: true,
+                                maintainAnimation: true,
+                                maintainSize: true,
+                                child: Stack(
+                                  clipBehavior: Clip.none,
+                                  alignment: Alignment.bottomCenter,
+                                  children: [
+                                    Positioned(
+                                      bottom: -ledgeHeight * .50,
+                                      width: dinoWidth * 1.54,
+                                      height: ledgeHeight,
+                                      child: const RepaintBoundary(
+                                        child: CustomPaint(
+                                          painter: DinoHillTopPainter(0),
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                ],
+                                    if (widget.skin != null)
+                                      Positioned.fill(
+                                        child: AnimatedDinoPreview(
+                                          template: widget.skin!,
+                                        ),
+                                      )
+                                    else
+                                      Positioned.fill(
+                                        child: Center(
+                                          child: AspectRatio(
+                                            aspectRatio: 240 / 280,
+                                            child: widget.bootDino != null
+                                                ? RawImage(
+                                                    image: widget.bootDino,
+                                                    fit: BoxFit.contain,
+                                                  )
+                                                : Image.asset(
+                                                    'assets/images/boot_dino.png',
+                                                    fit: BoxFit.contain,
+                                                  ),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
                               ),
                             ),
                           );
+                          final lockCardHeight =
+                              widget.error == null &&
+                              MediaQuery.textScalerOf(context).scale(1.0) <= 1.05;
                           final card = SingleChildScrollView(
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                CustomPaint(
-                                  painter: const PlaqueBadgePainter(
-                                    top: Color(0xFF2B3E59),
-                                    mid: MenuPalette.slate,
-                                    bottom: Color(0xFF152132),
-                                    outline: Color(0xFF0C121A),
-                                    lip: Color(0xFF0A1018),
-                                    innerRim: Color(0xDDD8AE5E),
-                                  ),
-                                  child: Padding(
-                                    padding: EdgeInsets.fromLTRB(
-                                      small ? 18 : 24,
-                                      small ? 6 : 9,
-                                      small ? 18 : 24,
-                                      small ? 11 : 14,
+                                SizedBox(
+                                  height: small ? 48.0 : 66.0,
+                                  child: CustomPaint(
+                                    painter: const PlaqueBadgePainter(
+                                      top: Color(0xFF2B3E59),
+                                      mid: MenuPalette.slate,
+                                      bottom: Color(0xFF152132),
+                                      outline: Color(0xFF0C121A),
+                                      lip: Color(0xFF0A1018),
+                                      innerRim: Color(0xDDD8AE5E),
                                     ),
-                                    child: FittedBox(
-                                      fit: BoxFit.scaleDown,
-                                      child: RichText(
-                                        text: TextSpan(
-                                          style: TextStyle(
-                                            fontFamily: 'Fredoka',
-                                            fontSize: small ? 26 : 36,
-                                            fontWeight: FontWeight.w800,
-                                            shadows: const [
-                                              Shadow(
-                                                color: Color(0xDD0B111A),
-                                                offset: Offset(0, 2.5),
-                                                blurRadius: 4,
+                                    child: Padding(
+                                      padding: EdgeInsets.fromLTRB(
+                                        small ? 18 : 24,
+                                        small ? 6 : 8,
+                                        small ? 18 : 24,
+                                        small ? 10 : 12,
+                                      ),
+                                      child: Center(
+                                        widthFactor: 1,
+                                        child: FittedBox(
+                                          fit: BoxFit.scaleDown,
+                                          child: RichText(
+                                            text: TextSpan(
+                                              style: TextStyle(
+                                                fontFamily: 'Fredoka',
+                                                fontSize: small ? 26 : 36,
+                                                height: 1.1,
+                                                fontWeight: FontWeight.w800,
+                                                shadows: const [
+                                                  Shadow(
+                                                    color: Color(0xDD0B111A),
+                                                    offset: Offset(0, 2.5),
+                                                    blurRadius: 4,
+                                                  ),
+                                                ],
                                               ),
-                                            ],
+                                              children: const [
+                                                TextSpan(
+                                                  text: 'Dino Run ',
+                                                  style: TextStyle(color: Color(0xFFFFF8E6)),
+                                                ),
+                                                TextSpan(
+                                                  text: 'Epochs',
+                                                  style: TextStyle(color: MenuPalette.gold),
+                                                ),
+                                              ],
+                                            ),
                                           ),
-                                          children: const [
-                                            TextSpan(
-                                              text: 'Dino Run ',
-                                              style: TextStyle(color: Color(0xFFFFF8E6)),
-                                            ),
-                                            TextSpan(
-                                              text: 'Epochs',
-                                              style: TextStyle(color: MenuPalette.gold),
-                                            ),
-                                          ],
                                         ),
                                       ),
                                     ),
                                   ),
                                 ),
                                 SizedBox(height: small ? 8 : 12),
-                                MenuPaper(
-                                  accent: MenuPalette.gold,
-                                  padding: EdgeInsets.fromLTRB(
-                                    small ? 14 : 18,
-                                    small ? 10 : 14,
-                                    small ? 14 : 18,
-                                    small ? 12 : 16,
-                                  ),
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                                    children: [
-                                      Text(
-                                        'Adventure awaits.',
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(
-                                          fontFamily: 'Fredoka',
-                                          fontSize: small ? 15 : 17,
-                                          fontWeight: FontWeight.w700,
-                                          color: MenuPalette.ink,
-                                        ),
-                                      ),
-                                      SizedBox(height: small ? 8 : 12),
-                                      Container(
-                                        padding: const EdgeInsets.all(2.5),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFF1D2C42),
-                                          borderRadius: BorderRadius.circular(10),
-                                          border: Border.all(
-                                            color: const Color(0xFFC2974D),
-                                            width: 1.6,
+                                SizedBox(
+                                  height: lockCardHeight
+                                      ? (small ? 92.0 : 114.0)
+                                      : null,
+                                  child: MenuPaper(
+                                    accent: MenuPalette.gold,
+                                    padding: EdgeInsets.fromLTRB(
+                                      small ? 14 : 18,
+                                      small ? 10 : 14,
+                                      small ? 14 : 18,
+                                      small ? 12 : 16,
+                                    ),
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                                      children: [
+                                        Text(
+                                          'Adventure awaits.',
+                                          textAlign: TextAlign.center,
+                                          maxLines: 1,
+                                          style: TextStyle(
+                                            fontFamily: 'Fredoka',
+                                            fontSize: small ? 15 : 17,
+                                            height: (small ? 18 : 20) / (small ? 15 : 17),
+                                            fontWeight: FontWeight.w700,
+                                            color: MenuPalette.ink,
                                           ),
                                         ),
-                                        child: ClipRRect(
-                                          borderRadius: BorderRadius.circular(6),
-                                          child: LinearProgressIndicator(
-                                            value: widget.progress,
-                                            minHeight: small ? 8 : 10,
-                                            color: MenuPalette.gold,
-                                            backgroundColor: const Color(0xFF2B3E58),
-                                          ),
-                                        ),
-                                      ),
-                                      SizedBox(height: small ? 6 : 9),
-                                      Text(
-                                        widget.error ??
-                                            (widget.ready
-                                                ? 'Preparing the epochs…'
-                                                : 'Waking up Dino…'),
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(
-                                          color: widget.error != null
-                                              ? MenuPalette.red
-                                              : MenuPalette.muted,
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: small ? 12 : 13,
-                                        ),
-                                      ),
-                                      if (widget.error != null)
-                                        Padding(
-                                          padding: EdgeInsets.only(top: small ? 8 : 12),
-                                          child: Center(
-                                            child: FilledButton(
-                                              style: adventureButtonStyle(MenuPalette.terracotta),
-                                              onPressed: widget.onRetry,
-                                              child: const Text('Try again'),
+                                        SizedBox(height: small ? 8 : 11),
+                                        SizedBox(
+                                          height: small ? 15 : 18,
+                                          child: Container(
+                                            padding: const EdgeInsets.all(2.5),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFF1D2C42),
+                                              borderRadius: BorderRadius.circular(10),
+                                              border: Border.all(
+                                                color: const Color(0xFFC2974D),
+                                                width: 1.6,
+                                              ),
+                                            ),
+                                            child: ClipRRect(
+                                              borderRadius: BorderRadius.circular(6),
+                                              child: LinearProgressIndicator(
+                                                value: widget.progress,
+                                                minHeight: small ? 7 : 10,
+                                                color: MenuPalette.gold,
+                                                backgroundColor: const Color(0xFF2B3E58),
+                                              ),
                                             ),
                                           ),
                                         ),
-                                    ],
+                                        SizedBox(height: small ? 6 : 9),
+                                        Text(
+                                          widget.error ??
+                                              (widget.ready
+                                                  ? 'Preparing the epochs…'
+                                                  : 'Waking up Dino…'),
+                                          textAlign: TextAlign.center,
+                                          maxLines: 1,
+                                          style: TextStyle(
+                                            fontFamily: 'Nunito',
+                                            color: widget.error != null
+                                                ? MenuPalette.red
+                                                : MenuPalette.muted,
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: small ? 12 : 13,
+                                            height: (small ? 14 : 17) / (small ? 12 : 13),
+                                          ),
+                                        ),
+                                        if (widget.error != null)
+                                          Padding(
+                                            padding: EdgeInsets.only(top: small ? 8 : 12),
+                                            child: Center(
+                                              child: FilledButton(
+                                                style: adventureButtonStyle(MenuPalette.terracotta),
+                                                onPressed: widget.onRetry,
+                                                child: const Text('Try again'),
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ],
@@ -474,52 +673,24 @@ class _SplashArtworkState extends State<SplashArtwork>
   );
 }
 
-class _SplashLedgePainter extends CustomPainter {
-  const _SplashLedgePainter();
-  @override
-  void paint(Canvas canvas, Size size) {
-    final p = Paint();
-    canvas.drawOval(
-      Offset.zero & size,
-      p
-        ..shader = const RadialGradient(
-          colors: [Color(0x9C0B1018), Color(0x450B1018), Color(0x000B1018)],
-          stops: [0, .58, 1],
-        ).createShader(Offset.zero & size),
-    );
-    p.shader = null;
-    final path = Path()
-      ..moveTo(size.width * .10, size.height * .66)
-      ..quadraticBezierTo(size.width * .24, size.height * .22, size.width * .50, size.height * .24)
-      ..quadraticBezierTo(size.width * .76, size.height * .22, size.width * .90, size.height * .66)
-      ..quadraticBezierTo(size.width * .50, size.height * .82, size.width * .10, size.height * .66)
-      ..close();
-    canvas.drawPath(
-      path,
-      p
-        ..shader = const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xE09C764D), Color(0xDD583F2A), Color(0x0024180E)],
-          stops: [0, .55, 1],
-        ).createShader(Offset.zero & size),
-    );
-  }
-
-  @override
-  bool shouldRepaint(_SplashLedgePainter old) => false;
-}
-
 class GamePlayScreen extends StatefulWidget {
   final CoinManager coinManager;
   final ui.Image? initialScenery;
   final ui.Image? initialBootDino;
+  final GlobalKey? menuDinoKey;
+  final bool showMenuDino;
+  final VoidCallback? onMenuReady;
+  final bool embeddedLoading;
 
   const GamePlayScreen({
     super.key,
     required this.coinManager,
     this.initialScenery,
     this.initialBootDino,
+    this.menuDinoKey,
+    this.showMenuDino = true,
+    this.onMenuReady,
+    this.embeddedLoading = false,
   });
 
   @override
@@ -556,17 +727,24 @@ class _GamePlayScreenState extends State<GamePlayScreen> {
           },
           child: GameWidget<DinoGame>(
             game: _game,
-            loadingBuilder: (_) => SplashArtwork(
-              scenery: widget.initialScenery,
-              bootDino: widget.initialBootDino,
-              ready: true,
-              animateEntrance: false,
-              progress: 1,
-            ),
+            loadingBuilder: (_) => widget.embeddedLoading
+                ? const SizedBox.shrink()
+                : SplashArtwork(
+                    scenery: widget.initialScenery,
+                    bootDino: widget.initialBootDino,
+                    ready: true,
+                    animateEntrance: false,
+                    progress: 1,
+                  ),
             overlayBuilderMap: {
               'RunResults': (_, game) => RunResults(game: game),
               'MainMenuOverlay': (BuildContext context, DinoGame game) {
-                return MainMenuOverlay(game: game);
+                return MainMenuOverlay(
+                  game: game,
+                  dinoStageKey: widget.menuDinoKey,
+                  showDino: widget.showMenuDino,
+                  onMenuReady: widget.onMenuReady,
+                );
               },
               'PauseMenu': (BuildContext context, DinoGame game) {
                 return PauseMenu(game: game);

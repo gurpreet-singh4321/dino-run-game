@@ -47,223 +47,227 @@ class EpochPostcard extends StatelessWidget {
         minimumSize: const Size(48, 48),
         fixedSize: const Size(48, 48),
       );
-      return SizedBox(
-        height: height,
-        width: double.infinity,
-        child: CustomPaint(
-          foregroundPainter: _PostcardFramePainter(accent),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: const Color(0xFF3E2D1A), width: 2.2),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0xFF2E2012),
-                  offset: Offset(0, 4),
-                ),
-                BoxShadow(
-                  color: Color(0x700E1724),
-                  offset: Offset(0, 9),
-                  blurRadius: 18,
-                ),
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  EpochBiomeImage(stage: stage),
-                  const DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Color(0x58172638),
-                          Color(0xC8101C2B),
-                          Color(0xEB0B1522),
-                        ],
-                        stops: [0, .52, 1],
-                      ),
-                    ),
+      final arrowPad = bounds.maxWidth < 340 ? 6.0 : 12.0;
+      final tightCard = height < 134;
+      return RepaintBoundary(
+        child: SizedBox(
+          height: height,
+          width: double.infinity,
+          child: CustomPaint(
+            foregroundPainter: _PostcardFramePainter(accent),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: const Color(0xFF3E2D1A), width: 2.2),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0xFF2E2012),
+                    offset: Offset(0, 4),
                   ),
-                  Row(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(left: 16),
-                        child: IconButton(
-                          tooltip: 'Previous epoch',
-                          style: arrowStyle(selected > 0),
-                          onPressed: selected > 0
-                              ? () => onSelect(selected - 1)
-                              : null,
-                          icon: const MenuChevron(left: true, size: 26),
+                  BoxShadow(
+                    color: Color(0x700E1724),
+                    offset: Offset(0, 9),
+                    blurRadius: 18,
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    EpochBiomeImage(stage: stage),
+                    const DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Color(0x58172638),
+                            Color(0xC8101C2B),
+                            Color(0xEB0B1522),
+                          ],
+                          stops: [0, .52, 1],
                         ),
                       ),
-                    Expanded(
-                      child: LayoutBuilder(
-                        builder: (context, inner) => Center(
-                          child: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: ConstrainedBox(
-                              constraints: BoxConstraints(
-                                maxWidth: inner.maxWidth,
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 4),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    AnimatedSwitcher(
-                                      duration:
-                                          MediaQuery.disableAnimationsOf(context)
-                                              ? Duration.zero
-                                              : const Duration(milliseconds: 220),
-                                      child: Row(
-                                        key: ValueKey(selected),
-                                        mainAxisSize: MainAxisSize.min,
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: [
-                                          EpochEmblem(stage: stage, size: 22),
-                                          const SizedBox(width: 7),
-                                          Flexible(
-                                            child: Text(
-                                              names[selected],
-                                              maxLines: 2,
-                                              textAlign: TextAlign.center,
-                                              style: const TextStyle(
-                                                color: Colors.white,
-                                                fontFamily: 'Fredoka',
-                                                fontSize: 19,
-                                                fontWeight: FontWeight.w800,
-                                                shadows: [
-                                                  Shadow(
-                                                    color: Colors.black54,
-                                                    blurRadius: 4,
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      descriptions[stage % 6],
-                                      textAlign: TextAlign.center,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        color: Color(0xFFFFF0CE),
-                                        fontSize: 12.5,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    FittedBox(
-                                      fit: BoxFit.scaleDown,
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 10,
-                                          vertical: 4,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0x8E101B29),
-                                          borderRadius: BorderRadius.circular(10),
-                                          border: Border.all(
-                                            color: const Color(0x4DDAB164),
-                                            width: 1,
-                                          ),
-                                        ),
+                    ),
+                    Row(
+                      children: [
+                        Padding(
+                          padding: EdgeInsets.only(left: arrowPad),
+                          child: IconButton(
+                            tooltip: 'Previous epoch',
+                            style: arrowStyle(selected > 0),
+                            onPressed: selected > 0
+                                ? () => onSelect(selected - 1)
+                                : null,
+                            icon: const MenuChevron(left: true, size: 26),
+                          ),
+                        ),
+                      Expanded(
+                        child: LayoutBuilder(
+                          builder: (context, inner) => Center(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  maxWidth: inner.maxWidth,
+                                ),
+                                child: Padding(
+                                  padding: EdgeInsets.symmetric(vertical: tightCard ? 2 : 4),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      AnimatedSwitcher(
+                                        duration:
+                                            MediaQuery.disableAnimationsOf(context)
+                                                ? Duration.zero
+                                                : const Duration(milliseconds: 220),
                                         child: Row(
+                                          key: ValueKey(selected),
                                           mainAxisSize: MainAxisSize.min,
                                           mainAxisAlignment:
                                               MainAxisAlignment.center,
                                           children: [
-                                            for (
-                                              var i = 0;
-                                              i < names.length;
-                                              i++
-                                            )
-                                              Padding(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 3,
+                                            EpochEmblem(stage: stage, size: 22),
+                                            const SizedBox(width: 7),
+                                            Flexible(
+                                              child: Text(
+                                                names[selected],
+                                                maxLines: 2,
+                                                textAlign: TextAlign.center,
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontFamily: 'Fredoka',
+                                                  fontSize: 19,
+                                                  fontWeight: FontWeight.w800,
+                                                  shadows: [
+                                                    Shadow(
+                                                      color: Colors.black54,
+                                                      blurRadius: 4,
                                                     ),
-                                                child: AnimatedContainer(
-                                                  duration:
-                                                      MediaQuery.disableAnimationsOf(
-                                                            context,
-                                                          )
-                                                          ? Duration.zero
-                                                          : const Duration(
-                                                              milliseconds: 180,
-                                                            ),
-                                                  width: i == selected ? 20 : 8,
-                                                  height: 7,
-                                                  decoration: BoxDecoration(
-                                                    color: i == selected
-                                                        ? MenuPalette.gold
-                                                        : const Color(0x72FFFFFF),
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          3.5,
-                                                        ),
-                                                    border: Border.all(
-                                                      color: i == selected
-                                                          ? const Color(
-                                                              0xFFFFF1C1,
-                                                            )
-                                                          : const Color(
-                                                              0x30FFFFFF,
-                                                            ),
-                                                      width: 0.9,
-                                                    ),
-                                                  ),
+                                                  ],
                                                 ),
-                                              ),
-                                            const SizedBox(width: 8),
-                                            Text(
-                                              '${selected + 1} / ${names.length}',
-                                              style: const TextStyle(
-                                                color: Color(0xFFFFF5DC),
-                                                fontSize: 11.5,
-                                                fontWeight: FontWeight.w800,
                                               ),
                                             ),
                                           ],
                                         ),
                                       ),
-                                    ),
-                                  ],
+                                      SizedBox(height: tightCard ? 2 : 4),
+                                      Text(
+                                        descriptions[stage % 6],
+                                        textAlign: TextAlign.center,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          color: Color(0xFFFFF0CE),
+                                          fontSize: 12.5,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      SizedBox(height: tightCard ? 5 : 8),
+                                      FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 10,
+                                            vertical: 4,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0x8E101B29),
+                                            borderRadius: BorderRadius.circular(10),
+                                            border: Border.all(
+                                              color: const Color(0x4DDAB164),
+                                              width: 1,
+                                            ),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              for (
+                                                var i = 0;
+                                                i < names.length;
+                                                i++
+                                              )
+                                                Padding(
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 3,
+                                                      ),
+                                                  child: AnimatedContainer(
+                                                    duration:
+                                                        MediaQuery.disableAnimationsOf(
+                                                              context,
+                                                            )
+                                                            ? Duration.zero
+                                                            : const Duration(
+                                                                milliseconds: 180,
+                                                              ),
+                                                    width: i == selected ? 20 : 8,
+                                                    height: 7,
+                                                    decoration: BoxDecoration(
+                                                      color: i == selected
+                                                          ? MenuPalette.gold
+                                                          : const Color(0x72FFFFFF),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            3.5,
+                                                          ),
+                                                      border: Border.all(
+                                                        color: i == selected
+                                                            ? const Color(
+                                                                0xFFFFF1C1,
+                                                              )
+                                                            : const Color(
+                                                                0x30FFFFFF,
+                                                              ),
+                                                        width: 0.9,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                '${selected + 1} / ${names.length}',
+                                                style: const TextStyle(
+                                                  color: Color(0xFFFFF5DC),
+                                                  fontSize: 11.5,
+                                                  fontWeight: FontWeight.w800,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(right: 16),
-                      child: IconButton(
-                        tooltip: 'Next epoch',
-                        style: arrowStyle(selected < names.length - 1),
-                        onPressed: selected < names.length - 1
-                            ? () => onSelect(selected + 1)
-                            : null,
-                        icon: const MenuChevron(left: false, size: 26),
+                      Padding(
+                        padding: EdgeInsets.only(right: arrowPad),
+                        child: IconButton(
+                          tooltip: 'Next epoch',
+                          style: arrowStyle(selected < names.length - 1),
+                          onPressed: selected < names.length - 1
+                              ? () => onSelect(selected + 1)
+                              : null,
+                          icon: const MenuChevron(left: false, size: 26),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
+          ),
         ),
       );
     },
@@ -355,6 +359,8 @@ class _CampAtmosphereState extends State<CampAtmosphere>
 class _AtmospherePainter extends CustomPainter {
   final Animation<double> clock;
   final int stage;
+  final Paint _paint = Paint()..strokeCap = StrokeCap.round;
+  final Path _workPath = Path();
   _AtmospherePainter(this.clock, this.stage) : super(repaint: clock);
 
   static double _hash(int seed) =>
@@ -363,7 +369,7 @@ class _AtmospherePainter extends CustomPainter {
   @override
   void paint(Canvas c, Size size) {
     final t = clock.value;
-    final p = Paint()..strokeCap = StrokeCap.round;
+    final p = _paint;
     switch (stage % 6) {
       case 0:
         _paintWindGusts(c, size, t, p, const Color(0xFFFFE5AE), count: 7, speed: 3);
@@ -404,7 +410,8 @@ class _AtmospherePainter extends CustomPainter {
       final len = size.width * (.12 + _hash(i * 19 + 5) * .12);
       final x = -len + phase * (size.width + len * 2);
       final wave = math.sin(t * math.pi * 4 + i * 1.9) * 6;
-      final path = Path()
+      _workPath
+        ..reset()
         ..moveTo(x, yBase)
         ..quadraticBezierTo(
           x + len * .45,
@@ -413,7 +420,7 @@ class _AtmospherePainter extends CustomPainter {
           yBase - 2 - wave * .4,
         );
       c.drawPath(
-        path,
+        _workPath,
         p
           ..strokeWidth = 1.4 + (i % 2) * .6
           ..color = color.withValues(alpha: fade * .22),
@@ -490,14 +497,15 @@ class _AtmospherePainter extends CustomPainter {
     final sway = math.sin(t * math.pi * 2) * 18;
     for (var i = 0; i < 3; i++) {
       final x = size.width * (.18 + i * .28) + sway * (i.isEven ? 1 : -.7);
-      final beam = Path()
+      _workPath
+        ..reset()
         ..moveTo(x - 24, 0)
         ..lineTo(x + 28, 0)
         ..lineTo(x + 120, size.height)
         ..lineTo(x - 6, size.height)
         ..close();
       c.drawPath(
-        beam,
+        _workPath,
         p..color = const Color(0xFFFFF3C6).withValues(alpha: .045),
       );
     }

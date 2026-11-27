@@ -220,7 +220,7 @@ class DinoGame extends FlameGame
         // Keep game safely paused on Pause Menu so player doesn't unpause unannounced
         AudioManager.pauseBgm();
       } else if (this.state == GameState.menu) {
-        AudioManager.playTitleBgm();
+        AudioManager.resumeBgm();
       } else if (this.state == GameState.playing ||
           this.state == GameState.spaceMode) {
         AudioManager.resumeBgm();
@@ -638,14 +638,14 @@ class DinoGame extends FlameGame
     final point = canvasToPlayfield(event.canvasPosition);
     if (tryPauseAt(point)) return;
 
-    // Ensure web browser audio context is active on gesture
-    AudioManager.ensureAudioPlaying();
-
     if (state == GameState.menu) {
       AudioManager.playTitleBgm();
       // Menu overlay handles its own taps; do not fall through to _handleInputStart() / startGame()
       return;
     }
+
+    // Ensure web browser audio context is active on gesture
+    AudioManager.ensureAudioPlaying();
 
     if (state == GameState.gameOver) {
       handleResultsTap(point);

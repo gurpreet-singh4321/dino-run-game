@@ -11,7 +11,16 @@ import 'settings_dialog.dart';
 
 class MainMenuOverlay extends StatefulWidget {
   final DinoGame game;
-  const MainMenuOverlay({super.key, required this.game});
+  final GlobalKey? dinoStageKey;
+  final bool showDino;
+  final VoidCallback? onMenuReady;
+  const MainMenuOverlay({
+    super.key,
+    required this.game,
+    this.dinoStageKey,
+    this.showDino = true,
+    this.onMenuReady,
+  });
   @override
   State<MainMenuOverlay> createState() => _MainMenuOverlayState();
 }
@@ -19,6 +28,7 @@ class MainMenuOverlay extends StatefulWidget {
 class _MainMenuOverlayState extends State<MainMenuOverlay>
     with SingleTickerProviderStateMixin {
   final focus = FocusNode();
+  bool _notifiedReady = false;
   late final AnimationController _departure = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 260),
@@ -49,6 +59,13 @@ class _MainMenuOverlayState extends State<MainMenuOverlay>
     super.initState();
     selected = stages.indexOf(widget.game.biomeManager.currentStage % 6);
     if (selected < 0) selected = 0;
+    if (widget.onMenuReady != null && !_notifiedReady) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || _notifiedReady) return;
+        _notifiedReady = true;
+        widget.onMenuReady?.call();
+      });
+    }
   }
 
   @override
@@ -171,6 +188,8 @@ class _MainMenuOverlayState extends State<MainMenuOverlay>
             stage: stages[selected],
             names: names,
             icons: icons,
+            dinoStageKey: widget.dinoStageKey,
+            showDino: widget.showDino,
             onPlay: play,
             onSelect: select,
             onGift: wallet.canClaimDailyReward ? gift : null,

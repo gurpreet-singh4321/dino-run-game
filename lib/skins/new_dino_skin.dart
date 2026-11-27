@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flame/flame.dart';
 import 'cosmetics.dart';
 import 'dino_motion.dart';
+import 'dino_shoe.dart';
 import 'skin.dart';
 
 /// Painted cutout rig with continuous gait, two-bone legs and bone attachments.
@@ -38,28 +39,39 @@ class NewDinoSkin extends CharacterSkin {
   static Future<void> preload() async {
     await Flame.images.load('new_dino_rig.png');
     if (_dressedTorsoImage == null) {
+      // Bake at 8x (360x352) to preserve the full 379x380 atlas detail and
+      // keep vector vest/belt edges crisp on high-DPI & main-menu hero sizes.
+      const scale = 8.0;
       final recorder = PictureRecorder();
       final canvas = Canvas(recorder);
       canvas.save();
-      canvas.scale(2.0, 2.0);
+      canvas.scale(scale, scale);
       canvas.translate(-35, -53);
       final rig = Flame.images.fromCache('new_dino_rig.png');
       canvas.drawImageRect(
         rig,
         _regions[1],
         const Rect.fromLTWH(35, 53, 45, 44),
-        Paint()..filterQuality = FilterQuality.medium,
+        Paint()
+          ..filterQuality = FilterQuality.high
+          ..isAntiAlias = true,
       );
       _drawDefaultCostume(canvas, 0, 0);
       canvas.restore();
       final picture = recorder.endRecording();
       try {
-        _dressedTorsoImage = await picture.toImage(90, 88);
+        _dressedTorsoImage = await picture.toImage(
+          (45 * scale).round(),
+          (44 * scale).round(),
+        );
       } finally {
         picture.dispose();
       }
     }
   }
+
+  /// Forces the blink eyelid amount for offline/boot preview frame baking.
+  void setBlinkPose(double value) => _blinkMix = value.clamp(0.0, 1.0);
 
   @override
   void resetMotion() => motion = DinoMotion();
@@ -117,11 +129,19 @@ class NewDinoSkin extends CharacterSkin {
     Rect.fromLTWH(908, 541, 383, 272),
     Rect.fromLTWH(1303, 471, 471, 384),
   ];
-  final Paint _paint = Paint()..filterQuality = FilterQuality.medium;
+  final Paint _paint = Paint()
+    ..filterQuality = FilterQuality.high
+    ..isAntiAlias = true;
 
-  void _part(Canvas canvas, int part, Rect destination, {bool far = false}) {
+  void _part(
+    Canvas canvas,
+    int part,
+    Rect destination, {
+    bool far = false,
+    Color farTint = const Color(0xFFCC9838),
+  }) {
     _paint.colorFilter = far
-        ? const ColorFilter.mode(Color(0xFFCC9838), BlendMode.modulate)
+        ? ColorFilter.mode(farTint, BlendMode.modulate)
         : null;
     canvas.drawImageRect(
       Flame.images.fromCache('new_dino_rig.png'),
@@ -134,34 +154,22 @@ class NewDinoSkin extends CharacterSkin {
   void _leg(Canvas c, bool far) {
     final hip = Offset(far ? 63 : 55, 89 + motion.bodyY);
     final ankle = motion.foot(far) - const Offset(0, 8);
-    final knee = DinoMotion.knee(hip, ankle, 14, 14);
-    // The ankle and foot share one outline. The atlas foot has a slanted cuff;
-    // attaching that entire cutout leaves a second, visibly broken joint.
+    // Keep resting knees gently upright so legs enter the sneaker cuffs cleanly,
+    // while scaling smoothly for full athletic knee bend during running strides.
+    final segLen = math.max(9.5, (ankle - hip).distance * 0.56);
+    final knee = DinoMotion.knee(hip, ankle, segLen, segLen);
     final upper = knee - hip;
     final lower = ankle - knee;
     Offset normal(Offset direction) =>
         Offset(-direction.dy, direction.dx) / direction.distance;
     final n1 = normal(upper), n2 = normal(lower);
     final middle = (n1 + n2) / (n1 + n2).distance;
-    final rootRadius = far ? 6.0 : 7.0;
-    final kneeRadius = far ? 4.7 : 5.5;
+    final rootRadius = far ? 5.8 : 6.6;
+    final kneeRadius = far ? 4.4 : 5.0;
     final a = hip + n1 * rootRadius, b = knee + middle * kneeRadius;
     final f = knee - middle * kneeRadius, g = hip - n1 * rootRadius;
     final angle = motion.footAngle(far);
-    Offset footPoint(double x, double y) =>
-        ankle +
-        Offset(
-          x * math.cos(angle) - y * math.sin(angle),
-          x * math.sin(angle) + y * math.cos(angle),
-        );
-    final heelJoin = footPoint(-4.5, -2);
-    final heel = footPoint(-7, 4);
-    final sole = footPoint(-2, 7);
-    final toe = footPoint(12, 7);
-    final toeTop = footPoint(14.5, 1.5);
-    final instep = footPoint(6, -.5);
-    final shinJoin = footPoint(4.5, -4);
-    final ankleRadius = far ? 4.0 : 4.5;
+    final ankleRadius = far ? 3.5 : 3.8;
     final d = ankle + n2 * ankleRadius, e = ankle - n2 * ankleRadius;
     final cap = ankle + lower / lower.distance * ankleRadius * 1.5;
     final legOutline = Path()
@@ -171,94 +179,129 @@ class NewDinoSkin extends CharacterSkin {
       ..quadraticBezierTo(f.dx, f.dy, g.dx, g.dy)
       ..quadraticBezierTo(hip.dx, hip.dy - 6, a.dx, a.dy)
       ..close();
-    final footOutline = Path()
-      ..moveTo(heelJoin.dx, heelJoin.dy)
-      ..quadraticBezierTo(
-        footPoint(-7, 0).dx,
-        footPoint(-7, 0).dy,
-        heel.dx,
-        heel.dy,
-      )
-      ..quadraticBezierTo(
-        footPoint(-7, 7).dx,
-        footPoint(-7, 7).dy,
-        sole.dx,
-        sole.dy,
-      )
-      ..lineTo(toe.dx, toe.dy)
-      ..quadraticBezierTo(
-        footPoint(18, 6).dx,
-        footPoint(18, 6).dy,
-        toeTop.dx,
-        toeTop.dy,
-      )
-      ..quadraticBezierTo(
-        footPoint(12, -.5).dx,
-        footPoint(12, -.5).dy,
-        instep.dx,
-        instep.dy,
-      )
-      ..quadraticBezierTo(
-        footPoint(4.5, -.5).dx,
-        footPoint(4.5, -.5).dy,
-        shinJoin.dx,
-        shinJoin.dy,
-      )
-      ..quadraticBezierTo(
-        footPoint(0, -5).dx,
-        footPoint(0, -5).dy,
-        heelJoin.dx,
-        heelJoin.dy,
-      )
-      ..close();
-    // Union before painting prevents folded calves from cutting a wedge out
-    // of the ankle when the foot swings behind the hip.
-    final outline = Path.combine(PathOperation.union, legOutline, footOutline);
-    c.save();
-    c.clipPath(outline);
-    // Reuse opaque painted thigh texture, without its detached cutout edges.
-    _paint.colorFilter = far
-        ? const ColorFilter.mode(Color(0xFFDBB35D), BlendMode.modulate)
-        : null;
-    c.drawImageRect(
-      Flame.images.fromCache('new_dino_rig.png'),
-      const Rect.fromLTWH(182, 516, 115, 135),
-      outline.getBounds().inflate(1),
-      _paint,
+
+    // Sample where the curved back calf and front shin meet the shoe collar
+    // height (-3.1 in foot-local space) so the shoe back & rounded top hug the leg.
+    final backLocalAtAnkle = DinoShoeMount.toFootLocal(d, ankle, angle);
+    final backLocalAtKnee = DinoShoeMount.toFootLocal(b, ankle, angle);
+    final frontLocalAtAnkle = DinoShoeMount.toFootLocal(e, ankle, angle);
+    final frontLocalAtKnee = DinoShoeMount.toFootLocal(f, ankle, angle);
+    double xAtCollar(Offset low, Offset high) {
+      final span = high.dy - low.dy;
+      if (span.abs() < 0.001) return low.dx;
+      final t = ((-3.1 - low.dy) / span).clamp(0.0, 1.0);
+      return low.dx + (high.dx - low.dx) * t;
+    }
+
+    final mount = DinoShoeMount(
+      ankle: ankle,
+      footAngle: angle,
+      far: far,
+      backX: xAtCollar(backLocalAtAnkle, backLocalAtKnee),
+      frontX: xAtCollar(frontLocalAtAnkle, frontLocalAtKnee),
     );
+    const shoeStyle = DinoShoeStyle.explorer;
+
+    // Back collar pocket behind ankle so the leg enters inside the shoe.
+    DinoShoeRenderer.paintBackCollar(c, mount, shoeStyle);
+
+    // Paint leg entering inside the collar pocket.
     c.save();
-    c.translate(ankle.dx, ankle.dy);
-    c.rotate(angle);
-    // Keep only the heel/toe painting, below the old cuff. The opaque thigh
-    // underneath fills transparent atlas margins and the curved ankle fillet.
-    c.drawImageRect(
-      Flame.images.fromCache('new_dino_rig.png'),
-      const Rect.fromLTWH(908, 632, 383, 181),
-      const Rect.fromLTWH(-7, -.5, 23, 7.5),
-      _paint,
+    c.clipPath(legOutline);
+    c.drawPath(
+      legOutline,
+      Paint()
+        ..isAntiAlias = true
+        ..shader = Gradient.linear(
+          Offset(hip.dx + 6, hip.dy - 2),
+          Offset(ankle.dx - 5, ankle.dy + 6),
+          far
+              ? const [Color(0xFFEBC348), Color(0xFFD59D28), Color(0xFFAF7314)]
+              : const [
+                  Color(0xFFFFEE46),
+                  Color(0xFFFFD818),
+                  Color(0xFFF6A713),
+                  Color(0xFFD97D0C),
+                ],
+          far ? const [0.0, 0.55, 1.0] : const [0.0, 0.40, 0.78, 1.0],
+        ),
+    );
+    // Soft belly overhang shadow on upper thigh.
+    c.drawCircle(
+      hip + const Offset(0, -1),
+      9.8,
+      Paint()
+        ..shader = Gradient.radial(
+          hip + const Offset(0, -1),
+          9.8,
+          [
+            far ? const Color(0x555E2A04) : const Color(0x456E3204),
+            const Color(0x006E3204),
+          ],
+        ),
+    );
+    // Soft sunlit highlight along front shin.
+    c.drawPath(
+      Path()
+        ..moveTo(hip.dx + 2.4, hip.dy + 2)
+        ..quadraticBezierTo(knee.dx + 2.0, knee.dy, ankle.dx + 1.8, ankle.dy - 1),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round
+        ..strokeWidth = far ? 1.5 : 2.1
+        ..color = far ? const Color(0x26FFE788) : const Color(0x44FFF9AD),
     );
     c.restore();
-    c.restore();
+
+    DinoShoeRenderer.paintShoeBody(c, mount, shoeStyle);
   }
 
   void _arm(Canvas c, bool far) {
     final swing = math.sin(motion.phase * math.pi * 2 + (far ? math.pi : 0));
+    if (far) {
+      // Anchor the far shoulder cleanly under the right collar/chest edge so
+      // it joins the torso naturally while the full forearm & 4-fingered paw
+      // extend clear past the vest/belly at proportional scale.
+      c.save();
+      c.translate(75.8, 64.5 + motion.bodyY);
+      c.rotate(
+        swing * .42 * motion.run -
+            .24 * (1 - motion.drivingMix) -
+            motion.air * .48 -
+            motion.damage * .25 -
+            motion.drivingMix * .28 -
+            motion.yawn * .25 -
+            motion.stretch * .55 -
+            motion.bounce * .32,
+      );
+      _part(
+        c,
+        3,
+        const Rect.fromLTWH(-6.4, -2.6, 16.8, 25.8),
+        far: true,
+        farTint: const Color(0xFFF6D26E),
+      );
+      c.restore();
+      return;
+    }
     c.save();
-    c.translate(far ? 72 : 48, 66 + motion.bodyY);
+    c.translate(48, 66 + motion.bodyY);
     c.rotate(
       swing * .42 * motion.run -
           motion.air * .55 -
-          motion.damage * (far ? .25 : .7) -
-          motion.drivingMix * (far ? .3 : 1.3) -
-          motion.yawn * (far ? .3 : 1.8) -
-          motion.stretch * (far ? .65 : 1.15) -
-          motion.bounce * (far ? .35 : .55) -
-          (far
-              ? 0
-              : motion.wave * (2.45 + .2 * math.sin(motion.idleTime * 13)) +
-                    motion.wag * math.sin(motion.idleTime * 12) * .25),
+          motion.damage * .7 -
+          motion.drivingMix * 1.3 -
+          motion.yawn * 1.8 -
+          motion.stretch * 1.15 -
+          motion.bounce * .55 -
+          (motion.wave * (2.45 + .2 * math.sin(motion.idleTime * 13)) +
+              motion.wag * math.sin(motion.idleTime * 12) * .25),
     );
-    _part(c, 3, Rect.fromLTWH(-7, -3, far ? 14 : 18, 28), far: far);
+    _part(
+      c,
+      3,
+      const Rect.fromLTWH(-7, -3, 18, 28),
+    );
     c.restore();
   }
 
@@ -309,7 +352,7 @@ class NewDinoSkin extends CharacterSkin {
       _paint.colorFilter = null;
       canvas.drawImageRect(
         dressed,
-        const Rect.fromLTWH(0, 0, 90, 88),
+        const Rect.fromLTWH(0, 0, 360, 352),
         torsoRect,
         _paint,
       );

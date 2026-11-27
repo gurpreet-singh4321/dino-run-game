@@ -1,14 +1,18 @@
+import 'dart:async' show unawaited;
 import 'dart:math' as math;
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import '../../game/dino_game.dart';
 import '../../managers/audio_manager.dart';
 import '../../skins/cart_skins.dart';
 import '../../skins/cosmetics.dart';
 import '../../skins/skin_registry.dart';
+import '../../utils/boot_preview_cache.dart';
 import '../../utils/cart_art.dart';
 import 'adventure_theme.dart';
 import 'adventure_toast.dart';
 import 'animated_dino_preview.dart';
+import 'dino_hill_top.dart';
 import 'illustrated_menu.dart';
 import 'menu_chrome.dart';
 import 'menu_motion.dart';
@@ -153,7 +157,18 @@ class _AdventureWardrobeState extends State<AdventureWardrobe> {
   bool busy = false;
   int tab = 0, equipReaction = 0;
   CosmeticSlot slot = CosmeticSlot.head;
-  String selected = 'explorer_hat', cartSelected = 'fossil_rover';
+  late String selected;
+  late String cartSelected;
+
+  @override
+  void initState() {
+    super.initState();
+    final wallet = widget.game.coinManager;
+    selected =
+        wallet.equippedCosmetics[slot] ??
+        CosmeticCatalog.items.firstWhere((i) => i.slot == slot).id;
+    cartSelected = wallet.equippedCartSkin;
+  }
 
   Future<void> act(BuildContext context, {required bool owned, required bool equipped}) async {
     if (busy || equipped) return;
@@ -166,6 +181,9 @@ class _AdventureWardrobeState extends State<AdventureWardrobe> {
       if (owned && ok) {
         if (mounted) setState(() => equipReaction++);
         SkinRegistry.setCosmetics(wallet.equippedCosmetics.values);
+        if (tab == 0) {
+          unawaited(cacheBootStagePreview(SkinRegistry.defaultSkin));
+        }
       }
       if (context.mounted) {
         if (ok) {
@@ -185,6 +203,7 @@ class _AdventureWardrobeState extends State<AdventureWardrobe> {
     try {
       await widget.game.coinManager.removeCosmetic(itemSlot);
       SkinRegistry.setCosmetics(widget.game.coinManager.equippedCosmetics.values);
+      unawaited(cacheBootStagePreview(SkinRegistry.defaultSkin));
     } finally {
       if (mounted) setState(() => busy = false);
     }
@@ -270,72 +289,147 @@ class _AdventureWardrobeState extends State<AdventureWardrobe> {
       title: 'Workshop', subtitle: 'Try it on. Make it yours.', accent: MenuPalette.terracotta,
       symbol: MenuSymbol.wardrobe, stage: widget.game.biomeManager.currentStage, coins: wallet.coins,
       child: LayoutBuilder(builder: (context, bounds) {
-        final compact = bounds.maxHeight < 300;
+        final compact = bounds.maxHeight < 300 || bounds.maxWidth < 660;
+        final stage = widget.game.biomeManager.currentStage;
+        final hasEquippedSlot =
+            tab == 0 && wallet.equippedCosmetics.containsKey(item.slot);
         final previewArt = Expanded(child: LayoutBuilder(builder: (context, box) {
-          final height = math.min(box.maxHeight, box.maxWidth * (tab == 1 && !compact ? 1.0 : 1.2));
+          final padBottom = compact ? 10.0 : 18.0;
+          final availableH = math.max(56.0, box.maxHeight - padBottom);
+          final height = math.min(availableH, box.maxWidth * (tab == 1 && !compact ? 1.0 : 1.18));
           final width = tab == 1 && !compact
               ? math.min(box.maxWidth, height * 1.1)
               : height / 1.2;
-          return Center(child: SizedBox(width: width, height: height,
-            child: AnimatedDinoPreview(template: preview, equipReaction: equipReaction, cartSkinId: tab == 1 ? cart.id : null)));
-        }));
-        final previewMeta = Column(mainAxisSize: MainAxisSize.min, children: [
-          Text(tab == 1 ? cart.name : item.name, textAlign: TextAlign.center,
-            style: const TextStyle(fontFamily: 'Fredoka', fontSize: 16, fontWeight: FontWeight.w700, color: MenuPalette.ink),
-            maxLines: compact ? 1 : 2, overflow: TextOverflow.ellipsis),
-          if (!compact) Padding(
-            padding: const EdgeInsets.only(top: 2),
-            child: Text(tab == 1 ? 'Smashes 3 objects.\nSkins change appearance.' : 'Live try-on preview',
-              textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, color: MenuPalette.muted)),
-          ),
-          if (tab == 0 && wallet.equippedCosmetics.containsKey(item.slot))
-            TextButton(onPressed: busy ? null : () => takeOff(item.slot), child: const Text('Take off')),
-        ]);
-        final previewCol = Expanded(flex: compact ? 2 : 5, child: compact
-          ? Column(children: [
-              tabs, const SizedBox(height: 4),
-              previewArt, previewMeta,
-            ])
-          : Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: const Color(0xFFB5925A), width: 1.8),
-                boxShadow: const [
-                  BoxShadow(color: Color(0x2B49351C), offset: Offset(0, 2.5)),
-                ],
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: CustomPaint(
-                  painter: _ShowcaseStagePainter(widget.game.biomeManager.currentStage),
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
-                    child: Column(children: [
-                      previewArt,
-                      const SizedBox(height: 8),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                        decoration: BoxDecoration(
-                          color: const Color(0xEBFFFBF0),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFD6BB8E), width: 1.2),
+          final ledgeHeight = (height * .26).clamp(22.0, 68.0);
+          return Align(
+            alignment: Alignment.bottomCenter,
+            child: Padding(
+              padding: EdgeInsets.only(bottom: padBottom),
+              child: SizedBox(
+                width: width,
+                height: height,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  alignment: Alignment.bottomCenter,
+                  children: [
+                    Positioned(
+                      bottom: -ledgeHeight * .50,
+                      width: width * 1.54,
+                      height: ledgeHeight,
+                      child: IgnorePointer(
+                        child: RepaintBoundary(
+                          child: CustomPaint(painter: DinoHillTopPainter(stage)),
                         ),
-                        child: previewMeta,
                       ),
-                    ]),
-                  ),
+                    ),
+                    Positioned.fill(
+                      child: AnimatedDinoPreview(
+                        template: preview,
+                        equipReaction: equipReaction,
+                        cartSkinId: tab == 1 ? cart.id : null,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ));
-        final catalogCol = Expanded(flex: compact ? 3 : 7, child: Column(children: [
+            ),
+          );
+        }));
+        final takeOffButton = SizedBox(
+          height: compact ? 32 : 36,
+          child: OutlinedButton(
+            style: OutlinedButton.styleFrom(
+              backgroundColor: const Color(0xFFFFF2D6),
+              foregroundColor: MenuPalette.terracotta,
+              disabledForegroundColor: MenuPalette.muted,
+              side: const BorderSide(color: Color(0xFFC25831), width: 1.5),
+              padding: EdgeInsets.symmetric(horizontal: compact ? 12 : 16, vertical: 4),
+              minimumSize: Size(0, compact ? 32 : 36),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: busy ? null : () => takeOff(item.slot),
+            child: Text(
+              'Take off',
+              style: TextStyle(
+                fontFamily: 'Fredoka',
+                fontSize: compact ? 12.5 : 13.5,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        );
+        final previewMeta = Column(mainAxisSize: MainAxisSize.min, children: [
+          Text(tab == 1 ? cart.name : item.name, textAlign: TextAlign.center,
+            style: TextStyle(fontFamily: 'Fredoka', fontSize: compact ? 14 : 16, fontWeight: FontWeight.w700, color: MenuPalette.ink),
+            maxLines: 1, overflow: TextOverflow.ellipsis),
+          if (!compact && tab == 1) const Padding(
+            padding: EdgeInsets.only(top: 2),
+            child: Text('Smashes 3 objects.\nSkins change appearance.',
+              textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: MenuPalette.muted)),
+          ),
+          if (hasEquippedSlot) ...[
+            SizedBox(height: compact ? 4 : 6),
+            takeOffButton,
+          ],
+        ]);
+        final showcaseCard = Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: const Color(0xFFB5925A), width: 1.8),
+            boxShadow: const [
+              BoxShadow(color: Color(0x2B49351C), offset: Offset(0, 2.5)),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: CustomPaint(
+              painter: _ShowcaseStagePainter(stage),
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  compact ? 8 : 12,
+                  compact ? 6 : 12,
+                  compact ? 8 : 12,
+                  compact ? 6 : 10,
+                ),
+                child: Column(children: [
+                  previewArt,
+                  SizedBox(height: compact ? 4 : 8),
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: compact ? 8 : 10,
+                      vertical: compact ? 5 : 7,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xEBFFFBF0),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFD6BB8E), width: 1.2),
+                    ),
+                    child: previewMeta,
+                  ),
+                ]),
+              ),
+            ),
+          ),
+        );
+        final previewCol = Expanded(
+          flex: compact ? 4 : 5,
+          child: compact
+              ? Column(children: [
+                  tabs,
+                  const SizedBox(height: 5),
+                  Expanded(child: showcaseCard),
+                ])
+              : showcaseCard,
+        );
+        final catalogCol = Expanded(flex: compact ? 6 : 7, child: Column(children: [
           if (!compact) ...[tabs, const SizedBox(height: 8)],
-          if (tab == 0) Padding(padding: EdgeInsets.only(bottom: compact ? 4 : 8), child: Row(children: [
+          if (tab == 0) Padding(padding: EdgeInsets.only(bottom: compact ? 5 : 8), child: Row(children: [
             for (final filter in CosmeticSlot.values)
               Expanded(child: Padding(padding: const EdgeInsets.symmetric(horizontal: 2.5),
                 child: Semantics(selected: slot == filter, child: TextButton(
                   style: TextButton.styleFrom(
-                    minimumSize: const Size(48, 48),
+                    minimumSize: Size(44, compact ? 40 : 48),
                     padding: const EdgeInsets.symmetric(horizontal: 4),
                     backgroundColor: slot == filter ? MenuPalette.terracotta : const Color(0xFFF3E7CF),
                     foregroundColor: slot == filter ? Colors.white : MenuPalette.ink,
@@ -347,7 +441,8 @@ class _AdventureWardrobeState extends State<AdventureWardrobe> {
                   ),
                   onPressed: busy ? null : () => setState(() {
                     slot = filter;
-                    selected = CosmeticCatalog.items.firstWhere((i) => i.slot == slot).id;
+                    selected = wallet.equippedCosmetics[slot] ??
+                        CosmeticCatalog.items.firstWhere((i) => i.slot == slot).id;
                   }),
                   child: FittedBox(
                     fit: BoxFit.scaleDown,
@@ -356,10 +451,9 @@ class _AdventureWardrobeState extends State<AdventureWardrobe> {
                   ),
                 )))),
           ])),
-          Expanded(child: _WorkshopPages(
+          Expanded(child: _WorkshopShelf(
             key: ValueKey('$tab-${slot.name}'),
             compact: compact,
-            action: compact ? action : null,
             children: [
               if (tab == 0) for (final candidate in CosmeticCatalog.items.where((i) => i.slot == slot))
                 _WorkshopChoice(name: candidate.name,
@@ -376,7 +470,8 @@ class _AdventureWardrobeState extends State<AdventureWardrobe> {
                   onTap: busy ? null : () => setState(() => cartSelected = candidate.id)),
             ],
           )),
-          if (!compact) ...[const SizedBox(height: 6), action],
+          SizedBox(height: compact ? 5 : 8),
+          SizedBox(height: compact ? 44 : 48, child: action),
         ]));
         return Row(children: [previewCol, SizedBox(width: compact ? 10 : 14), catalogCol]);
       }),
@@ -384,64 +479,49 @@ class _AdventureWardrobeState extends State<AdventureWardrobe> {
   }
 }
 
-class _WorkshopPages extends StatefulWidget {
+class _WorkshopShelf extends StatelessWidget {
   final List<Widget> children;
   final bool compact;
-  final Widget? action;
-  const _WorkshopPages({super.key, required this.children, this.compact = false, this.action});
+  const _WorkshopShelf({super.key, required this.children, this.compact = false});
+
   @override
-  State<_WorkshopPages> createState() => _WorkshopPagesState();
-}
-class _WorkshopPagesState extends State<_WorkshopPages> {
-  final controller = PageController();
-  int page = 0;
-  @override
-  void dispose() { controller.dispose(); super.dispose(); }
-  void move(int direction) {
-    if (!controller.hasClients) return;
-    controller.animateToPage(page + direction,
-      duration: MediaQuery.disableAnimationsOf(context) ? Duration.zero : const Duration(milliseconds: 240), curve: Curves.easeOutCubic);
-  }
-  @override
-  Widget build(BuildContext context) {
-    final count = (widget.children.length / 4).ceil();
-    return Column(children: [
-      Expanded(child: PageView.builder(controller: controller, itemCount: count,
-        onPageChanged: (value) => setState(() => page = value),
-        itemBuilder: (context, index) => LayoutBuilder(builder: (context, bounds) {
-          final gap = widget.compact ? 6.0 : 8.0;
-          final cellHeight = math.min(widget.compact ? 130.0 : 172.0, math.max(114.0, (bounds.maxHeight - gap) / 2));
-          return GridView.count(
-            crossAxisCount: 2, mainAxisSpacing: gap, crossAxisSpacing: gap,
-            childAspectRatio: ((bounds.maxWidth - gap) / 2) / cellHeight,
-            children: widget.children.skip(index * 4).take(4).toList(),
-          );
-        }))),
-      if (widget.compact && widget.action != null) ...[
-        const SizedBox(height: 4),
-        SizedBox(height: 48, child: Row(children: [
-          if (count > 1) Tooltip(message: 'Previous items', child: IconButton(
-            onPressed: page > 0 ? () => move(-1) : null,
-            icon: const MenuChevron(left: true, size: 22))),
-          Expanded(child: widget.action!),
-          if (count > 1) Tooltip(message: 'Next items', child: IconButton(
-            onPressed: page + 1 < count ? () => move(1) : null,
-            icon: const MenuChevron(left: false, size: 22))),
-        ])),
-      ] else
-        SizedBox(height: 48, child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          Tooltip(message: 'Previous items', child: TextButton(
-            style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4)),
-            onPressed: page > 0 ? () => move(-1) : null,
-            child: const Row(mainAxisSize: MainAxisSize.min, children: [MenuChevron(left: true, size: 18), Text('Prev', style: TextStyle(fontSize: 12))]))),
-          Flexible(child: Text('${page + 1} / $count', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12))),
-          Tooltip(message: 'Next items', child: TextButton(
-            style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4)),
-            onPressed: page + 1 < count ? () => move(1) : null,
-            child: const Row(mainAxisSize: MainAxisSize.min, children: [Text('Next', style: TextStyle(fontSize: 12)), MenuChevron(left: false, size: 18)]))),
-        ])),
-    ]);
-  }
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, bounds) {
+      final gap = compact ? 8.0 : 10.0;
+      final singleRow = bounds.maxHeight < 210 || compact;
+      final rowCount = singleRow ? 1 : 2;
+      final rowHeight = math.max(
+        96.0,
+        (bounds.maxHeight - gap * (rowCount - 1)) / rowCount,
+      );
+      final cardWidth = singleRow
+          ? (bounds.maxWidth * 0.44).clamp(112.0, 152.0)
+          : ((bounds.maxWidth - gap) / 2.15).clamp(136.0, 184.0);
+      return ScrollConfiguration(
+        behavior: ScrollConfiguration.of(context).copyWith(
+          dragDevices: const {
+            PointerDeviceKind.touch,
+            PointerDeviceKind.mouse,
+            PointerDeviceKind.trackpad,
+          },
+        ),
+        child: GridView.builder(
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(
+            parent: AlwaysScrollableScrollPhysics(),
+          ),
+          itemCount: children.length,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: rowCount,
+            mainAxisSpacing: gap,
+            crossAxisSpacing: gap,
+            childAspectRatio: rowHeight / cardWidth,
+          ),
+          itemBuilder: (_, index) => children[index],
+        ),
+      );
+    },
+  );
 }
 
 class _WorkshopChoice extends StatelessWidget {
@@ -568,14 +648,14 @@ class _ShowcaseStagePainter extends CustomPainter {
         ).createShader(rect),
     );
     p.shader = null;
-    // Soft sun halo behind Dino / cart showcase.
+    // Soft sky halo behind Dino / cart showcase while DinoHillTopPainter renders the foreground earth mound.
     canvas.drawCircle(
-      Offset(size.width * .5, size.height * .36),
+      Offset(size.width * .5, size.height * .38),
       size.shortestSide * .42,
       p..color = const Color(0x70FFFDF4),
     );
-    // Distant silhouetted dunes/hills to ground the diorama scene.
-    final horizon = size.height * .62;
+    // Distant silhouetted dunes/hills behind the foreground hilltop.
+    final horizon = size.height * .66;
     final hill = Path()
       ..moveTo(0, horizon + 12)
       ..quadraticBezierTo(size.width * .28, horizon - 14, size.width * .55, horizon + 4)
@@ -583,12 +663,7 @@ class _ShowcaseStagePainter extends CustomPainter {
       ..lineTo(size.width, size.height)
       ..lineTo(0, size.height)
       ..close();
-    canvas.drawPath(hill, p..color = Color.lerp(const Color(0xFFE3C89D), tint, .12)!);
-    // Warm earth trail ledge directly beneath the showcase floor.
-    canvas.drawRect(
-      Rect.fromLTWH(0, size.height * .68, size.width, size.height * .32),
-      p..color = Color.lerp(const Color(0xFFD5B381), tint, .08)!,
-    );
+    canvas.drawPath(hill, p..color = Color.lerp(const Color(0xFFE3C89D), tint, .12)!.withValues(alpha: .65));
   }
 
   @override
